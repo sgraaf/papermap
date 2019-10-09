@@ -7,6 +7,7 @@ Below, you'll find two examples on how to use PaperMap. Both of these examples a
 
 ### Package
 ```python
+from papermap import PaperMap
 pm = PaperMap(13.75889, 100.49722)
 pm.render()
 pm.save('Bangkok.pdf')
