@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from collections import OrderedDict
-from pathlib import Path
 
 SCALE_DEFAULT = 25000
 MARGIN_DEFAULT = 12
 DPI_DEFAULT = 300
 NB_WORKERS_DEFAULT = 4
 NB_RETRIES_DEFAULT = 3
-PATH_DEFAULT = Path(__file__).resolve().parents[1] / 'maps'
 
 SIZES_DICT = OrderedDict([
     ('A0', {

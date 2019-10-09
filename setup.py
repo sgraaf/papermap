@@ -8,7 +8,7 @@ with open('requirements.txt', 'r', encoding='utf-8') as f:
 
 setuptools.setup(
     name='papermap',
-    version='0.1',
+    version='0.1.1',
     license='GNU General Public License (GNU GPL v3 or above)',
     author='Steven van de Graaf',
     author_email='steven@vandegraaf.xyz',

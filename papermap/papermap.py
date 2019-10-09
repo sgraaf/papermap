@@ -11,7 +11,7 @@ from math import ceil, floor
 from pathlib import Path
 from random import choice
 from subprocess import Popen
-from typing import Dict, Union
+from typing import Dict
 
 import requests
 from cachecontrol import CacheControl
@@ -30,7 +30,7 @@ class PaperMap(object):
     def __init__(
         self, 
         lat: float, 
-        lon: float, 
+        lon: float,
         tile_server: str = TILE_SERVER_DEFAULT, 
         scale: int = SCALE_DEFAULT, 
         size: str = SIZE_DEFAULT,
@@ -40,12 +40,11 @@ class PaperMap(object):
         margin_left: int = MARGIN_DEFAULT, 
         margin_right: int = MARGIN_DEFAULT, 
         nb_workers: int = NB_WORKERS_DEFAULT, 
-        nb_retries: int = NB_RETRIES_DEFAULT, 
-        path: Union[str, Path] = PATH_DEFAULT, 
+        nb_retries: int = NB_RETRIES_DEFAULT,
         landscape: bool = False,
-        grid: bool = False, 
-        open: bool = False, 
-        quiet: bool = False
+        grid: bool = False,
+        quiet: bool = False,
+        **kwargs
     ) -> None:
         """
         Initialize the papermap
@@ -62,7 +61,6 @@ class PaperMap(object):
             dpi (int): dots per inch. Default: 300
             nb_workers (int): = Number of workers (for parallelization). Default: 4
             nb_retries (int):  = Number of retries (for failed tiles). Default: 3
-            path: (str/pathlib.Path): = Directory path where the paper map should be saved to. Default: ./maps 
             landscape (bool): Use landscape orientation. Default: False
             grid (bool): Use a coordinate grid. Default: False
             open (bool): Open paper map after generating. Default: False
@@ -78,10 +76,8 @@ class PaperMap(object):
         self.margin_right = mm_to_px(margin_right, self.dpi)
         self.nb_workers = nb_workers
         self.nb_retries = nb_retries
-        self.output_path = path
         self.use_landscape = landscape
         self.use_grid = grid
-        self.open_map = open
         self.quiet_mode = quiet
 
         # get the right tile server
@@ -159,9 +155,6 @@ class PaperMap(object):
         self.session = CacheControl(requests.Session())
         self.session.headers = HEADERS
 
-        # create output directory (if not exists)
-        self.output_path.mkdir(exist_ok=True)
-
     def download_tiles(self):
         for nb_retry in count(1):
             # get the unsuccessful tiles
@@ -174,7 +167,7 @@ class PaperMap(object):
             # break if max number of retries exceeded
             if nb_retry > self.nb_retries:
                 if not self.quiet_mode:
-                    raise RuntimeError(f'Could not download {len(tiles)} tiles after {nb_retries} retries.')
+                    raise RuntimeError(f'Could not download {len(tiles)} tiles after {self.nb_retries} retries.')
                 sys.exit()
             
             # download the tiles (parallelalized)
@@ -212,7 +205,7 @@ class PaperMap(object):
             add_grid(self.map_image, GRID_SIZE, self.lat, self.lon, self.scale, self.dpi)
 
         # add the attribution and scale to the map
-        add_attribution_scale(self.map_image, self.scale, self.tile_server['attribution'])
+        add_attribution_scale(self.map_image, self.tile_server['attribution'], self.scale)
 
         # paste the map image onto the paper map
         self.paper_map.paste(self.map_image, (self.margin_left, self.margin_top))
@@ -236,6 +229,7 @@ def main():
     # required arguments
     parser.add_argument('lat', type=float, metavar='LAT', help='Latitude')
     parser.add_argument('lon', type=float, metavar='LON', help='Longitude')
+    parser.add_argument('file', type=str, metavar='PATH', help='File path to save the file to')
 
     # optional arguments
     parser.add_argument('-t', '--tile_server', type=str, default=TILE_SERVER_DEFAULT, choices=TILE_SERVER_CHOICES, help='Tile server to serve as the base of the paper map')
@@ -248,16 +242,15 @@ def main():
     parser.add_argument('-d', '--dpi', type=int, default=DPI_DEFAULT, metavar='NUMBER', help='Dots per inch')
     parser.add_argument('-w', '--nb_workers', type=int, default=NB_WORKERS_DEFAULT, metavar='NUMBER', help='Number of workers (for parallelization)')
     parser.add_argument('-r', '--nb_retries', type=int, default=NB_RETRIES_DEFAULT, metavar='NUMBER', help='Number of retries (for failed tiles)')
-    parser.add_argument('-p', '--path', type=str, default=PATH_DEFAULT, metavar='PATH', help='Directory path where the paper map should be saved to')
     
-    # args
+    # boolean arguments
     parser.add_argument('-o', '--open', action='store_true', help='Open paper map after generating')
     parser.add_argument('-l', '--landscape', action='store_true', help='Use landscape orientation')
     parser.add_argument('-g', '--grid', action='store_true', help='Use a coordinate grid')
     parser.add_argument('-q', '--quiet', action='store_true', help='Activate quiet mode')
     parser.add_argument('-v', '--version', action='version', help=f'Display the current version of {NAME}')
     
-    parsed, unparsed = parser.parse_known_args()
+    parsed, _ = parser.parse_known_args()
     args = vars(parsed)
 
     # initialize the paper map
@@ -267,7 +260,7 @@ def main():
     pm.render()
 
     # save it
-    file = args['path'] / f'{NAME}.pdf'
+    file = args['file']
     try:
         pm.save(file)
     except PermissionError:
