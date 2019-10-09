@@ -52,19 +52,19 @@ class PaperMap(object):
         Args:
             lat (float): latitude
             lon (float): longitude
+            tile_server (str): Tile server to serve as the base of the paper map. Default: OpenStreetMap
             scale (int): scale of the paper map (in cm). Default: 25000
             size (str): size of the paper map. Default: A4
             margin_top (int): top margin (in mm), Default: 12
-            margin_bottom (int): bottm margin (in mm), Default: 12
+            margin_bottom (int): bottom margin (in mm), Default: 12
             margin_left (int): left margin (in mm), Default: 12
-            margin_right (int): bottom margin (in mm), Default: 12
+            margin_right (int): right margin (in mm), Default: 12
             dpi (int): dots per inch. Default: 300
-            nb_workers (int): = Number of workers (for parallelization). Default: 4
-            nb_retries (int):  = Number of retries (for failed tiles). Default: 3
-            landscape (bool): Use landscape orientation. Default: False
-            grid (bool): Use a coordinate grid. Default: False
-            open (bool): Open paper map after generating. Default: False
-            quiet (bool): Activate quiet mode. Default: False
+            nb_workers (int): number of workers (for parallelization). Default: 4
+            nb_retries (int): number of retries (for failed tiles). Default: 3
+            landscape (bool): use landscape orientation. Default: False
+            grid (bool): use a coordinate grid. Default: False
+            quiet (bool): activate quiet mode. Default: False
         """
         self.lat = lat
         self.lon = lon
@@ -219,6 +219,9 @@ class PaperMap(object):
 
     def open(self):
         Popen([str(self.file)], shell=True)
+
+    def __repr__(self):
+        return f'PaperMap({self.lat}, {self.lon})'
 
 
 def main():

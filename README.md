@@ -15,7 +15,7 @@ pm.save('Bangkok.pdf')
 
 ### CLI
 ```bash
-papermap 13.75889 100.4972 Bangkok.pdf
+papermap 13.75889 100.49722 Bangkok.pdf
 ```
 
 ## Installation
