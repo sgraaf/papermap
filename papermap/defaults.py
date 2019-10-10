@@ -53,6 +53,13 @@ TILE_SERVERS_DICT = OrderedDict([
             'zoom_max': 19
         }
     ), (
+        'OpenStreetMap Monochrome', {
+            'attribution': 'Map data: © OpenStreetMap contributors',
+            'url': 'https://tiles.wmflabs.org/bw-mapnik/{z}/{x}/{y}.png',
+            'zoom_min': 0,
+            'zoom_max': 19
+        }
+    ), (
         'OpenTopoMap', {
             'attribution': 'Map data: © OpenStreetMap contributors, SRTM. Map style: © OpenTopoMap (CC-BY-SA)',
             'url': 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
@@ -81,18 +88,46 @@ TILE_SERVERS_DICT = OrderedDict([
             'zoom_max': 22
         }
     ), (
-        'ESRI Aerial', {
+        'ESRI Standard', {
+            'attribution': 'Map data: © Esri',
+            'url': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}.png',
+            'zoom_min': 0,
+            'zoom_max': 17
+        }
+    ), (
+        'ESRI Satellite', {
             'attribution': 'Map data: © Esri',
             'url': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}.png',
             'zoom_min': 0,
-            'zoom_max': 19
+            'zoom_max': 17
         }
     ), (
         'ESRI Topo', {
             'attribution': 'Map data: © Esri',
             'url': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}.png',
             'zoom_min': 0,
-            'zoom_max': 19
+            'zoom_max': 20
+        }
+    ), (
+        'ESRI Dark Gray', {
+            'attribution': 'Map data: © Esri',
+            'url': 'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}.png',
+            'zoom_min': 0,
+            'zoom_max': 16
+        }
+    ), (
+        'ESRI Light Gray', {
+            'attribution': 'Map data: © Esri',
+            'url': 'https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}.png',
+            'zoom_min': 0,
+            'zoom_max': 16
+        }
+    ), (
+        'ESRI Transportation', {
+            'attribution': 'Map data: © Esri',
+            'url': 'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}.png',
+            'zoom_min': 0,
+            'zoom_max': 20
         }
     ), (
         'Stamen Terrain', {
@@ -105,6 +140,13 @@ TILE_SERVERS_DICT = OrderedDict([
         'Stamen Toner', {
             'attribution': 'Map data: © OpenStreetMap contributors. Map style: © Stamen Design (CC-BY-3.0)',
             'url': 'http://{s}.tile.stamen.com/toner/{z}/{x}/{y}.png',
+            'zoom_min': 0,
+            'zoom_max': 18
+        }
+    ), (
+        'Stamen Toner Lite', {
+            'attribution': 'Map data: © OpenStreetMap contributors. Map style: © Stamen Design (CC-BY-3.0)',
+            'url': 'http://{s}.tile.stamen.com/toner-lite/{z}/{x}/{y}.png',
             'zoom_min': 0,
             'zoom_max': 18
         }
