@@ -7,7 +7,8 @@ HEADERS = {'User-Agent': f'{NAME}v{VERSION}', 'Accept': 'image/png,image/*;q=0.9
 TILE_SIZE = 256  # size (width/height) of tiles
 GRID_SIZE = 1000_000  # grid size (in mm)
 SERVERS = ['a', 'b', 'c']  # tile server subdomains
-C = 40_075_017  # circumference of the equator
+R = 6_378_137  # equatorial radius
+C = 40_075_017  # equatorial circumference
 X0 = 155_000  # RD coordinates of Amersfoort
 Y0 = 463_000
 LAT0 = 52.15517440  # WGS84 coordinates of Amersfoort

@@ -19,30 +19,31 @@ from PIL import Image
 
 from .constants import *
 from .defaults import *
+from .markers import Circle
 from .tile import Tile
 from .utils import (add_attribution_scale, add_grid, compute_scale,
-                   compute_scaled_size, compute_zoom, lat_to_y, lon_to_x,
-                   mm_to_px)
+                    compute_scaled_size, compute_zoom, lat_to_y, lon_to_x,
+                    mm_to_px)
 
 
 class PaperMap(object):
 
     def __init__(
-        self, 
-        lat: float, 
+        self,
+        lat: float,
         lon: float,
-        tile_server: str = TILE_SERVER_DEFAULT, 
-        scale: int = SCALE_DEFAULT, 
+        tile_server: str = TILE_SERVER_DEFAULT,
+        scale: int = SCALE_DEFAULT,
         size: str = SIZE_DEFAULT,
         dpi: int = DPI_DEFAULT,
         margin_top: int = MARGIN_DEFAULT,
-        margin_bottom: int = MARGIN_DEFAULT, 
-        margin_left: int = MARGIN_DEFAULT, 
-        margin_right: int = MARGIN_DEFAULT, 
-        nb_workers: int = NB_WORKERS_DEFAULT, 
+        margin_bottom: int = MARGIN_DEFAULT,
+        margin_left: int = MARGIN_DEFAULT,
+        margin_right: int = MARGIN_DEFAULT,
+        grid: str = GRID_DEFAULT,
+        nb_workers: int = NB_WORKERS_DEFAULT,
         nb_retries: int = NB_RETRIES_DEFAULT,
         landscape: bool = False,
-        grid: bool = False,
         quiet: bool = False,
         **kwargs
     ) -> None:
@@ -55,15 +56,15 @@ class PaperMap(object):
             tile_server (str): Tile server to serve as the base of the paper map. Default: OpenStreetMap
             scale (int): scale of the paper map (in cm). Default: 25000
             size (str): size of the paper map. Default: A4
+            dpi (int): dots per inch. Default: 300
             margin_top (int): top margin (in mm), Default: 12
             margin_bottom (int): bottom margin (in mm), Default: 12
             margin_left (int): left margin (in mm), Default: 12
             margin_right (int): right margin (in mm), Default: 12
-            dpi (int): dots per inch. Default: 300
+            grid (str): coordinate grid to display on the paper map. Default: None
             nb_workers (int): number of workers (for parallelization). Default: 4
             nb_retries (int): number of retries (for failed tiles). Default: 3
             landscape (bool): use landscape orientation. Default: False
-            grid (bool): use a coordinate grid. Default: False
             quiet (bool): activate quiet mode. Default: False
         """
         self.lat = lat
@@ -74,10 +75,10 @@ class PaperMap(object):
         self.margin_bottom = mm_to_px(margin_bottom, self.dpi)
         self.margin_left = mm_to_px(margin_left, self.dpi)
         self.margin_right = mm_to_px(margin_right, self.dpi)
+        self.grid = grid
         self.nb_workers = nb_workers
         self.nb_retries = nb_retries
         self.use_landscape = landscape
-        self.use_grid = grid
         self.quiet_mode = quiet
 
         # get the right tile server
@@ -117,7 +118,8 @@ class PaperMap(object):
         self.im_height = self.height - self.margin_top - self.margin_bottom
 
         # compute the scaled width and height of the image
-        self.im_width_scaled, self.im_height_scaled = compute_scaled_size((self.im_width, self.im_height), self.zoom, self.zoom_scaled)
+        self.im_width_scaled, self.im_height_scaled = compute_scaled_size(
+            (self.im_width, self.im_height), self.zoom, self.zoom_scaled)
 
         # determine the center tile
         self.x_center = lon_to_x(self.lon, self.zoom_scaled)
@@ -159,7 +161,7 @@ class PaperMap(object):
         for nb_retry in count(1):
             # get the unsuccessful tiles
             tiles = [tile for tile in self.tiles if not tile.success]
-            
+
             # break if all tiles successful
             if not tiles:
                 break
@@ -169,10 +171,11 @@ class PaperMap(object):
                 if not self.quiet_mode:
                     raise RuntimeError(f'Could not download {len(tiles)} tiles after {self.nb_retries} retries.')
                 sys.exit()
-            
+
             # download the tiles (parallelalized)
             with ThreadPoolExecutor(max_workers=self.nb_workers) as executor:
-                futures = [executor.submit(self.session.get, self.tile_server['url'].format(s=choice(SERVERS), x=tile.x, y=tile.y, z=tile.z)) for tile in tiles if not tile.success]
+                futures = [executor.submit(self.session.get, self.tile_server['url'].format(
+                    s=choice(SERVERS), x=tile.x, y=tile.y, z=tile.z)) for tile in tiles if not tile.success]
 
                 for tile, future in zip(tiles, futures):
                     try:
@@ -180,7 +183,7 @@ class PaperMap(object):
 
                         if r.status_code == 200:
                             # open the tile image and mark it a success
-                            tile.image = Image.open(BytesIO(r.content)).convert('RGBA')                            
+                            tile.image = Image.open(BytesIO(r.content)).convert('RGBA')
                             tile.success = True
                         else:
                             if not self.quiet_mode:
@@ -201,8 +204,8 @@ class PaperMap(object):
         self.map_image = self.map_image_scaled.resize((self.im_width, self.im_height), Image.LANCZOS)
 
         # add the coordinate grid
-        if self.use_grid:
-            add_grid(self.map_image, GRID_SIZE, self.lat, self.lon, self.scale, self.dpi)
+        if self.grid:
+            add_grid(self.map_image, self.grid, self.grid_size, self.lat, self.lon, self.scale, self.dpi)
 
         # add the attribution and scale to the map
         add_attribution_scale(self.map_image, self.tile_server['attribution'], self.scale)
@@ -235,30 +238,40 @@ def main():
     parser.add_argument('file', type=str, metavar='PATH', help='File path to save the file to')
 
     # optional arguments
-    parser.add_argument('-t', '--tile_server', type=str, default=TILE_SERVER_DEFAULT, choices=TILE_SERVER_CHOICES, help='Tile server to serve as the base of the paper map')
-    parser.add_argument('-sz', '--size', type=str, default=SIZE_DEFAULT, choices=SIZES_CHOICES, help='Size of the paper map')
-    parser.add_argument('-sc', '--scale', type=int, default=SCALE_DEFAULT, metavar='CENTIMETERS', help='Scale of the paper map')
-    parser.add_argument('-mt', '--margin_top', type=int, default=MARGIN_DEFAULT, metavar='MILLIMETERS', help='Top margin')
-    parser.add_argument('-mb', '--margin_bottom', type=int, default=MARGIN_DEFAULT, metavar='MILLIMETERS', help='Bottom margin')
-    parser.add_argument('-ml', '--margin_left', type=int, default=MARGIN_DEFAULT, metavar='MILLIMETERS', help='Left margin')
-    parser.add_argument('-mr', '--margin_right', type=int, default=MARGIN_DEFAULT, metavar='MILLIMETERS', help='Right margin')
+    parser.add_argument('-t', '--tile_server', type=str, default=TILE_SERVER_DEFAULT,
+                        choices=TILE_SERVER_CHOICES, help='Tile server to serve as the base of the paper map')
+    parser.add_argument('-sz', '--size', type=str, default=SIZE_DEFAULT,
+                        choices=SIZES_CHOICES, help='Size of the paper map')
+    parser.add_argument('-sc', '--scale', type=int, default=SCALE_DEFAULT,
+                        metavar='CENTIMETERS', help='Scale of the paper map')
+    parser.add_argument('-mt', '--margin_top', type=int, default=MARGIN_DEFAULT,
+                        metavar='MILLIMETERS', help='Top margin')
+    parser.add_argument('-mb', '--margin_bottom', type=int, default=MARGIN_DEFAULT,
+                        metavar='MILLIMETERS', help='Bottom margin')
+    parser.add_argument('-ml', '--margin_left', type=int, default=MARGIN_DEFAULT,
+                        metavar='MILLIMETERS', help='Left margin')
+    parser.add_argument('-mr', '--margin_right', type=int, default=MARGIN_DEFAULT,
+                        metavar='MILLIMETERS', help='Right margin')
     parser.add_argument('-d', '--dpi', type=int, default=DPI_DEFAULT, metavar='NUMBER', help='Dots per inch')
-    parser.add_argument('-w', '--nb_workers', type=int, default=NB_WORKERS_DEFAULT, metavar='NUMBER', help='Number of workers (for parallelization)')
-    parser.add_argument('-r', '--nb_retries', type=int, default=NB_RETRIES_DEFAULT, metavar='NUMBER', help='Number of retries (for failed tiles)')
-    
+    parser.add_argument('-g', '--grid', type=str, default=GRID_DEFAULT, choices=GRID_CHOICES,
+                        help='Coordinate grid to display on the paper map')
+    parser.add_argument('-w', '--nb_workers', type=int, default=NB_WORKERS_DEFAULT,
+                        metavar='NUMBER', help='Number of workers (for parallelization)')
+    parser.add_argument('-r', '--nb_retries', type=int, default=NB_RETRIES_DEFAULT,
+                        metavar='NUMBER', help='Number of retries (for failed tiles)')
+
     # boolean arguments
     parser.add_argument('-o', '--open', action='store_true', help='Open paper map after generating')
     parser.add_argument('-l', '--landscape', action='store_true', help='Use landscape orientation')
-    parser.add_argument('-g', '--grid', action='store_true', help='Use a coordinate grid')
     parser.add_argument('-q', '--quiet', action='store_true', help='Activate quiet mode')
     parser.add_argument('-v', '--version', action='version', help=f'Display the current version of {NAME}')
-    
+
     parsed, _ = parser.parse_known_args()
     args = vars(parsed)
 
     # initialize the paper map
     pm = PaperMap(**args)
-    
+
     # render it
     pm.render()
 
