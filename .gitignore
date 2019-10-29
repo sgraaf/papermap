@@ -124,3 +124,6 @@ dmypy.json
 
 # vscode
 .vscode/*
+
+# resources
+resources/*
