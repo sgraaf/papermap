@@ -13,3 +13,6 @@ X0 = 155_000  # RD coordinates of Amersfoort
 Y0 = 463_000
 LAT0 = 52.15517440  # WGS84 coordinates of Amersfoort
 LON0 = 5.38720621
+K0 = 0.9996  # scale factor
+E = 0.00669438  # eccentricity (squared)
+E_ = E / (1.0 - E)

@@ -6,7 +6,7 @@ from typing import List, Tuple, Union
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
-from .constants import LAT0, LON0, NAME, X0, Y0, C, R
+from .constants import E_, K0, LAT0, LON0, X0, Y0, C, E, R
 
 
 def constrain_lon(lon: float):
@@ -124,7 +124,7 @@ def dd_to_dms(dd: float) -> Tuple[int, int, float]:
     m, s = divmod(dd * 3600, 60)
     d, m = divmod(m, 60)
     d = d if is_positive else -d
-    return int(d), int(m), round(s, 6)
+    return round(d), round(m), round(s, 6)
 
 
 def dms_to_dd(dms: Tuple[int, int, float]) -> float:
@@ -278,6 +278,10 @@ def wgs84_to_zone_number(lat: float, lon: float):
     return int((lon + 180) / 6) + 1
 
 
+def compute_central_lon(z: int):
+    return (z - 1) * 6 - 180 + 3
+
+
 def wgs84_to_utm(lat: float, lon: float):
     """
     Convert WGS84 coordinate into UTM coordinate
@@ -297,7 +301,7 @@ def wgs84_to_utm(lat: float, lon: float):
 
     # ensure lat is not out of range for conversion
     if not -80.0 <= lat <= 84.0:
-        raise ValueError('Latitude out of range for UTM conversion')
+        raise ValueError(f'Latitude out of range [-80.0, 84.0] for UTM conversion: {lat}')
 
     # get the zone number and letter
     z = wgs84_to_zone_number(lat, lon)
@@ -313,29 +317,77 @@ def wgs84_to_utm(lat: float, lon: float):
     lat_tan = tan(lat_rad)
 
     # compute the lon of the central meridian
-    central_lon_rad = radians((z - 1) * 6 - 180 + 3)
-    
-    # define some constants
-    k0 = 0.9996  # scale factor
-    e = 0.00669438  # eccentricity (squared)
+    central_lon_rad = radians(compute_central_lon(z))
 
     # compute some quantities to be used in further computations
-    e_ = e / (1.0 - e)
-    N = R / sqrt(1 - e * lat_sin ** 2)
+    N = R / sqrt(1 - E * lat_sin ** 2)
     T = lat_tan ** 2
-    C = e_ * lat_cos ** 2
+    C = E_ * lat_cos ** 2
     A = (lon_rad - central_lon_rad) * lat_cos
 
     # compute the true distance to from the equator
-    M = R * ((1 - e / 4 - 3 * e ** 2 / 64 - 5 * e ** 3 / 256) * lat_rad - (3 * e / 8 + 3 * e ** 2 / 32 + 45 * e ** 3 / 1024) *
-             sin(2 * lat_rad) + (15 * e ** 2 / 256 + 45 * e ** 3 / 1024) * sin(4 * lat_rad) - (35 * e ** 3 / 3072) * sin(6 * lat_rad))
+    M = R * ((1 - E / 4 - 3 * E ** 2 / 64 - 5 * E ** 3 / 256) * lat_rad - (3 * E / 8 + 3 * E ** 2 / 32 + 45 * E ** 3 / 1024) *
+             sin(2 * lat_rad) + (15 * E ** 2 / 256 + 45 * E ** 3 / 1024) * sin(4 * lat_rad) - (35 * E ** 3 / 3072) * sin(6 * lat_rad))
 
     # compute the easting (x) and northing (y)
-    x = k0 * N * (A + (1 - T + C) * A ** 3 / 6 + (5 - 18 * T + T ** 2 + 72 * C - 58 * e_) * A ** 5 / 120) + 500000
-    y = k0 * (M + N * lat_tan * (A ** 2 / 2 + (5 - T + 9 * C + 4 * C ** 2) * A **
-                                 4 / 24 + (61 - 58 * T + T ** 2 + 600 * C - 330 * e_) * A ** 6 / 720))
+    x = K0 * N * (A + (1 - T + C) * A ** 3 / 6 + (5 - 18 * T + T ** 2 + 72 * C - 58 * E_) * A ** 5 / 120) + 500000
+    y = K0 * (M + N * lat_tan * (A ** 2 / 2 + (5 - T + 9 * C + 4 * C ** 2) * A **
+                                 4 / 24 + (61 - 58 * T + T ** 2 + 600 * C - 330 * E_) * A ** 6 / 720))
+
+    if lat < 0:
+        y += 10000000
 
     return x, y, z, l
+
+
+def utm_to_wgs84(x: float, y: float, z: int, l: str = None):
+    """
+    Convert UTM coordinate into WGS84 coordinate
+    Based on formulas from (Snyder, 1987)
+    Adapted parts from: https://gist.github.com/twpayne/4409500
+
+    Args:
+        x (float): easting
+        y (float): northing
+        z (int): zone number
+        l (str): zone letter. Default: None
+
+    References:
+        Snyder, J. P. (1987). Map projections -- A working manual (Vol. 1395). US Government Printing Office.
+    """
+    # ensure x and y are not out of range for conversion
+    if not 160000 <= x <= 840000:
+        raise ValueError(f'Easting (x) out of range [160e3, 840e3] for WGS84 conversion: {x}')
+    if not 0 <= y <= 10000000:
+        raise ValueError(f'Northing (y) out of range [0, 10e6] for WGS84 conversion: {y}')
+
+    x -= 500000
+    if l < 'N':
+        y -= 10000000
+
+    # compute some quantities to be used in further computations
+    E1 = (1 - sqrt(1 - E)) / (1 + sqrt(1 - E))
+    M0 = 0
+    M = M0 + y / K0
+    M1 = (1 - E / 4 - 3 * E**2 / 64 - 5 * E**3 / 256)
+    mu = M / (R * M1)
+
+    LON0 = compute_central_lon(z)
+    LAT1 = mu + (3 * E1 / 2 - 27 * E1 ** 3 / 32 + 269 * E1 ** 5 / 512) * sin(2 * mu) + (21 * E1 ** 2 / 16 - 55 * E1 ** 4 / 32) * \
+        sin(4 * mu) + (151 * E1 ** 3 / 96 - 417 * E1 ** 5 / 128) * sin(6 * mu) + (1097 * E1 ** 4 / 512) * sin(8 * mu)
+
+    C1 = E1 * cos(LAT1) ** 2
+    T1 = tan(LAT1) ** 2
+    N1 = R / sqrt(1 - E * sin(LAT1) ** 2)
+    R1 = R * (1 - E) / (1 - E * sin(LAT1) ** 2) ** (3 / 2)
+    D = x / (N1 * K0)
+
+    lat = degrees(LAT1 - (N1 * tan(LAT1) / R1) * (D ** 2 / 2 - (5 + 3 * T1 + 10 * C1 - 4 * C1 ** 2 - 9 * E_)
+                                                  * D ** 4 / 24 + (61 + 90 * T1 + 298 * C1 + 45 * T1 ** 2 - 252 * E_ - 3 * C1 ** 2) * D ** 6 / 720))
+    lon = LON0 + degrees((D - (1 + 2 * T1 + C1) * D ** 3 / 6 + (5 - 2 * C1 + 28 * T1 -
+                                                                3 * C1 ** 2 + 8 * E_ + 24 * T1 ** 2) * D ** 5 / 120) / cos(LAT1))
+
+    return lat, lon
 
 
 def compute_zoom(lat: float, scale: int, dpi: int = 300) -> float:
@@ -525,7 +577,7 @@ def add_attribution_scale(
         color (str): color of the text. Default: 'black'
     """
     draw = ImageDraw.Draw(image)
-    text = f'{attribution}. Scale: 1:{scale}'
+    text = f'{attribution}. Created with PaperMap. Scale: 1:{scale}'
     text_size = draw.textsize(text, font=font)
     if text_size[0] <= image.width:
         draw.rectangle([(image.width - text_size[0], image.height - text_size[1]),
