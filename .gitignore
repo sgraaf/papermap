@@ -127,3 +127,6 @@ dmypy.json
 
 # resources
 resources/*
+
+# maps
+maps/*

@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 from math import atan, cos, degrees, floor, log, pi, radians, sin, sinh, sqrt, tan
-from pathlib import Path
 from typing import List, Tuple, Union
 
-from PIL import Image, ImageDraw, ImageFont, ImageOps
+from PIL import Image, ImageColor, ImageDraw, ImageFont, ImageOps
 
 from .constants import E_, K0, LAT0, LON0, X0, Y0, C, E, R
 
@@ -88,6 +87,32 @@ def y_to_lat(y: Union[float, int], zoom: int) -> float:
     """
     lat = atan(sinh(pi * (1 - 2 * y / (2 ** zoom)))) / pi * 180
     return lat
+
+
+def x_to_px(x: int, x_center: int, width: int, tile_size: int = 256):
+    """
+    Convert x (tile number) to pixel
+    
+    Args:
+        x (int): tile number
+        x_center (int): tile number of center tile
+        width (int): image width in pixels
+        tile_size (int): tile size in pixels
+    """
+    return round(width / 2 - (x_center - x) * tile_size)
+
+
+def y_to_px(y: int, y_center: int, height: int, tile_size: int = 256):
+    """
+    Convert y (tile number) to pixel
+    
+    Args:
+        y (int): tile number
+        y_center (int): tile number of center tile
+        height (int): image height in pixels
+        tile_size (int): tile size in pixels
+    """
+    return round(height / 2 - (y_center - y) * tile_size)
 
 
 def mm_to_px(mm: float, dpi: int = 300) -> int:
@@ -584,3 +609,13 @@ def add_attribution_scale(
                         (image.width, image.height)], fill='white')
         draw.text((image.width - text_size[0], image.height - text_size[1]), text, font=font, fill=color)
     del draw
+
+
+def convert_color(image: Image, color: str):
+    color_rgb = ImageColor.getrgb(color)
+    pixels = image.load()
+
+    for x in range(image.size[0]):
+        for y in range(image.size[1]):
+            if pixels[x, y] != (255, 255, 255, 0):
+                pixels[x, y] = color_rgb + (pixels[x, y][3], )

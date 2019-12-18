@@ -15,7 +15,7 @@ pm.save('Bangkok.pdf')
 
 ### CLI
 ```bash
-papermap 13.75889 100.49722 Bangkok.pdf
+papermap wgs84 13.75889 100.49722 Bangkok.pdf
 ```
 
 ## Installation
@@ -36,7 +36,7 @@ python setup.py install
 ### Package
 #### Create a new PaperMap instance
 ```python
-pm = PaperMap(lat, lon, tile_server, scale, size, dpi, margin_top, margin_bottom, margin_left, margin_right, nb_workers, nb_retries, landscape, grid, quiet)
+pm = PaperMap(lat, lon, tile_server, scale, size, dpi, margin_top, margin_bottom, margin_left, margin_right, grid, nb_workers, nb_retries, landscape, quiet, gpx)
 ```
 
 #### Arguments
@@ -50,27 +50,34 @@ pm = PaperMap(lat, lon, tile_server, scale, size, dpi, margin_top, margin_bottom
     margin_left (int):      left margin (in mm), Default: 12
     margin_right (int):     right margin (in mm), Default: 12
     dpi (int):              dots per inch. Default: 300
+    grid (str):             coordinate grid to display on the paper map. Default: None
     nb_workers (int):       number of workers (for parallelization). Default: 4
     nb_retries (int):       number of retries (for failed tiles). Default: 3
     landscape (bool):       use landscape orientation. Default: False
-    grid (bool):            use a coordinate grid. Default: False
     quiet (bool):           activate quiet mode. Default: False
+    gpx (GPX):              GPX object. Default: None
     
 ### CLI
 ```bash
-papermap [OPTIONS] LAT LON PATH
+papermap [GLOBAL OPTIONS] {wgs84,utm,rd,gpx} [ARGS] PATH
 ```
 
-#### Options
+#### Global Options
     -t, --tile_server {OpenStreetMap,
+    OpenStreetMap Monochrome,
     OpenTopoMap,
     Thunderforest Landscape,
     Thunderforest Outdoors,
     Thunderforest Transport,
-    ESRI Aerial,
+    ESRI Standard,
+    ESRI Satellite,
     ESRI Topo,
+    ESRI Dark Gray,
+    ESRI Light Gray,
+    ESRI Transportation,
     Stamen Terrain,
     Stamen Toner,
+    Stamen Toner Lite,
     Komoot,
     Wikimedia,
     Hike & Bike}                        Tile server to serve as the base of the paper map
@@ -82,13 +89,20 @@ papermap [OPTIONS] LAT LON PATH
     -ml, --margin_left MILLIMETERS      Left margin
     -mr, --margin_right MILLIMETERS     Right margin
     -d, --dpi NUMBER                    Dots per inch
+    -g, --grid {utm, rd}                Coordinate grid to display on the paper map
     -w, --nb_workers NUMBER             Number of workers (for parallelization)
     -r, --nb_retries NUMBER             Number of retries (for failed tiles)
     -o, --open                          Open paper map after generating
     -l, --landscape                     Use landscape orientation
-    -g, --grid                          Use a coordinate grid
     -q, --quiet                         Activate quiet mode
     -v, --version                       Display the current version of PaperMap
-    
-### Licence
+
+### Attribution and alternatives
+PaperMap (and its functionality) draws inspiration from various sources. You can find some of these listed below:
+* [StaticMap](https://github.com/komoot/staticmap), a small, python-based library for creating map images with lines and markers
+* [ScoutingTools.nl](https://scoutingtools.nl/), a Dutch website dedicated to useful tools for scouts (e.g. generating maps)
+* [rijksdriehoek](https://github.com/djvanderlaan/rijksdriehoek), a collection of functions to convert WGS84 coordinates into RD coordinates in various programming languages
+
+
+### License
 PaperMap is open-source and licensed under GNU GPL, Version 3.

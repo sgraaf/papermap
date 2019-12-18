@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+import os
 from collections import OrderedDict
+from pathlib import Path
 
 SCALE_DEFAULT = 25000
 MARGIN_DEFAULT = 12
 DPI_DEFAULT = 300
-NB_WORKERS_DEFAULT = 4
+NB_WORKERS_DEFAULT = os.cpu_count()
 NB_RETRIES_DEFAULT = 3
+TRACK_COLOR_DEFAULT = 'blue'
+WAYPOINT_COLOR_DEFAULT = 'blue'
 
 SIZES_DICT = OrderedDict(
     [
@@ -194,5 +198,7 @@ TILE_SERVERS_DICT = OrderedDict(
 TILE_SERVER_CHOICES = list(TILE_SERVERS_DICT.keys())
 TILE_SERVER_DEFAULT = 'OpenStreetMap'
 
-GRID_CHOICES = ['UTM', 'RD']
+GRID_CHOICES = ['utm', 'rd']
 GRID_DEFAULT = None
+
+MAP_MARKER_FILE = Path(__file__).resolve().parent / 'icons' / 'map_marker.png'
