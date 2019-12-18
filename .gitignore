@@ -121,3 +121,12 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# vscode
+.vscode/*
+
+# resources
+resources/*
+
+# maps
+maps/*
