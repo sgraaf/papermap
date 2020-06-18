@@ -619,3 +619,19 @@ def convert_color(image: Image, color: str):
         for y in range(image.size[1]):
             if pixels[x, y] != (255, 255, 255, 0):
                 pixels[x, y] = color_rgb + (pixels[x, y][3], )
+
+
+def get_string_formatting_arguments(s: str):
+    return [t[1] for t in Formatter().parse(s) if t[1] is not None]
+
+
+def is_out_of_bounds(test: Dict[str, float], bounds: Dict[str, float]) -> bool:
+    if test['lat_min'] < bounds['lat_min']:
+        return True
+    elif test['lon_min'] < bounds['lon_min']:
+        return True
+    elif test['lat_max'] > bounds['lat_max']:
+        return True
+    elif test['lon_max'] > bounds['lat_max']:
+        return True
+    return False

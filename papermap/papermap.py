@@ -144,6 +144,20 @@ class PaperMap(object):
         self.y_min = floor(self.y_center - (0.5 * self.im_height_scaled / TILE_SIZE))
         self.x_max = ceil(self.x_center + (0.5 * self.im_width_scaled / TILE_SIZE))
         self.y_max = ceil(self.y_center + (0.5 * self.im_height_scaled / TILE_SIZE))
+        # compute the coordinate bounds
+        self.bounds = {
+            'lat_min': y_to_lat(self.y_min, self.zoom_scaled),
+            'lon_min': x_to_lon(self.x_min, self.zoom_scaled),
+            'lat_max': y_to_lat(self.y_max, self.zoom_scaled),
+            'lon_max': x_to_lon(self.x_max, self.zoom_scaled)
+        }
+
+        # make sure the gpx tracks / waypoints are not out of bounds
+        if self.gpx is not None:
+            if is_out_of_bounds(self.gpx.bounds, self.bounds):
+                if not self.quiet_mode:
+                    raise ValueError('GPX out of bounds')
+            sys.exit()
 
         self.tiles = []
 
