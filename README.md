@@ -43,6 +43,7 @@ pm = PaperMap(lat, lon, tile_server, scale, size, dpi, margin_top, margin_bottom
     lat (float):            latitude (in DD)
     lon (float):            longitude (in DD)
     tile_server (str):      tile server to serve as the base of the paper map. Default: OpenStreetMap
+    api_key (str):          API key for the chosen tile server (if applicable). Default: None
     scale (int):            scale of the paper map (in cm). Default: 25000
     size (str):             size of the paper map. Default: A4
     margin_top (int):       top margin (in mm), Default: 12
@@ -86,6 +87,7 @@ papermap [GLOBAL OPTIONS] {wgs84,utm,rd,gpx} [ARGS] PATH
     Komoot,
     Wikimedia,
     Hike & Bike}                        Tile server to serve as the base of the paper map
+    -a, --api_key                       API key for the chosen tile server (if applicable)
     -sz, --size {A0,A1,A2,A3,
     A4,A5,A6,A7,Letter,Legal}           Size of the paper map
     -sc, --scale CENTIMETERS            Scale of the paper map
@@ -102,11 +104,14 @@ papermap [GLOBAL OPTIONS] {wgs84,utm,rd,gpx} [ARGS] PATH
     -q, --quiet                         Activate quiet mode
     -v, --version                       Display the current version of PaperMap
 
+For a visual reference of the different tile servers at your disposal, please refer to [`example.pdf`](https://github.com/sgraaf/papermap/blob/master/example.pdf).
+
 ### Attribution and alternatives
 PaperMap (and its functionality) draws inspiration from various sources. You can find some of these listed below:
 * [StaticMap](https://github.com/komoot/staticmap), a small, python-based library for creating map images with lines and markers
 * [ScoutingTools.nl](https://scoutingtools.nl/), a Dutch website dedicated to useful tools for scouts (e.g. generating maps)
 * [rijksdriehoek](https://github.com/djvanderlaan/rijksdriehoek), a collection of functions to convert WGS84 coordinates into RD coordinates in various programming languages
+* [Movable Type](https://www.movable-type.co.uk/scripts/latlong.html), a collection of calculations and code relevant to WGS84 coordinates
 
 
 ### License
