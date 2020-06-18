@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from math import atan, cos, degrees, floor, log, pi, radians, sin, sinh, sqrt, tan
-from typing import List, Tuple, Union
+from math import (asin, atan, atan2, cos, degrees, floor, log, pi, radians,
+                  sin, sinh, sqrt, tan)
+from string import Formatter
+from typing import Dict, List, Tuple, Union
 
 from PIL import Image, ImageColor, ImageDraw, ImageFont, ImageOps
 
 from .constants import E_, K0, LAT0, LON0, X0, Y0, C, E, R
 
 
-def constrain_lon(lon: float):
+def constrain_lon(lon: float) -> float:
     """
     Constrains longitude to [-180, 180] range
 
@@ -18,7 +20,7 @@ def constrain_lon(lon: float):
     return (lon + 180) % 360 - 180
 
 
-def constrain_lat(lat: float):
+def constrain_lat(lat: float) -> float:
     """
     Constrains latitude to [-90, 90] range
 
@@ -40,7 +42,7 @@ def lon_to_x(lon: float, zoom: int) -> float:
     lon = constrain_lon(lon)
 
     # convert lon to [0, 1] range
-    x = ((lon + 180.0) / 360) * 2 ** zoom
+    x = ((lon + 180.0) / 360) * 2**zoom
 
     return x
 
@@ -53,7 +55,7 @@ def x_to_lon(x: Union[float, int], zoom: int) -> float:
         x (float / int): tile number
         zoom (int): zoom level
     """
-    lon = x / (2 ** zoom) * 360 - 180
+    lon = x / (2**zoom) * 360 - 180
     return lon
 
 
@@ -69,10 +71,10 @@ def lat_to_y(lat: float, zoom: int) -> float:
     lat = constrain_lat(lat)
 
     # convert lat to radians
-    lat_rad = radians(lat)
+    φ = radians(lat)
 
     # convert lat to [0, 1] range
-    y = ((1 - log(tan(lat_rad) + 1 / cos(lat_rad)) / pi) / 2) * 2 ** zoom
+    y = ((1 - log(tan(φ) + 1 / cos(φ)) / pi) / 2) * 2**zoom
 
     return y
 
@@ -85,14 +87,14 @@ def y_to_lat(y: Union[float, int], zoom: int) -> float:
         y (float / int): tile number
         zoom (int): zoom level
     """
-    lat = atan(sinh(pi * (1 - 2 * y / (2 ** zoom)))) / pi * 180
+    lat = atan(sinh(pi * (1 - 2 * y / (2**zoom)))) / pi * 180
     return lat
 
 
-def x_to_px(x: int, x_center: int, width: int, tile_size: int = 256):
+def x_to_px(x: int, x_center: int, width: int, tile_size: int = 256) -> int:
     """
     Convert x (tile number) to pixel
-    
+
     Args:
         x (int): tile number
         x_center (int): tile number of center tile
@@ -102,10 +104,10 @@ def x_to_px(x: int, x_center: int, width: int, tile_size: int = 256):
     return round(width / 2 - (x_center - x) * tile_size)
 
 
-def y_to_px(y: int, y_center: int, height: int, tile_size: int = 256):
+def y_to_px(y: int, y_center: int, height: int, tile_size: int = 256) -> int:
     """
     Convert y (tile number) to pixel
-    
+
     Args:
         y (int): tile number
         y_center (int): tile number of center tile
@@ -163,6 +165,99 @@ def dms_to_dd(dms: Tuple[int, int, float]) -> float:
     return d + m / 60 + s / 3600
 
 
+def great_circle_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """
+    Calculate the great-circle distance (in m) between two coordinates (in dd)
+    Adapted from: https://www.movable-type.co.uk/scripts/latlong.html
+
+    Args:
+        lon1 (float): the longitude of the first coordinate (in dd)
+        lat1 (float): the latitude of the first coordinate (in dd)
+        lon2 (float): the longitude of the second coordinate (in dd)
+        lat2 (float): the latitude of the second coordinate (in dd)
+
+    Returns:
+        The great-circle distance (in m) between the two coordinates.
+    """
+    # convert dd to radians
+    Δλ = radians(lon2 - lon1)
+    Δφ = radians(lat2 - lat1)
+    φ1 = radians(lat1)
+    φ2 = radians(lat2)
+
+    # haversine formula
+    a = sin(Δφ / 2)**2 + cos(φ1) * cos(φ2) * sin(Δλ / 2)**2
+    c = 2 * asin(sqrt(a))
+    return round(R * c, 3)
+
+
+def initial_bearing(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """
+    Calculate the (initial) bearing (in degrees) between two coordinates (in dd)
+    Adapted from: https://www.movable-type.co.uk/scripts/latlong.html
+
+    Args:
+        lon1 (float): the longitude of the first coordinate (in dd)
+        lat1 (float): the latitude of the first coordinate (in dd)
+        lon2 (float): the longitude of the second coordinate (in dd)
+        lat2 (float): the latitude of the second coordinate (in dd)
+
+    Returns:
+        The (initial) bearing (in degrees) between the two coordinates.
+    """
+    # convert dd to radians
+    Δλ = radians(lon2 - lon1)
+    φ1 = radians(lat1)
+    φ2 = radians(lat2)
+
+    # forward azimuth (in radians)
+    x = cos(φ1) * sin(φ2) - sin(φ1) * cos(φ2) * cos(Δλ)
+    y = sin(Δλ) * cos(φ2)
+    θ = atan2(y, x)
+
+    # convert radians to dd
+    bearing = degrees(θ)
+
+    return bearing
+
+
+def destination_coordinate(lat1: float, lon1: float, distance: int, bearing: float) -> Tuple[float, float]:
+    """
+    Calculate the destination coordinate from a given initial coordinate, having 
+    travelled the given distance on the given initial bearing.
+    Adapted from: https://www.movable-type.co.uk/scripts/latlong.html
+
+    Args:
+        lat1 (float): the latitude of the initial coordinate (in dd)
+        lon1 (float): the longitude of the initial coordinate (in dd)
+        distance (int): the distance travelled (in m)
+        bearing (float): the initial bearing (in dd)
+
+    Returns:
+        the coordinates in (lat, lon) of the destination.
+    """
+    # convert latitude, longitude and bearing to radians
+    φ1 = radians(lat1)
+    λ1 = radians(lon1)
+    θ = radians(bearing)
+
+    # compute the angular distance (in radians)
+    δ = distance / R
+
+    # compute the latitude and longitude (in radians)
+    φ2 = asin(sin(φ1) * cos(δ) + cos(φ1) * sin(δ) * cos(θ))
+    λ2 = λ1 + atan2(sin(θ) * sin(δ) * cos(φ1), cos(δ) - sin(φ1) * sin(φ2))
+
+    # convert radians to dd
+    lat_2 = degrees(φ2)
+    lon_2 = degrees(λ2)
+
+    # constrain lon to [180, 180] range
+    lon_2 = constrain_lon(lon_2)
+
+    return lat_2, lon_2
+
+
 def wgs84_to_rd(lat: float, lon: float) -> Tuple[float, float]:
     """
     Convert WGS84 coordinate into RD coordinate
@@ -211,10 +306,10 @@ def wgs84_to_rd(lat: float, lon: float) -> Tuple[float, float]:
     y = Y0
 
     for p, q, r in pqr:
-        x += r * dlat ** p * dlon ** q
+        x += r * dlat**p * dlon**q
 
     for p, q, s in pqs:
-        y += s * dlat ** p * dlon ** q
+        y += s * dlat**p * dlon**q
 
     return x, y
 
@@ -271,10 +366,10 @@ def rd_to_wgs84(x, y):
     lon = LON0
 
     for p, q, k in pqk:
-        lat += k * dx ** p * dy ** q / 3600
+        lat += k * dx**p * dy**q / 3600
 
     for p, q, l in pql:
-        lon += l * dx ** p * dy ** q / 3600
+        lon += l * dx**p * dy**q / 3600
 
     return lat, lon
 
@@ -326,38 +421,40 @@ def wgs84_to_utm(lat: float, lon: float):
 
     # ensure lat is not out of range for conversion
     if not -80.0 <= lat <= 84.0:
-        raise ValueError(f'Latitude out of range [-80.0, 84.0] for UTM conversion: {lat}')
+        raise ValueError(
+            f'Latitude out of range [-80.0, 84.0] for UTM conversion: {lat}')
 
     # get the zone number and letter
     z = wgs84_to_zone_number(lat, lon)
     l = 'CDEFGHJKLMNPQRSTUVWXX'[int((lat + 80) / 8)]
 
     # convert lat and lon to radians
-    lat_rad = radians(lat)
-    lon_rad = radians(lon)
+    φ = radians(lat)
+    λ = radians(lon)
 
     # compute sin, cos and tan of lat to be used in further computations
-    lat_sin = sin(lat_rad)
-    lat_cos = cos(lat_rad)
-    lat_tan = tan(lat_rad)
+    φ_sin = sin(φ)
+    φ_cos = cos(φ)
+    φ_tan = tan(φ)
 
     # compute the lon of the central meridian
-    central_lon_rad = radians(compute_central_lon(z))
+    central_λ = radians(compute_central_lon(z))
 
     # compute some quantities to be used in further computations
-    N = R / sqrt(1 - E * lat_sin ** 2)
-    T = lat_tan ** 2
-    C = E_ * lat_cos ** 2
-    A = (lon_rad - central_lon_rad) * lat_cos
+    N = R / sqrt(1 - E * φ_sin**2)
+    T = φ_tan**2
+    C = E_ * φ_cos**2
+    A = (λ - central_λ) * φ_cos
 
     # compute the true distance to from the equator
-    M = R * ((1 - E / 4 - 3 * E ** 2 / 64 - 5 * E ** 3 / 256) * lat_rad - (3 * E / 8 + 3 * E ** 2 / 32 + 45 * E ** 3 / 1024) *
-             sin(2 * lat_rad) + (15 * E ** 2 / 256 + 45 * E ** 3 / 1024) * sin(4 * lat_rad) - (35 * E ** 3 / 3072) * sin(6 * lat_rad))
+    M = R * ((1 - E / 4 - 3 * E**2 / 64 - 5 * E**3 / 256) * φ - (3 * E / 8 + 3 * E**2 / 32 + 45 * E**3 / 1024)
+             * sin(2 * φ) + (15 * E**2 / 256 + 45 * E**3 / 1024) * sin(4 * φ) - (35 * E**3 / 3072) * sin(6 * φ))
 
     # compute the easting (x) and northing (y)
-    x = K0 * N * (A + (1 - T + C) * A ** 3 / 6 + (5 - 18 * T + T ** 2 + 72 * C - 58 * E_) * A ** 5 / 120) + 500000
-    y = K0 * (M + N * lat_tan * (A ** 2 / 2 + (5 - T + 9 * C + 4 * C ** 2) * A **
-                                 4 / 24 + (61 - 58 * T + T ** 2 + 600 * C - 330 * E_) * A ** 6 / 720))
+    x = K0 * N * (A + (1 - T + C) * A**3 / 6 + (5 - 18 * T +
+                                                T**2 + 72 * C - 58 * E_) * A**5 / 120) + 500000
+    y = K0 * (M + N * φ_tan * (A**2 / 2 + (5 - T + 9 * C + 4 * C**2) * A **
+                               4 / 24 + (61 - 58 * T + T**2 + 600 * C - 330 * E_) * A**6 / 720))
 
     if lat < 0:
         y += 10000000
@@ -382,9 +479,11 @@ def utm_to_wgs84(x: float, y: float, z: int, l: str = None):
     """
     # ensure x and y are not out of range for conversion
     if not 160000 <= x <= 840000:
-        raise ValueError(f'Easting (x) out of range [160e3, 840e3] for WGS84 conversion: {x}')
+        raise ValueError(
+            f'Easting (x) out of range [160e3, 840e3] for WGS84 conversion: {x}')
     if not 0 <= y <= 10000000:
-        raise ValueError(f'Northing (y) out of range [0, 10e6] for WGS84 conversion: {y}')
+        raise ValueError(
+            f'Northing (y) out of range [0, 10e6] for WGS84 conversion: {y}')
 
     x -= 500000
     if l < 'N':
@@ -395,22 +494,29 @@ def utm_to_wgs84(x: float, y: float, z: int, l: str = None):
     M0 = 0
     M = M0 + y / K0
     M1 = (1 - E / 4 - 3 * E**2 / 64 - 5 * E**3 / 256)
-    mu = M / (R * M1)
+    μ = M / (R * M1)
 
-    LON0 = compute_central_lon(z)
-    LAT1 = mu + (3 * E1 / 2 - 27 * E1 ** 3 / 32 + 269 * E1 ** 5 / 512) * sin(2 * mu) + (21 * E1 ** 2 / 16 - 55 * E1 ** 4 / 32) * \
-        sin(4 * mu) + (151 * E1 ** 3 / 96 - 417 * E1 ** 5 / 128) * sin(6 * mu) + (1097 * E1 ** 4 / 512) * sin(8 * mu)
+    λ0 = radians(compute_central_lon(z))
+    φ1 = μ + (3 * E1 / 2 - 27 * E1**3 / 32 + 269 * E1**5 / 512) * sin(2 * μ) \
+        + (21 * E1**2 / 16 - 55 * E1**4 / 32) * sin(4 * μ) \
+        + (151 * E1**3 / 96 - 417 * E1**5 / 128) * sin(6 * μ) \
+        + (1097 * E1**4 / 512) * sin(8 * μ)
 
-    C1 = E1 * cos(LAT1) ** 2
-    T1 = tan(LAT1) ** 2
-    N1 = R / sqrt(1 - E * sin(LAT1) ** 2)
-    R1 = R * (1 - E) / (1 - E * sin(LAT1) ** 2) ** (3 / 2)
+    C1 = E1 * cos(φ1)**2
+    T1 = tan(φ1)**2
+    N1 = R / sqrt(1 - E * sin(φ1)**2)
+    R1 = R * (1 - E) / (1 - E * sin(φ1)**2)**(3 / 2)
     D = x / (N1 * K0)
 
-    lat = degrees(LAT1 - (N1 * tan(LAT1) / R1) * (D ** 2 / 2 - (5 + 3 * T1 + 10 * C1 - 4 * C1 ** 2 - 9 * E_)
-                                                  * D ** 4 / 24 + (61 + 90 * T1 + 298 * C1 + 45 * T1 ** 2 - 252 * E_ - 3 * C1 ** 2) * D ** 6 / 720))
-    lon = LON0 + degrees((D - (1 + 2 * T1 + C1) * D ** 3 / 6 + (5 - 2 * C1 + 28 * T1 -
-                                                                3 * C1 ** 2 + 8 * E_ + 24 * T1 ** 2) * D ** 5 / 120) / cos(LAT1))
+    # compute lat and lon in radians
+    φ = φ1 - (N1 * tan(φ1) / R1) * (D**2 / 2 - (5 + 3 * T1 + 10 * C1 - 4 * C1**2 - 9 * E_) *
+                                    D**4 / 24 + (61 + 90 * T1 + 298 * C1 + 45 * T1**2 - 252 * E_ - 3 * C1**2) * D**6 / 720)
+    λ = λ0 + (D - (1 + 2 * T1 + C1) * D**3 / 6 + (5 - 2 * C1 + 28 *
+                                                  T1 - 3 * C1**2 + 8 * E_ + 24 * T1**2) * D**5 / 120) / cos(φ1)
+
+    # convert to degrees
+    lat = degrees(φ)
+    lon = degrees(λ)
 
     return lat, lon
 
@@ -424,8 +530,12 @@ def compute_zoom(lat: float, scale: int, dpi: int = 300) -> float:
         scale (int): the scale (in cm)
         dpi (int): dots per inch. Default: 300
     """
+    # convert lat to radians
+    φ = radians(lat)
+
+    # compute the zoom level
     scale_px = scale * 25.4 / (1000 * dpi)
-    zoom = log(C * cos(radians(lat)) / scale_px, 2) - 8
+    zoom = log(C * cos(φ) / scale_px, 2) - 8
     return zoom, floor(zoom)
 
 
@@ -438,7 +548,11 @@ def compute_scale(lat: float, zoom: int, dpi: int = 300) -> float:
         zoom (int): the zoom level
         dpi (int): dots per inch. Default: 300
     """
-    scale_px = C * cos(radians(lat)) / 2 ** (zoom + 8)
+    # convert lat to radians
+    φ = radians(lat)
+
+    # compute the scale
+    scale_px = C * cos(φ) / 2**(zoom + 8)
     scale = scale_px * dpi * 1000 / 25.4
     return scale
 
@@ -453,7 +567,7 @@ def compute_scaled_size(size: Tuple[int, int], zoom: float, zoom_scaled: int) ->
         zoom_scaled (int) rounded-down zoom level
     """
     # compute the resize factor
-    resize_factor = 2 ** zoom_scaled / 2 ** zoom
+    resize_factor = 2**zoom_scaled / 2**zoom
 
     # compute the new height and width
     width, height = size
@@ -476,13 +590,13 @@ def compute_grid_coordinates(
     Computes the coordinates (and labels) for the RD grid
 
     Args:
-    image (PIL.Image): image to compute the grid coordinates (and labels) for
-    grid (str): coordinate grid to add to the image
-    grid_size (int): size of the grid (in px)
-    lat (float): latitude
-    lon (float): longitude
-    scale (int): scale of the map
-    dpi (int): dots per inch. Default: 300
+        image (PIL.Image): image to compute the grid coordinates (and labels) for
+        grid (str): coordinate grid to add to the image
+        grid_size (int): size of the grid (in px)
+        lat (float): latitude
+        lon (float): longitude
+        scale (int): scale of the map
+        dpi (int): dots per inch. Default: 300
     """
     # convert WGS84 coordinate (lat, lon) into UTM/RD coordinate (x, y)
     if grid == 'UTM':
@@ -554,7 +668,8 @@ def add_grid(
         color (str): color of the grid lines. Default: 'black'
     """
     # get grid coordinates
-    x_grid, y_grid = compute_grid_coordinates(image, grid, grid_size, lat, lon, scale, dpi)
+    x_grid, y_grid = compute_grid_coordinates(
+        image, grid, grid_size, lat, lon, scale, dpi)
 
     draw = ImageDraw.Draw(image)
 
@@ -565,7 +680,8 @@ def add_grid(
 
         # draw grid label
         text_size = draw.textsize(label, font=font)
-        draw.rectangle([(x - text_size[0] / 2, 0), (x + text_size[0] / 2, text_size[1])], fill='white')
+        draw.rectangle([(x - text_size[0] / 2, 0),
+                        (x + text_size[0] / 2, text_size[1])], fill='white')
         draw.text((x - text_size[0] / 2, 0), label, font=font, fill=color)
 
     # draw horizontal grid lines
@@ -605,9 +721,13 @@ def add_attribution_scale(
     text = f'{attribution}. Created with PaperMap. Scale: 1:{scale}'
     text_size = draw.textsize(text, font=font)
     if text_size[0] <= image.width:
-        draw.rectangle([(image.width - text_size[0], image.height - text_size[1]),
-                        (image.width, image.height)], fill='white')
-        draw.text((image.width - text_size[0], image.height - text_size[1]), text, font=font, fill=color)
+        draw.rectangle(
+            [(image.width - text_size[0], image.height -
+              text_size[1]), (image.width, image.height)],
+            fill='white'
+        )
+        draw.text(
+            (image.width - text_size[0], image.height - text_size[1]), text, font=font, fill=color)
     del draw
 
 

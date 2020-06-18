@@ -49,7 +49,12 @@ class Track(object):
 
 class GPX(object):
 
-    def __init__(self, gpx_file: str, track_color: str = TRACK_COLOR_DEFAULT, waypoint_color: str = WAYPOINT_COLOR_DEFAULT) -> None:
+    def __init__(
+        self,
+        gpx_file: str,
+        track_color: str = TRACK_COLOR_DEFAULT,
+        waypoint_color: str = WAYPOINT_COLOR_DEFAULT
+    ) -> None:
         self._gpx_file = Path(gpx_file)
         self._track_color = track_color
         self._waypoint_color = waypoint_color
@@ -64,7 +69,8 @@ class GPX(object):
 
     def _parse(self) -> None:
         # parse the gpx file
-        tree = etree.parse(str(self._gpx_file))  # lxml doesn't support pathlib.Path objects (yet)
+        # lxml doesn't support pathlib.Path objects (yet)
+        tree = etree.parse(str(self._gpx_file))
         root = tree.getroot()
 
         # get the NSMAP
@@ -90,8 +96,10 @@ class GPX(object):
 
         # compute the center coordinates
         self.center = (
-            (self.bounds['lat_max'] - self.bounds['lat_min']) / 2 + self.bounds['lat_min'],
-            (self.bounds['lon_max'] - self.bounds['lon_min']) / 2 + self.bounds['lon_min']
+            (self.bounds['lat_max'] - self.bounds['lat_min']) /
+            2 + self.bounds['lat_min'],
+            (self.bounds['lon_max'] - self.bounds['lon_min']) /
+            2 + self.bounds['lon_min']
         )
 
     def render_tracks(self, image: Image, center_coord: Tuple[int, int], zoom: int, dpi: int = 300, tile_size: int = 256, antialias: int = 4, width: int = 5):
@@ -100,18 +108,21 @@ class GPX(object):
         antialias_height = im_height * antialias
         im_x_center, im_y_center = center_coord
 
-        lines_image = Image.new('RGBA', (antialias_width, antialias_height), (255, 0, 0, 0))
+        lines_image = Image.new(
+            'RGBA', (antialias_width, antialias_height), (255, 0, 0, 0))
         draw = ImageDraw.Draw(lines_image)
 
         # render the tracks
         for track in self.tracks:
             points_px = [(x_to_px(lon_to_x(point[1], zoom), im_x_center, image.width, tile_size) * antialias, y_to_px(
                 lat_to_y(point[0], zoom), im_y_center, image.height, tile_size) * antialias) for point in track.points]
-            draw.line(points_px, fill=self._track_color, width=width * antialias, joint='curve')
+            draw.line(points_px, fill=self._track_color,
+                      width=width * antialias, joint='curve')
 
         # resize the lines_image
         del draw
-        lines_image = lines_image.resize((im_width, im_height), Image.ANTIALIAS)
+        lines_image = lines_image.resize(
+            (im_width, im_height), Image.ANTIALIAS)
 
         # paste the lines_image onto the base image
         image.paste(lines_image, (0, 0), lines_image)
@@ -126,8 +137,8 @@ class GPX(object):
 
         # render the waypoints
         for waypoint in self.waypoints:
-            point_px = (x_to_px(lon_to_x(waypoint.lon, zoom), im_x_center, image.width, tile_size),
-                        y_to_px(lat_to_y(waypoint.lat, zoom), im_y_center, image.height, tile_size))
+            point_px = (x_to_px(lon_to_x(waypoint.lon, zoom), im_x_center, image.width, tile_size), y_to_px(
+                lat_to_y(waypoint.lat, zoom), im_y_center, image.height, tile_size))
             box = (
                 round(point_px[0] - map_marker_im.width / 2),
                 round(point_px[1] - map_marker_im.height)

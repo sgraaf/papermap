@@ -3,10 +3,12 @@ import unittest
 
 from papermap import PaperMap
 from papermap.utils import (compute_scale, compute_zoom, constrain_lat,
-                            constrain_lon, dd_to_dms, dms_to_dd, lat_to_y,
-                            lon_to_x, mm_to_px, px_to_mm, rd_to_wgs84,
-                            utm_to_wgs84, wgs84_to_rd, wgs84_to_utm,
-                            wgs84_to_zone_number, x_to_lon, y_to_lat)
+                            constrain_lon, dd_to_dms, destination_coordinate,
+                            dms_to_dd, great_circle_distance, initial_bearing,
+                            lat_to_y, lon_to_x, mm_to_px, px_to_mm,
+                            rd_to_wgs84, utm_to_wgs84, wgs84_to_rd,
+                            wgs84_to_utm, wgs84_to_zone_number, x_to_lon,
+                            y_to_lat)
 
 
 class TestUtils(unittest.TestCase):
@@ -44,7 +46,7 @@ class TestUtils(unittest.TestCase):
             y = lat_to_y(lat, zoom)
             l = y_to_lat(y, zoom)
             self.assertAlmostEqual(lat, l, places=5)
-    
+
     def test_lon_x_conversion(self):
         for _ in range(20):
             lon = random.uniform(-180, 180)
@@ -78,6 +80,19 @@ class TestUtils(unittest.TestCase):
             lat_, lon_ = utm_to_wgs84(x, y, z, l)
             self.assertAlmostEqual(lat, lat_, places=4)
             self.assertAlmostEqual(lon, lon_, places=4)
+
+    def test_great_circle_distance_bearing_conversion(self):
+        for _ in range(20):
+            lat1 = random.uniform(-80, 84)
+            lon1 = random.uniform(-180, 180)
+            lat2 = random.uniform(-80, 84)
+            lon2 = random.uniform(-180, 180)
+            distance = great_circle_distance(lat1, lon1, lat2, lon2)
+            bearing = initial_bearing(lat1, lon1, lat2, lon2)
+            lat2_, lon2_ = destination_coordinate(
+                lat1, lon1, distance, bearing)
+            self.assertAlmostEqual(lat2, lat2_, places=4)
+            self.assertAlmostEqual(lon2, lon2_, places=4)
 
 
 if __name__ == '__main__':
