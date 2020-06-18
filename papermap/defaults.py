@@ -4,6 +4,7 @@ import os
 from collections import OrderedDict
 from pathlib import Path
 
+API_KEY_DEFAULT = None
 SCALE_DEFAULT = 25000
 MARGIN_DEFAULT = 12
 DPI_DEFAULT = 300
@@ -62,7 +63,7 @@ TILE_SERVERS_DICT = OrderedDict(
             'Thunderforest Landscape',
             {
                 'attribution': 'Map data: © OpenStreetMap contributors',
-                'url': 'https://{s}.tile.thunderforest.com/landscape/{z}/{x}/{y}.png',
+                'url': 'https://{ss}.tile.thunderforest.com/landscape/{z}/{x}/{y}.png?apikey={a}',
                 'zoom_min': 0,
                 'zoom_max': 22,
             }
@@ -71,7 +72,7 @@ TILE_SERVERS_DICT = OrderedDict(
             'Thunderforest Outdoors',
             {
                 'attribution': 'Map data: © OpenStreetMap contributors',
-                'url': 'https://{s}.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png',
+                'url': 'https://{ss}.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey={a}',
                 'zoom_min': 0,
                 'zoom_max': 22,
             }
@@ -80,7 +81,7 @@ TILE_SERVERS_DICT = OrderedDict(
             'Thunderforest Transport',
             {
                 'attribution': 'Map data: © OpenStreetMap contributors',
-                'url': 'https://{s}.tile.thunderforest.com/transport/{z}/{x}/{y}.png',
+                'url': 'https://{ss}.tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey={a}',
                 'zoom_min': 0,
                 'zoom_max': 22,
             }

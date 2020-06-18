@@ -22,8 +22,10 @@ from .defaults import *
 from .gpx import GPX
 from .tile import Tile
 from .utils import (add_attribution_scale, add_grid, compute_scale,
-                    compute_scaled_size, compute_zoom, lat_to_y, lon_to_x,
-                    mm_to_px, utm_to_wgs84, rd_to_wgs84)
+                    compute_scaled_size, compute_zoom,
+                    get_string_formatting_arguments, is_out_of_bounds,
+                    lat_to_y, lon_to_x, mm_to_px, rd_to_wgs84, utm_to_wgs84,
+                    x_to_lon, y_to_lat)
 
 
 class PaperMap(object):
@@ -33,6 +35,7 @@ class PaperMap(object):
         lat: float,
         lon: float,
         tile_server: str = TILE_SERVER_DEFAULT,
+        api_key: str = API_KEY_DEFAULT,
         scale: int = SCALE_DEFAULT,
         size: str = SIZE_DEFAULT,
         dpi: int = DPI_DEFAULT,
@@ -55,6 +58,7 @@ class PaperMap(object):
             lat (float): latitude
             lon (float): longitude
             tile_server (str): Tile server to serve as the base of the paper map. Default: OpenStreetMap
+            api_key (str): API key for the chosen tile server (if applicable). Default: None
             scale (int): scale of the paper map (in cm). Default: 25000
             size (str): size of the paper map. Default: A4
             dpi (int): dots per inch. Default: 300
@@ -90,6 +94,13 @@ class PaperMap(object):
         except KeyError:
             if not self.quiet_mode:
                 raise ValueError(f'Invalid tile server. Please choose one of {TILE_SERVER_CHOICES}')
+            sys.exit()
+
+        # evaluate whether an API key is provided (if needed)
+        if 'a' in get_string_formatting_arguments(self.tile_server['url']) and self.api_key is None:
+            if not self.quiet_mode:
+                raise ValueError(
+                    f'No API key specified for {tile_server} tile server')
             sys.exit()
 
         # get the paper size
@@ -177,13 +188,11 @@ class PaperMap(object):
 
             # download the tiles (parallelalized)
             with ThreadPoolExecutor(max_workers=self.nb_workers) as executor:
-                futures = [executor.submit(self.session.get, self.tile_server['url'].format(
-                    s=choice(SERVERS), x=tile.x, y=tile.y, z=tile.z)) for tile in tiles if not tile.success]
+                responses = executor.map(self.session.get, [self.tile_server['url'].format(si=choice(SERVERS_I), ss=choice(
+                    SERVERS_S), x=tile.x, y=tile.y, z=tile.z, a=self.api_key) for tile in tiles if not tile.success])
 
-                for tile, future in zip(tiles, futures):
+                for tile, r in zip(tiles, responses):
                     try:
-                        r = future.result()
-
                         if r.status_code == 200:
                             # open the tile image and mark it a success
                             tile.image = Image.open(BytesIO(r.content)).convert('RGBA')
@@ -253,6 +262,8 @@ def main():
     parser.add_argument('file', type=str, metavar='PATH', help='File path to save the paper map to')
     parser.add_argument('-t', '--tile_server', type=str, default=TILE_SERVER_DEFAULT,
                         choices=TILE_SERVER_CHOICES, help='Tile server to serve as the base of the paper map')
+    parser.add_argument('-a', '--api_key', type=str, default=API_KEY_DEFAULT,
+                        metavar='KEY', help='API key for the chosen tile server (if applicable)')
     parser.add_argument('-sz', '--size', type=str, default=SIZE_DEFAULT,
                         choices=SIZES_CHOICES, help='Size of the paper map')
     parser.add_argument('-sc', '--scale', type=int, default=SCALE_DEFAULT,
