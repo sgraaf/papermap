@@ -32,10 +32,10 @@ class Track(object):
         self.points = [(float(point.xpath('@lat')[0]), float(point.xpath('@lon')[0]))
                        for point in trk.xpath('gpx:trkseg/gpx:trkpt', namespaces=NSMAP)]
         self.bounds = {
-            'min_lat': min(point[0] for point in self.points),
-            'min_lon': min(point[1] for point in self.points),
-            'max_lat': max(point[0] for point in self.points),
-            'max_lon': max(point[1] for point in self.points)
+            'lat_min': min(point[0] for point in self.points),
+            'lon_min': min(point[1] for point in self.points),
+            'lat_max': max(point[0] for point in self.points),
+            'lon_max': max(point[1] for point in self.points)
         }
 
         try:
@@ -44,7 +44,7 @@ class Track(object):
             self.name = None
 
     def __repr__(self):
-        return f'Track(({self.bounds["min_lat"]:.5f}, {self.bounds["min_lon"]:.5f}), ({self.bounds["max_lat"]:.5f}, {self.bounds["max_lon"]:.5f}))'
+        return f'Track(({self.bounds["lat_min"]:.5f}, {self.bounds["lon_min"]:.5f}), ({self.bounds["lat_max"]:.5f}, {self.bounds["lon_max"]:.5f}))'
 
 
 class GPX(object):
@@ -82,16 +82,16 @@ class GPX(object):
 
         # compute the bounds
         self.bounds = {
-            'min_lat': min([trk.bounds['min_lat'] for trk in self.tracks] + [wpt.lat for wpt in self.waypoints]),
-            'min_lon': min([trk.bounds['min_lon'] for trk in self.tracks] + [wpt.lon for wpt in self.waypoints]),
-            'max_lat': max([trk.bounds['max_lat'] for trk in self.tracks] + [wpt.lat for wpt in self.waypoints]),
-            'max_lon': max([trk.bounds['max_lon'] for trk in self.tracks] + [wpt.lon for wpt in self.waypoints])
+            'lat_min': min([trk.bounds['lat_min'] for trk in self.tracks] + [wpt.lat for wpt in self.waypoints]),
+            'lon_min': min([trk.bounds['lon_min'] for trk in self.tracks] + [wpt.lon for wpt in self.waypoints]),
+            'lat_max': max([trk.bounds['lat_max'] for trk in self.tracks] + [wpt.lat for wpt in self.waypoints]),
+            'lon_max': max([trk.bounds['lon_max'] for trk in self.tracks] + [wpt.lon for wpt in self.waypoints])
         }
 
         # compute the center coordinates
         self.center = (
-            (self.bounds['max_lat'] - self.bounds['min_lat']) / 2 + self.bounds['min_lat'],
-            (self.bounds['max_lon'] - self.bounds['min_lon']) / 2 + self.bounds['min_lon']
+            (self.bounds['lat_max'] - self.bounds['lat_min']) / 2 + self.bounds['lat_min'],
+            (self.bounds['lon_max'] - self.bounds['lon_min']) / 2 + self.bounds['lon_min']
         )
 
     def render_tracks(self, image: Image, center_coord: Tuple[int, int], zoom: int, dpi: int = 300, tile_size: int = 256, antialias: int = 4, width: int = 5):
