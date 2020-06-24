@@ -10,14 +10,33 @@ from PIL import Image, ImageColor, ImageDraw, ImageFont, ImageOps
 from .constants import E_, K0, LAT0, LON0, X0, Y0, C, E, R
 
 
+def constrain_angle(angle: float, limit: float) -> float:
+    """
+    Constrains an angle (either in dd or rad) to [-limit, limit] range.
+
+    Args:
+        angle (int/float): angle (in dd/rad)
+        limit (int/float): limit (in dd/rad)
+
+    Returns:
+        The angle constrained to [-limit, limit] range.
+    """
+    if -limit <= angle <= limit:  # angle already in [-limit, limit] range
+        return angle
+    return (angle + limit) % (2 * limit) - limit
+
+
 def constrain_lon(lon: float) -> float:
     """
     Constrains longitude to [-180, 180] range
 
     Args:
-        lon (float): longitude (in dd)
+        lon (int/float): longitude (in dd)
+
+    Returns:
+        The longitude constrained to [-180, 180] range.
     """
-    return (lon + 180) % 360 - 180
+    return constrain_angle(lon, 180)
 
 
 def constrain_lat(lat: float) -> float:
@@ -25,9 +44,27 @@ def constrain_lat(lat: float) -> float:
     Constrains latitude to [-90, 90] range
 
     Args:
-        lat (float): latitude (in dd)
+        lat (int/float): latitude (in dd)
+
+    Returns:
+        The latitude constrained to [-90, 90] range.
     """
-    return (lat + 90) % 180 - 90
+    return constrain_angle(lat, 90)
+
+
+def constrain_brng(brng: float) -> float:
+    """
+    Constrains bearing to [0, 360] range
+
+    Args:
+        bearing (int/float): bearing (in dd)
+
+    Returns:
+        The bearing constrained to [0, 360] range.
+    """
+    if 0 <= brng <= 360:  # bearing already in [0, 360] range
+        return brng
+    return brng % 360
 
 
 def lon_to_x(lon: float, zoom: int) -> float:
