@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-from math import (asin, atan, atan2, cos, degrees, floor, log, pi, radians,
-                  sin, sinh, sqrt, tan)
+from math import asin, atan, atan2, cos, degrees, floor, hypot, isclose, log, radians, sin, sinh, sqrt, tan
+from math import pi as π
 from string import Formatter
 from typing import Dict, List, Tuple, Union
 
@@ -111,7 +111,7 @@ def lat_to_y(lat: float, zoom: int) -> float:
     φ = radians(lat)
 
     # convert lat to [0, 1] range
-    y = ((1 - log(tan(φ) + 1 / cos(φ)) / pi) / 2) * 2**zoom
+    y = ((1 - log(tan(φ) + 1 / cos(φ)) / π) / 2) * 2**zoom
 
     return y
 
@@ -124,7 +124,7 @@ def y_to_lat(y: Union[float, int], zoom: int) -> float:
         y (float / int): tile number
         zoom (int): zoom level
     """
-    lat = atan(sinh(pi * (1 - 2 * y / (2**zoom)))) / pi * 180
+    lat = atan(sinh(π * (1 - 2 * y / (2**zoom)))) / π * 180
     return lat
 
 
@@ -202,16 +202,64 @@ def dms_to_dd(dms: Tuple[int, int, float]) -> float:
     return d + m / 60 + s / 3600
 
 
-def great_circle_distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+def spherical_to_cartesian(lat: float, lon: float, r: float = R) -> Tuple[float, float, float]:
+    """
+    Convert spherical coordinates (lat, lon)  to cartesian coordinates (x, y, z)
+    Adapted from: https://www.movable-type.co.uk/scripts/latlong.html
+
+    Args:
+        lat (float): the latitude (in dd)
+        lon (float): the longitude (in dd)
+        r (float): the radius of the sphere. Default: 6378137 (equatorial Earth radius)
+
+    Returns:
+        The cartesian coordinates (x, y, z).
+    """
+    # convert lat and lon (in dd) to radians
+    φ = radians(lat)
+    λ = radians(lon)
+
+    x = r * cos(φ) * cos(λ)
+    y = r * cos(φ) * sin(λ)
+    z = r * sin(φ)
+
+    return x, y, z
+
+
+def cartesian_to_spherical(x: float, y: float, z: float) -> Tuple[float, float]:
+    """
+    Convert cartesian coordinates (x, y, z) to spherical coordinates (lat, lon)
+    Adapted from: https://www.movable-type.co.uk/scripts/latlong.html
+
+    Args:
+        x (float): x
+        y (float): y
+        z (float): z
+
+    Returns:
+        The spherical coordinates (lat, lon).
+    """
+    # compute the spherical coordinates in radians
+    φ = atan2(z, hypot(x, y))
+    λ = atan2(y, x)
+    
+    # convert radians to degrees
+    lat = degrees(φ)
+    lon = degrees(λ)
+    
+    return lat, lon
+
+
+def distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """
     Calculate the great-circle distance (in m) between two coordinates (in dd)
     Adapted from: https://www.movable-type.co.uk/scripts/latlong.html
 
     Args:
-        lon1 (float): the longitude of the first coordinate (in dd)
         lat1 (float): the latitude of the first coordinate (in dd)
-        lon2 (float): the longitude of the second coordinate (in dd)
+        lon1 (float): the longitude of the first coordinate (in dd)
         lat2 (float): the latitude of the second coordinate (in dd)
+        lon2 (float): the longitude of the second coordinate (in dd)
 
     Returns:
         The great-circle distance (in m) between the two coordinates.
@@ -225,22 +273,26 @@ def great_circle_distance(lat1: float, lon1: float, lat2: float, lon2: float) ->
     # haversine formula
     a = sin(Δφ / 2)**2 + cos(φ1) * cos(φ2) * sin(Δλ / 2)**2
     c = 2 * asin(sqrt(a))
-    return round(R * c, 3)
+
+    # compute the distance (in m)
+    d = R * c
+
+    return d
 
 
-def initial_bearing(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+def initial_brng(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """
-    Calculate the (initial) bearing (in degrees) between two coordinates (in dd)
+    Calculate the initial bearing (in dd) between two coordinates (also in dd)
     Adapted from: https://www.movable-type.co.uk/scripts/latlong.html
 
     Args:
-        lon1 (float): the longitude of the first coordinate (in dd)
         lat1 (float): the latitude of the first coordinate (in dd)
-        lon2 (float): the longitude of the second coordinate (in dd)
+        lon1 (float): the longitude of the first coordinate (in dd)
         lat2 (float): the latitude of the second coordinate (in dd)
+        lon2 (float): the longitude of the second coordinate (in dd)
 
     Returns:
-        The (initial) bearing (in degrees) between the two coordinates.
+        The initial bearing (in dd) between the two coordinates.
     """
     # convert dd to radians
     Δλ = radians(lon2 - lon1)
@@ -253,22 +305,140 @@ def initial_bearing(lat1: float, lon1: float, lat2: float, lon2: float) -> float
     θ = atan2(y, x)
 
     # convert radians to dd
-    bearing = degrees(θ)
+    brng = degrees(θ)
 
-    return bearing
+    # convert bearing to [0, 360] range
+    brng = constrain_brng(brng)
+
+    return brng
 
 
-def destination_coordinate(lat1: float, lon1: float, distance: int, bearing: float) -> Tuple[float, float]:
+def final_brng(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """
-    Calculate the destination coordinate from a given initial coordinate, having 
-    travelled the given distance on the given initial bearing.
+    Calculate the final bearing (in dd) between two coordinates (also in dd)
+    Adapted from: https://www.movable-type.co.uk/scripts/latlong.html
+
+    Args:
+        lat1 (float): the latitude of the first coordinate (in dd)
+        lon1 (float): the longitude of the first coordinate (in dd)
+        lat2 (float): the latitude of the second coordinate (in dd)
+        lon2 (float): the longitude of the second coordinate (in dd)
+
+    Returns:
+        The final bearing (in dd) between the two coordinates.
+    """
+    # get the initial bearing from the second coordinate to the first and reverse it by 180 degrees
+    brng = initial_brng(lat2, lon2, lat1, lon1) + 180
+
+    # convert bearing to [0, 360] range
+    brng = constrain_brng(brng)
+
+    return brng
+
+
+def midpoint(lat1: float, lon1: float, lat2: float, lon2: float) -> Tuple[float, float]:
+    """
+    Calculate the midpoint (in dd) of two coordinates (also in dd)
+    Adapted from: https://www.movable-type.co.uk/scripts/latlong.html
+
+    Args:
+        lat1 (float): the latitude of the first coordinate (in dd)
+        lon1 (float): the longitude of the first coordinate (in dd)
+        lat2 (float): the latitude of the second coordinate (in dd)
+        lon2 (float): the longitude of the second coordinate (in dd)
+
+    Returns:
+        The midpoint (in dd) of the two coordinates.
+    """
+    # convert dd to radians
+    φ1 = radians(lat1)
+    λ1 = radians(lon1)
+    φ2 = radians(lat2)
+    Δλ = radians(lon2 - lon1)
+    
+    # compute cartesian coordinates (x, y, z)
+    x1 = cos(φ1)
+    y1 = 0  # first coordinate in x-z plane, so y = 0
+    z1 = sin(φ1)
+    x2 = cos(φ2) * cos(Δλ)
+    y2 = cos(φ2) * sin(Δλ)
+    z2 = sin(φ2)
+    
+    # compute cartesian coordinates of the midpoint
+    x3 = x1 + x2
+    y3 = y1 + y2
+    z3 = z1 + z2
+    
+    # compute spherical coordinates (lat, lon) of the midpoint in radians
+    φ3 = atan2(mid_z, hypot(mid_x, mid_y))
+    λ3 = λ1 + atan2(mid_y, mid_x)
+    
+    # convert radians to dd
+    lat3 = degrees(φ3)
+    lon3 = degrees(λ3)
+
+    # constrain lon to [-180, 180] range
+    lon_3 = constrain_lon(lon_3)
+    
+    return lat3, lon3
+
+
+def intermediate_point(lat1: float, lon1: float, lat2: float, lon2: float, frac: float) -> Tuple[float, float]:
+    """
+    Calculate the intermediate point (in dd) at a fraction along the great circle path between two coordinates (also in dd)
+    Adapted from: https://www.movable-type.co.uk/scripts/latlong.html
+    References: http://www.edwilliams.org/avform.htm#Intermediate
+
+    Args:
+        lat1 (float): the latitude of the first coordinate (in dd)
+        lon1 (float): the longitude of the first coordinate (in dd)
+        lat2 (float): the latitude of the second coordinate (in dd)
+        lon2 (float): the longitude of the second coordinate (in dd)
+        frac (float): the fraction along the great circle path (in [0, 1])
+
+    Returns:
+        The intermediate point (in dd) at a fraction along the great circle path between the two coordinates (also in dd)
+    """
+    # convert dd to radians
+    φ1 = radians(lat1)
+    λ1 = radians(lon1)
+    φ2 = radians(lat2)
+    λ2 = radians(lon2)
+    
+    # compute the distance between the two coordinates
+    d = distance(lat1, lon1, lat2, lon2)
+    
+    # compute the angular distance (in radians)
+    δ = d / R
+    
+    a = sin((1 - frac) * δ) / sin(δ)
+    b = sin(frac * δ) / sin(δ)
+    
+    # compute the cartesian coordinates of the intermediate point
+    x = a * cos(φ1) * cos(λ1) + b * cos(φ2) * cos(λ2)
+    y = a * cos(φ1) * sin(λ1) + b * cos(φ2) * sin(λ2)
+    z = a * sin(φ1) + b * sin(φ2)
+    
+    # convert cartesian coordinates to spherical coordinates (in dd)
+    lat3, lon3 = cartesian_to_spherical_2(x, y, z)
+
+    # constrain lon to [-180, 180] range
+    lon_3 = constrain_lon(lon_3)
+    
+    return lat3, lon3
+
+
+def destination(lat1: float, lon1: float, d: int, brng: float) -> Tuple[float, float]:
+    """
+    Calculate the destination coordinate from a given initial coordinate, having travelled the given distance on the 
+    given initial bearing.
     Adapted from: https://www.movable-type.co.uk/scripts/latlong.html
 
     Args:
         lat1 (float): the latitude of the initial coordinate (in dd)
         lon1 (float): the longitude of the initial coordinate (in dd)
-        distance (int): the distance travelled (in m)
-        bearing (float): the initial bearing (in dd)
+        d (int): the distance travelled (in m)
+        brng (float): the initial bearing (in dd)
 
     Returns:
         the coordinates in (lat, lon) of the destination.
@@ -276,10 +446,10 @@ def destination_coordinate(lat1: float, lon1: float, distance: int, bearing: flo
     # convert latitude, longitude and bearing to radians
     φ1 = radians(lat1)
     λ1 = radians(lon1)
-    θ = radians(bearing)
+    θ = radians(brng)
 
     # compute the angular distance (in radians)
-    δ = distance / R
+    δ = d / R
 
     # compute the latitude and longitude (in radians)
     φ2 = asin(sin(φ1) * cos(δ) + cos(φ1) * sin(δ) * cos(θ))
@@ -289,10 +459,107 @@ def destination_coordinate(lat1: float, lon1: float, distance: int, bearing: flo
     lat_2 = degrees(φ2)
     lon_2 = degrees(λ2)
 
-    # constrain lon to [180, 180] range
+    # constrain lon to [-180, 180] range
     lon_2 = constrain_lon(lon_2)
 
     return lat_2, lon_2
+
+
+def intersection(lat1: float, lon1: float, brng1: float, lat2: float, lon2: float, brng2: float) -> Tuple[float, float]:
+    """
+    Calculate the intersection (in dd) of two paths defined by their coordinates and bearings (both also in dd)
+    Adapted from: https://www.movable-type.co.uk/scripts/latlong.html
+
+    Args:
+        lat1 (float): the latitude of the first coordinate (in dd)
+        lon1 (float): the longitude of the first coordinate (in dd)
+        brng1 (float): the initial bearing from the first coordinate (in dd)
+        lat2 (float): the latitude of the second coordinate (in dd)
+        lon2 (float): the longitude of the second coordinate (in dd)
+        brng2 (float): the initial bearing from the second coordinate (in dd)
+
+    Returns:
+        The intersection (in dd) of the two paths.
+    """
+    # convert dd to radians
+    φ1 = radians(lat1)
+    λ1 = radians(lon1)
+    φ2 = radians(lat2)
+    λ2 = radians(lon2)
+    θ13 = radians(brng1)
+    θ23 = radians(brng2)
+    
+    # compute the distance between the two coordinates
+    d = distance(lat1, lon1, lat2, lon2)
+    
+    # compute the angular distance (in radians)
+    δ12 = d / R
+    
+    if isclose(δ12, 0, rel_tol=1e-5):  # coincedence
+        return lat1, lon1
+    
+    # compute initial and final bearings between the two coordinates
+    θa = acos((sin(φ2) - sin(φ1) * cos(δ12)) / (sin(δ12) * cos(φ1)))
+    θb = acos((sin(φ1) - sin(φ2) * cos(δ12)) / (sin(δ12) * cos(φ2)))
+    
+    # protect against rounding errors
+    θa = min(max(θa, -π), π)
+    θb = min(max(θb, -π), π)
+
+    if sin(λ2 - λ1) > 0:
+        θ12 = θa
+        θ21 = 2 * π - θb
+    else:
+        θ12 = 2 * π - θa
+        θ21 = θb
+    
+    # compute angles
+    α1 = θ13 - θ12  # angle 2-1-3
+    α2 = θ21 - θ23  # angle 1-2-3
+    
+    if sin(α1) == 0 and sin(α2) == 0:  # infinite intersections
+        raise ValueError(f'Infinite intersections for ({lat1}, {lon1}) @ {brng1} and ({lat2}, {lon2}) @ {brng2}')
+    if sin(α1) * sin(α2) < 0:  # ambiguous intersection
+        raise ValueError(f'Ambiguous intersection for ({lat1}, {lon1}) @ {brng1} and ({lat2}, {lon2}) @ {brng2}')
+
+    # compute spherical coordinates (lat, lon) of the intersection 
+    cosα3 = -cos(α1) * cos(α2) + sin(α1) * sin(α2) * cos(δ12)
+    δ13 = atan2(sin(δ12) * sin(α1) * sin(α2), cos(α2) + cos(α1) * cosα3)
+    φ3 = asin(sin(φ1) * cos(δ13) + cos(φ1) * sin(δ13) * cos(θ13))
+    φ3 = min(max(φ3, -π), π)  # protect against rounding errors
+    Δλ13 = atan2(sin(θ13) * sin(δ13) * cos(φ1), cos(δ13) - sin(φ1) * sin(φ3))
+    λ3 = λ1 + Δλ13
+
+    # convert to degrees
+    lat3 = degrees(φ3)
+    lon3 = degrees(λ3)
+    
+    return lat3, lon3
+
+
+def intersection2(lat11: float, lon11: float, lat12: float, lon12: float, lat21: float, lon21: float, lat22: float, lon22: float) -> Tuple[float, float]:
+    """
+    Calculate the intersection (in dd) of two paths defined by their coordinates (both also in dd)
+    Adapted from: https://www.movable-type.co.uk/scripts/latlong.html
+
+    Args:
+        lat11 (float): the latitude of the first coordinate of the first path (in dd)
+        lon11 (float): the longitude of the first coordinate of the first path (in dd)
+        lat12 (float): the latitude of the second coordinate of the first path (in dd)
+        lon12 (float): the longitude of the second coordinate of the first path (in dd)
+        lat21 (float): the latitude of the first coordinate of the second path (in dd)
+        lon21 (float): the longitude of the first coordinate of the second path (in dd)
+        lat22 (float): the latitude of the second coordinate of the second path (in dd)
+        lon22 (float): the longitude of the second coordinate of the second path (in dd)
+        
+    Returns:
+        The intersection (in dd) of the two paths.
+    """
+    # get initial bearings
+    brng1 = initial_brng(lat11, lon11, lat12, lon12)
+    brng2 = initial_brng(lat21, lon21, lat22, lon22)
+    
+    return intersection(lat11, lon11, brng1, lat21, lon21, brng2)
 
 
 def wgs84_to_rd(lat: float, lon: float) -> Tuple[float, float]:
