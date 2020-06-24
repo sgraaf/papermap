@@ -903,9 +903,9 @@ def compute_grid_coordinates(
         dpi (int): dots per inch. Default: 300
     """
     # convert WGS84 coordinate (lat, lon) into UTM/RD coordinate (x, y)
-    if grid == 'UTM':
+    if grid == 'utm':
         x, y, z, l = wgs84_to_utm(lat, lon)
-    elif grid == 'RD':
+    elif grid == 'rd':
         x, y = wgs84_to_rd(lat, lon)
 
     # round RD coordinate to nearest thousand
@@ -938,9 +938,9 @@ def compute_grid_coordinates(
 
     # determine the grid coordinates labels (RD coordinates)
     x_labels = [x_label_start + i for i in range(len(x_grid_cs))]
-    if grid == 'UTM':
+    if grid == 'utm':
         y_labels = [y_label_start - i for i in range(len(y_grid_cs))]
-    elif grid == 'RD':
+    elif grid == 'rd':
         y_labels = [y_label_start - i for i in range(1, len(y_grid_cs) + 1)]
 
     return (list(zip(x_grid_cs, map(str, x_labels))), list(zip(y_grid_cs, map(str, y_labels))))
@@ -972,8 +972,7 @@ def add_grid(
         color (str): color of the grid lines. Default: 'black'
     """
     # get grid coordinates
-    x_grid, y_grid = compute_grid_coordinates(
-        image, grid, grid_size, lat, lon, scale, dpi)
+    x_grid, y_grid = compute_grid_coordinates(image, grid, grid_size, lat, lon, scale, dpi)
 
     draw = ImageDraw.Draw(image)
 
@@ -984,8 +983,7 @@ def add_grid(
 
         # draw grid label
         text_size = draw.textsize(label, font=font)
-        draw.rectangle([(x - text_size[0] / 2, 0),
-                        (x + text_size[0] / 2, text_size[1])], fill='white')
+        draw.rectangle([(x - text_size[0] / 2, 0), (x + text_size[0] / 2, text_size[1])], fill='white')
         draw.text((x - text_size[0] / 2, 0), label, font=font, fill=color)
 
     # draw horizontal grid lines
