@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from math import pi as π
+
 NAME = 'papermap'
 DESCRIPTION = 'A python package and CLI for creating paper maps'  # description of papermap
 VERSION =  '0.2'  # current version of papermap

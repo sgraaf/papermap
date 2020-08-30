@@ -36,7 +36,8 @@ TILE_SERVERS_DICT = OrderedDict(
             'OpenStreetMap',
             {
                 'attribution': 'Map data: © OpenStreetMap contributors',
-                'url': 'http://{ss}.tile.osm.org/{z}/{x}/{y}.png',
+                'url': 'http://{s}.tile.osm.org/{z}/{x}/{y}.png',
+                'servers': ['a', 'b', 'c'],
                 'zoom_min': 0,
                 'zoom_max': 19,
             }
@@ -46,6 +47,7 @@ TILE_SERVERS_DICT = OrderedDict(
             {
                 'attribution': 'Map data: © OpenStreetMap contributors',
                 'url': 'https://tiles.wmflabs.org/bw-mapnik/{z}/{x}/{y}.png',
+                'servers': ['a', 'b', 'c'],
                 'zoom_min': 0,
                 'zoom_max': 19,
             }
@@ -54,7 +56,8 @@ TILE_SERVERS_DICT = OrderedDict(
             'OpenTopoMap',
             {
                 'attribution': 'Map data: © OpenStreetMap contributors, SRTM. Map style: © OpenTopoMap (CC-BY-SA)',
-                'url': 'https://{ss}.tile.opentopomap.org/{z}/{x}/{y}.png',
+                'url': 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',
+                'servers': ['a', 'b', 'c'],
                 'zoom_min': 0,
                 'zoom_max': 17,
             }
@@ -63,7 +66,8 @@ TILE_SERVERS_DICT = OrderedDict(
             'Thunderforest Landscape',
             {
                 'attribution': 'Map data: © OpenStreetMap contributors',
-                'url': 'https://{ss}.tile.thunderforest.com/landscape/{z}/{x}/{y}.png?apikey={a}',
+                'url': 'https://{s}.tile.thunderforest.com/landscape/{z}/{x}/{y}.png?apikey={a}',
+                'servers': ['a', 'b', 'c'],
                 'zoom_min': 0,
                 'zoom_max': 22,
             }
@@ -72,7 +76,8 @@ TILE_SERVERS_DICT = OrderedDict(
             'Thunderforest Outdoors',
             {
                 'attribution': 'Map data: © OpenStreetMap contributors',
-                'url': 'https://{ss}.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey={a}',
+                'url': 'https://{s}.tile.thunderforest.com/outdoors/{z}/{x}/{y}.png?apikey={a}',
+                'servers': ['a', 'b', 'c'],
                 'zoom_min': 0,
                 'zoom_max': 22,
             }
@@ -81,7 +86,18 @@ TILE_SERVERS_DICT = OrderedDict(
             'Thunderforest Transport',
             {
                 'attribution': 'Map data: © OpenStreetMap contributors',
-                'url': 'https://{ss}.tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey={a}',
+                'url': 'https://{s}.tile.thunderforest.com/transport/{z}/{x}/{y}.png?apikey={a}',
+                'servers': ['a', 'b', 'c'],
+                'zoom_min': 0,
+                'zoom_max': 22,
+            }
+        ),
+        (
+            'Thunderforest OpenCycleMap',
+            {
+                'attribution': 'Map data: © OpenStreetMap contributors',
+                'url': 'https://{s}.tile.thunderforest.com/cycle/{z}/{x}/{y}.png?apikey={a}',
+                'servers': ['a', 'b', 'c'],
                 'zoom_min': 0,
                 'zoom_max': 22,
             }
@@ -141,28 +157,41 @@ TILE_SERVERS_DICT = OrderedDict(
             }
         ),
         (
+            'Geofabrik Topo',
+            {
+                'attribution': 'Map data: © OpenStreetMap contributors',
+                'url': 'http://{s}.tile.geofabrik.de/15173cf79060ee4a66573954f6017ab0/{z}/{x}/{y}.png',
+                'servers': ['a', 'b', 'c'],
+                'zoom_min': 0,
+                'zoom_max': 19,
+            }
+        ),
+        (
             'Google Maps',
             {
                 'attribution': 'Map data: © Google',
-                'url': 'http://mt{si}.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}',
+                'url': 'http://mt{s}.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}',
+                'servers': [0, 1, 2, 3],
                 'zoom_min': 0,
                 'zoom_max': 19,
             }
         ),
         (
-            'Google Maps Sattelite',
+            'Google Maps Satellite',
             {
                 'attribution': 'Map data: © Google',
-                'url': 'http://mt{si}.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}',
+                'url': 'http://mt{s}.google.com/vt/lyrs=s&hl=en&x={x}&y={y}&z={z}',
+                'servers': [0, 1, 2, 3],
                 'zoom_min': 0,
                 'zoom_max': 19,
             }
         ),
         (
-            'Google Maps Sattelite Hybrid',
+            'Google Maps Satellite Hybrid',
             {
                 'attribution': 'Map data: © Google',
-                'url': 'http://mt{si}.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}',
+                'url': 'http://mt{s}.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}',
+                'servers': [0, 1, 2, 3],
                 'zoom_min': 0,
                 'zoom_max': 19,
             }
@@ -171,7 +200,8 @@ TILE_SERVERS_DICT = OrderedDict(
             'Google Maps Terrain',
             {
                 'attribution': 'Map data: © Google',
-                'url': 'http://mt{si}.google.com/vt/lyrs=t&hl=en&x={x}&y={y}&z={z}',
+                'url': 'http://mt{s}.google.com/vt/lyrs=t&hl=en&x={x}&y={y}&z={z}',
+                'servers': [0, 1, 2, 3],
                 'zoom_min': 0,
                 'zoom_max': 19,
             }
@@ -180,7 +210,48 @@ TILE_SERVERS_DICT = OrderedDict(
             'Google Maps Terrain Hybrid',
             {
                 'attribution': 'Map data: © Google',
-                'url': 'http://mt{si}.google.com/vt/lyrs=p&hl=en&x={x}&y={y}&z={z}',
+                'url': 'http://mt{s}.google.com/vt/lyrs=p&hl=en&x={x}&y={y}&z={z}',
+                'servers': [0, 1, 2, 3],
+                'zoom_min': 0,
+                'zoom_max': 19,
+            }
+        ),
+        (
+            'HERE Terrain',
+            {
+                'attribution': 'Map data: © HERE',
+                'url': 'https://{s}.aerial.maps.ls.hereapi.com/maptile/2.1/maptile/newest/terrain.day/{z}/{x}/{y}/256/png8?apiKey={a}',
+                'servers': [1, 2, 3, 4],
+                'zoom_min': 0,
+                'zoom_max': 20,
+            }
+        ),
+        (
+            'HERE Satellite',
+            {
+                'attribution': 'Map data: © HERE',
+                'url': 'https://{s}.aerial.maps.ls.hereapi.com/maptile/2.1/maptile/newest/satellite.day/{z}/{x}/{y}/256/png8?apiKey={a}',
+                'servers': [1, 2, 3, 4],
+                'zoom_min': 0,
+                'zoom_max': 20,
+            }
+        ),
+        (
+            'HERE Hybrid',
+            {
+                'attribution': 'Map data: © HERE',
+                'url': 'https://{s}.aerial.maps.ls.hereapi.com/maptile/2.1/maptile/newest/hybrid.day/{z}/{x}/{y}/256/png8?apiKey={a}',
+                'servers': [1, 2, 3, 4],
+                'zoom_min': 0,
+                'zoom_max': 20,
+            }
+        ),
+        (
+            'Mapy.cz',
+            {
+                'attribution': 'Map data: © OpenStreetMap contributors. Map style: © Sesznam.cz',
+                'url': 'https://m{s}.mapserver.mapy.cz/turist-m/{z}-{x}-{y}.png',
+                'servers': [1, 2, 3, 4],
                 'zoom_min': 0,
                 'zoom_max': 19,
             }
@@ -189,7 +260,8 @@ TILE_SERVERS_DICT = OrderedDict(
             'Stamen Terrain',
             {
                 'attribution': 'Map data: © OpenStreetMap contributors. Map style: © Stamen Design (CC-BY-3.0)',
-                'url': 'http://{ss}.tile.stamen.com/terrain/{z}/{x}/{y}.png',
+                'url': 'http://{s}.tile.stamen.com/terrain/{z}/{x}/{y}.png',
+                'servers': ['a', 'b', 'c'],
                 'zoom_min': 0,
                 'zoom_max': 18,
             }
@@ -198,7 +270,8 @@ TILE_SERVERS_DICT = OrderedDict(
             'Stamen Toner',
             {
                 'attribution': 'Map data: © OpenStreetMap contributors. Map style: © Stamen Design (CC-BY-3.0)',
-                'url': 'http://{ss}.tile.stamen.com/toner/{z}/{x}/{y}.png',
+                'url': 'http://{s}.tile.stamen.com/toner/{z}/{x}/{y}.png',
+                'servers': ['a', 'b', 'c'],
                 'zoom_min': 0,
                 'zoom_max': 18,
             }
@@ -207,7 +280,8 @@ TILE_SERVERS_DICT = OrderedDict(
             'Stamen Toner Lite',
             {
                 'attribution': 'Map data: © OpenStreetMap contributors. Map style: © Stamen Design (CC-BY-3.0)',
-                'url': 'http://{ss}.tile.stamen.com/toner-lite/{z}/{x}/{y}.png',
+                'url': 'http://{s}.tile.stamen.com/toner-lite/{z}/{x}/{y}.png',
+                'servers': ['a', 'b', 'c'],
                 'zoom_min': 0,
                 'zoom_max': 18,
             }
@@ -216,7 +290,8 @@ TILE_SERVERS_DICT = OrderedDict(
             'Komoot',
             {
                 'attribution': 'Map data: © OpenStreetMap contributors',
-                'url': 'http://{ss}.tile.komoot.de/komoot-2/{z}/{x}/{y}.png',
+                'url': 'http://{s}.tile.komoot.de/komoot-2/{z}/{x}/{y}.png',
+                'servers': ['a', 'b', 'c'],
                 'zoom_min': 0,
                 'zoom_max': 19,
             }
@@ -234,7 +309,18 @@ TILE_SERVERS_DICT = OrderedDict(
             'Hike & Bike',
             {
                 'attribution': 'Map data: © OpenStreetMap contributors',
-                'url': 'http://{ss}.tiles.wmflabs.org/hikebike/{z}/{x}/{y}.png',
+                'url': 'http://{s}.tiles.wmflabs.org/hikebike/{z}/{x}/{y}.png',
+                'servers': ['a', 'b', 'c'],
+                'zoom_min': 0,
+                'zoom_max': 20,
+            }
+        ),
+        (
+            'AllTrails',
+            {
+                'attribution': 'Map data: © OpenStreetMap contributors',
+                'url': 'http://alltrails.com/tiles/alltrailsOutdoors/{z}/{x}/{y}.png',
+                'servers': ['a', 'b', 'c'],
                 'zoom_min': 0,
                 'zoom_max': 20,
             }

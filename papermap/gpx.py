@@ -8,8 +8,7 @@ from PIL import Image, ImageDraw
 
 from .defaults import (MAP_MARKER_FILE, TRACK_COLOR_DEFAULT,
                        WAYPOINT_COLOR_DEFAULT)
-from .utils import convert_color, lat_to_y, lon_to_x, x_to_px, y_to_px
-
+from .utils import convert_color, lat_to_y, lon_to_x, x_to_px, y_to_px, distance, midpoint
 
 class Waypoint(object):
 
@@ -43,6 +42,10 @@ class Track(object):
         except IndexError:
             self.name = None
 
+        self.length = 0
+        for i in range(1, len(self.points)):
+            self.length += distance(*self.points[i - 1], *self.points[i])
+
     def __repr__(self):
         return f'Track(({self.bounds["lat_min"]:.5f}, {self.bounds["lon_min"]:.5f}), ({self.bounds["lat_max"]:.5f}, {self.bounds["lon_max"]:.5f}))'
 
@@ -59,7 +62,7 @@ class GPX(object):
         self._track_color = track_color
         self._waypoint_color = waypoint_color
 
-        self.name = self._gpx_file.stem
+        self.name = self._gpx_file.name
         self.waypoints = []
         self.tracks = []
         self.bounds = None
@@ -94,15 +97,19 @@ class GPX(object):
             'lon_max': max([trk.bounds['lon_max'] for trk in self.tracks] + [wpt.lon for wpt in self.waypoints])
         }
 
-        # compute the center coordinates
-        self.center = (
-            (self.bounds['lat_max'] - self.bounds['lat_min']) /
-            2 + self.bounds['lat_min'],
-            (self.bounds['lon_max'] - self.bounds['lon_min']) /
-            2 + self.bounds['lon_min']
-        )
+        # compute the center point
+        self.center = midpoint(self.bounds['lat_min'], self.bounds['lon_min'], self.bounds['lat_max'], self.bounds['lon_max'])
 
-    def render_tracks(self, image: Image, center_coord: Tuple[int, int], zoom: int, dpi: int = 300, tile_size: int = 256, antialias: int = 4, width: int = 5):
+    def render_tracks(
+        self,
+        image: Image,
+        center_coord: Tuple[int, int],
+        zoom: int,
+        dpi: int = 300,
+        tile_size: int = 256,
+        antialias: int = 4,
+        width: int = 5
+    ):
         im_width, im_height = image.size
         antialias_width = im_width * antialias
         antialias_height = im_height * antialias
@@ -127,7 +134,16 @@ class GPX(object):
         # paste the lines_image onto the base image
         image.paste(lines_image, (0, 0), lines_image)
 
-    def render_waypoints(self, image: Image, center_coord: Tuple[int, int], zoom: int, dpi: int = 300, tile_size: int = 256, antialias: int = 4, width: int = 50):
+    def render_waypoints(
+        self, 
+        image: Image, 
+        center_coord: Tuple[int, int], 
+        zoom: int, 
+        dpi: int = 300, 
+        tile_size: int = 256, 
+        antialias: int = 4, 
+        width: int = 50
+    ):
         im_x_center, im_y_center = center_coord
 
         map_marker_im = Image.open(MAP_MARKER_FILE)

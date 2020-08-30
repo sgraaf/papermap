@@ -2,34 +2,33 @@ import random
 import unittest
 
 from papermap import PaperMap
-from papermap.utils import (compute_scale, compute_zoom, constrain_lat,
-                            constrain_lon, dd_to_dms, destination_coordinate,
-                            dms_to_dd, great_circle_distance, initial_bearing,
+from papermap.utils import (zoom_to_scale, scale_to_zoom, dd_to_dms, destination,
+                            dms_to_dd, distance, initial_brng,
                             lat_to_y, lon_to_x, mm_to_px, px_to_mm,
                             rd_to_wgs84, utm_to_wgs84, wgs84_to_rd,
                             wgs84_to_utm, wgs84_to_zone_number, x_to_lon,
-                            y_to_lat)
+                            y_to_lat, wrap90, wrap180)
 
 
 class TestUtils(unittest.TestCase):
-    def test_compute_scale_zoom(self):
+    def test_convert_scale_zoom(self):
         for _ in range(20):
             lat = random.uniform(-90, 90)
             zoom = random.randint(0, 18)
-            s = compute_scale(lat, zoom, dpi=300)
-            z, _ = compute_zoom(lat, s, dpi=300)
+            scale = zoom_to_scale(zoom, lat, dpi=300)
+            z = scale_to_zoom(scale, lat, dpi=300)
             self.assertAlmostEqual(zoom, z, places=5)
 
     def test_constrain_lat(self):
         for _ in range(20):
             lat = random.uniform(-180, 180)
-            l = constrain_lat(lat)
+            l = wrap90(lat)
             self.assertTrue(-90 <= l <= 90)
 
     def test_constrain_lon(self):
         for _ in range(20):
             lon = random.uniform(-360, 360)
-            l = constrain_lon(lon)
+            l = wrap180(lon)
             self.assertTrue(-180 <= l <= 180)
 
     def test_dd_dms_conversion(self):
@@ -81,16 +80,15 @@ class TestUtils(unittest.TestCase):
             self.assertAlmostEqual(lat, lat_, places=4)
             self.assertAlmostEqual(lon, lon_, places=4)
 
-    def test_great_circle_distance_bearing_conversion(self):
+    def test_distance_bearing_destination_conversion(self):
         for _ in range(20):
             lat1 = random.uniform(-80, 84)
             lon1 = random.uniform(-180, 180)
             lat2 = random.uniform(-80, 84)
             lon2 = random.uniform(-180, 180)
-            distance = great_circle_distance(lat1, lon1, lat2, lon2)
-            bearing = initial_bearing(lat1, lon1, lat2, lon2)
-            lat2_, lon2_ = destination_coordinate(
-                lat1, lon1, distance, bearing)
+            d = distance(lat1, lon1, lat2, lon2)
+            brng = initial_brng(lat1, lon1, lat2, lon2)
+            lat2_, lon2_ = destination(lat1, lon1, d, brng)
             self.assertAlmostEqual(lat2, lat2_, places=4)
             self.assertAlmostEqual(lon2, lon2_, places=4)
 
