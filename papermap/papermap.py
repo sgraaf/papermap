@@ -77,7 +77,6 @@ class PaperMap(object):
         self.margin_bottom = mm_to_px(margin_bottom, self.dpi)
         self.margin_left = mm_to_px(margin_left, self.dpi)
         self.margin_right = mm_to_px(margin_right, self.dpi)
-        self.grid = grid
         self.nb_workers = nb_workers
         self.nb_retries = nb_retries
         self.use_landscape = landscape
@@ -109,6 +108,12 @@ class PaperMap(object):
             if not self.quiet_mode:
                 raise ValueError(f'Invalid paper size. Please choose one of {SIZES_DICT}')
             sys.exit()
+
+        # set the grid
+        if grid is not None:
+            if grid not in GRID_CHOICES:
+                raise ValueError(f'Invalid grid. Please choose one of {GRID_CHOICES}')
+        self.grid = grid
 
         # convert lat and lon to radians
         self.φ = radians(self.lat)
@@ -245,37 +250,38 @@ class PaperMap(object):
         """
         Adds a grid to the image
         """
-        # get grid coordinates
-        x_grid_cs_and_labels, y_grid_cs_and_labels = self.compute_grid_coordinates()
+        if self.grid is not None:
+            # get grid coordinates
+            x_grid_cs_and_labels, y_grid_cs_and_labels = self.compute_grid_coordinates()
 
-        draw = ImageDraw.Draw(self.map_image)
-        color = '#000'
-        font = ImageFont.truetype('arial.ttf', 35)
+            draw = ImageDraw.Draw(self.map_image)
+            color = '#000'
+            font = ImageFont.truetype('arial.ttf', 35)
 
-        # draw vertical grid lines
-        for x, label in x_grid_cs_and_labels:
-            # draw grid line
-            draw.line(((x, 0), (x, self.im_height)), fill=color)
+            # draw vertical grid lines
+            for x, label in x_grid_cs_and_labels:
+                # draw grid line
+                draw.line(((x, 0), (x, self.im_height)), fill=color)
 
-            # draw grid label
-            text_size = draw.textsize(label, font=font)
-            draw.rectangle([(x - text_size[0] / 2, 0), (x + text_size[0] / 2, text_size[1])], fill='#fff')
-            draw.text((x - text_size[0] / 2, 0), label, font=font, fill=color)
+                # draw grid label
+                text_size = draw.textsize(label, font=font)
+                draw.rectangle([(x - text_size[0] / 2, 0), (x + text_size[0] / 2, text_size[1])], fill='#fff')
+                draw.text((x - text_size[0] / 2, 0), label, font=font, fill=color)
 
-        # draw horizontal grid lines
-        for y, label in y_grid_cs_and_labels:
-            # draw grid line
-            draw.line(((0, y), (self.im_width, y)), fill=color)
+            # draw horizontal grid lines
+            for y, label in y_grid_cs_and_labels:
+                # draw grid line
+                draw.line(((0, y), (self.im_width, y)), fill=color)
 
-            # draw grid label
-            text_size = draw.textsize(label, font=font)
-            text_image = Image.new('RGB', text_size, '#fff')
-            text_draw = ImageDraw.Draw(text_image)
-            text_draw.text((0, 0), label, font=font, fill=color)
-            text_image = text_image.rotate(90, expand=1)
-            self.map_image.paste(text_image, (0, int(y - text_size[0] / 2)))
-            del text_draw
-        del draw
+                # draw grid label
+                text_size = draw.textsize(label, font=font)
+                text_image = Image.new('RGB', text_size, '#fff')
+                text_draw = ImageDraw.Draw(text_image)
+                text_draw.text((0, 0), label, font=font, fill=color)
+                text_image = text_image.rotate(90, expand=1)
+                self.map_image.paste(text_image, (0, int(y - text_size[0] / 2)))
+                del text_draw
+            del draw
 
     def render_attribution_and_scale(self):
         """
