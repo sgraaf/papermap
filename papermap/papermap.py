@@ -92,13 +92,15 @@ class PaperMap(object):
                 self.servers = cycle([None])
         except KeyError:
             if not self.quiet_mode:
-                raise ValueError(f'Invalid tile server. Please choose one of {TILE_SERVER_CHOICES}')
+                raise ValueError(
+                    f'Invalid tile server. Please choose one of {TILE_SERVER_CHOICES}')
             sys.exit()
 
         # evaluate whether an API key is provided (if needed)
         if 'a' in get_string_formatting_arguments(self.tile_server['url']) and self.api_key is None:
             if not self.quiet_mode:
-                raise ValueError(f'No API key specified for {tile_server} tile server')
+                raise ValueError(
+                    f'No API key specified for {tile_server} tile server')
             sys.exit()
 
         # get the paper size
@@ -106,13 +108,15 @@ class PaperMap(object):
             self.size = SIZES_DICT[size]
         except KeyError:
             if not self.quiet_mode:
-                raise ValueError(f'Invalid paper size. Please choose one of {SIZES_DICT}')
+                raise ValueError(
+                    f'Invalid paper size. Please choose one of {SIZES_DICT}')
             sys.exit()
 
         # set the grid
         if grid is not None:
             if grid not in GRID_CHOICES:
-                raise ValueError(f'Invalid grid. Please choose one of {GRID_CHOICES}')
+                raise ValueError(
+                    f'Invalid grid. Please choose one of {GRID_CHOICES}')
         self.grid = grid
 
         # convert lat and lon to radians
@@ -134,8 +138,10 @@ class PaperMap(object):
         self.grid_size = mm_to_px(GRID_SIZE / self.scale, self.dpi)
 
         # get the width and height of the paper (incl. margins, in px)
-        self.width = mm_to_px(self.size['h'] if self.use_landscape else self.size['w'], self.dpi)
-        self.height = mm_to_px(self.size['w'] if self.use_landscape else self.size['h'], self.dpi)
+        self.width = mm_to_px(
+            self.size['h'] if self.use_landscape else self.size['w'], self.dpi)
+        self.height = mm_to_px(
+            self.size['w'] if self.use_landscape else self.size['h'], self.dpi)
 
         # compute the width and height of the image (in px)
         self.im_width = self.width - self.margin_left - self.margin_right
@@ -150,10 +156,14 @@ class PaperMap(object):
         self.y_center = lat_to_y(self.lat, self.zoom_scaled)
 
         # determine the tiles required to produce the map image
-        self.x_min = floor(self.x_center - (0.5 * self.im_width_scaled / TILE_SIZE))
-        self.y_min = floor(self.y_center - (0.5 * self.im_height_scaled / TILE_SIZE))
-        self.x_max = ceil(self.x_center + (0.5 * self.im_width_scaled / TILE_SIZE))
-        self.y_max = ceil(self.y_center + (0.5 * self.im_height_scaled / TILE_SIZE))
+        self.x_min = floor(
+            self.x_center - (0.5 * self.im_width_scaled / TILE_SIZE))
+        self.y_min = floor(
+            self.y_center - (0.5 * self.im_height_scaled / TILE_SIZE))
+        self.x_max = ceil(
+            self.x_center + (0.5 * self.im_width_scaled / TILE_SIZE))
+        self.y_max = ceil(
+            self.y_center + (0.5 * self.im_height_scaled / TILE_SIZE))
 
         # compute the coordinate bounds
         self.bounds = {
@@ -180,10 +190,14 @@ class PaperMap(object):
                 y_tile = (y + max_tile) % max_tile
 
                 bbox = (
-                    round((x_tile - self.x_center) * TILE_SIZE + self.im_width_scaled / 2),
-                    round((y_tile - self.y_center) * TILE_SIZE + self.im_height_scaled / 2),
-                    round((x_tile + 1 - self.x_center) * TILE_SIZE + self.im_width_scaled / 2),
-                    round((y_tile + 1 - self.y_center) * TILE_SIZE + self.im_height_scaled / 2),
+                    round((x_tile - self.x_center) *
+                          TILE_SIZE + self.im_width_scaled / 2),
+                    round((y_tile - self.y_center) *
+                          TILE_SIZE + self.im_height_scaled / 2),
+                    round((x_tile + 1 - self.x_center) *
+                          TILE_SIZE + self.im_width_scaled / 2),
+                    round((y_tile + 1 - self.y_center) *
+                          TILE_SIZE + self.im_height_scaled / 2),
                 )
 
                 self.tiles.append(Tile(x_tile, y_tile, self.zoom_scaled, bbox))
@@ -194,7 +208,8 @@ class PaperMap(object):
 
         # initialize paper map and scaled map image
         self.paper_map = Image.new('RGB', (self.width, self.height), '#fff')
-        self.map_image_scaled = Image.new('RGB', (self.im_width_scaled, self.im_height_scaled), '#fff')
+        self.map_image_scaled = Image.new(
+            'RGB', (self.im_width_scaled, self.im_height_scaled), '#fff')
 
     def compute_grid_coordinates(self):
         """
@@ -239,7 +254,8 @@ class PaperMap(object):
         if self.grid == 'utm':
             y_labels = [y_label_start - i for i in range(len(y_grid_cs))]
         elif self.grid == 'rd':
-            y_labels = [y_label_start - i for i in range(1, len(y_grid_cs) + 1)]
+            y_labels = [y_label_start -
+                        i for i in range(1, len(y_grid_cs) + 1)]
 
         x_grid_cs_and_labels = list(zip(x_grid_cs, map(str, x_labels)))
         y_grid_cs_and_labels = list(zip(y_grid_cs, map(str, y_labels)))
@@ -265,8 +281,10 @@ class PaperMap(object):
 
                 # draw grid label
                 text_size = draw.textsize(label, font=font)
-                draw.rectangle([(x - text_size[0] / 2, 0), (x + text_size[0] / 2, text_size[1])], fill='#fff')
-                draw.text((x - text_size[0] / 2, 0), label, font=font, fill=color)
+                draw.rectangle(
+                    [(x - text_size[0] / 2, 0), (x + text_size[0] / 2, text_size[1])], fill='#fff')
+                draw.text((x - text_size[0] / 2, 0),
+                          label, font=font, fill=color)
 
             # draw horizontal grid lines
             for y, label in y_grid_cs_and_labels:
@@ -279,7 +297,8 @@ class PaperMap(object):
                 text_draw = ImageDraw.Draw(text_image)
                 text_draw.text((0, 0), label, font=font, fill=color)
                 text_image = text_image.rotate(90, expand=1)
-                self.map_image.paste(text_image, (0, int(y - text_size[0] / 2)))
+                self.map_image.paste(
+                    text_image, (0, int(y - text_size[0] / 2)))
                 del text_draw
             del draw
 
@@ -295,10 +314,12 @@ class PaperMap(object):
         text_size = draw.textsize(text, font=font)
         if text_size[0] <= self.im_width:
             draw.rectangle(
-                [(self.im_width - text_size[0], self.im_height - text_size[1]), (self.im_width, self.im_height)],
+                [(self.im_width - text_size[0], self.im_height -
+                  text_size[1]), (self.im_width, self.im_height)],
                 fill='#fff'
             )
-            draw.text((self.im_width - text_size[0], self.im_height - text_size[1]), text, font=font, fill=color)
+            draw.text(
+                (self.im_width - text_size[0], self.im_height - text_size[1]), text, font=font, fill=color)
         del draw
 
     def download_tiles(self):
@@ -334,11 +355,13 @@ class PaperMap(object):
                     try:
                         if r.status_code == 200:
                             # open the tile image and mark it a success
-                            tile.image = Image.open(BytesIO(r.content)).convert('RGBA')
+                            tile.image = Image.open(
+                                BytesIO(r.content)).convert('RGBA')
                             tile.success = True
                         else:
                             if not self.quiet_mode:
-                                print(f'Request failed [{r.status_code}]: {r.url}')
+                                print(
+                                    f'Request failed [{r.status_code}]: {r.url}')
                     except ConnectionError as e:
                         if not self.quiet_mode:
                             print(f'Connection error for URL: {str(r.url)}')
@@ -381,7 +404,8 @@ class PaperMap(object):
         self.render_gpx()
 
         # resize the scaled map image
-        self.map_image = self.map_image_scaled.resize((self.im_width, self.im_height), Image.LANCZOS)
+        self.map_image = self.map_image_scaled.resize(
+            (self.im_width, self.im_height), Image.LANCZOS)
 
         # add the coordinate grid
         self.render_grid()
@@ -390,14 +414,22 @@ class PaperMap(object):
         self.render_attribution_and_scale()
 
         # paste the map image onto the paper map
-        self.paper_map.paste(self.map_image, (self.margin_left, self.margin_top))
+        self.paper_map.paste(
+            self.map_image,
+            (self.margin_left, self.margin_top)
+        )
 
     def show(self):
         self.paper_map.show()
 
     def save(self, file: Path, title: str = NAME, author: str = NAME):
         self.file = file
-        self.paper_map.save(self.file, resolution=self.dpi, title=title, author=author)
+        self.paper_map.save(
+            self.file,
+            resolution=self.dpi,
+            title=title,
+            author=author
+        )
 
     def open(self):
         Popen([str(self.file)], shell=True)
@@ -414,7 +446,8 @@ def main():
         title='inputs', dest='input', required=True)
 
     # global arguments
-    parser.add_argument('file', type=str, metavar='PATH', help='File path to save the paper map to')
+    parser.add_argument('file', type=str, metavar='PATH',
+                        help='File path to save the paper map to')
     parser.add_argument('-t', '--tile_server', type=str, default=TILE_SERVER_DEFAULT,
                         choices=TILE_SERVER_CHOICES, help='Tile server to serve as the base of the paper map')
     parser.add_argument('-a', '--api_key', type=str, default=API_KEY_DEFAULT, metavar='KEY',
@@ -431,27 +464,38 @@ def main():
                         metavar='MILLIMETERS', help='Left margin')
     parser.add_argument('-mr', '--margin_right', type=int, default=MARGIN_DEFAULT,
                         metavar='MILLIMETERS', help='Right margin')
-    parser.add_argument('-d', '--dpi', type=int, default=DPI_DEFAULT, metavar='NUMBER', help='Dots per inch')
+    parser.add_argument('-d', '--dpi', type=int, default=DPI_DEFAULT,
+                        metavar='NUMBER', help='Dots per inch')
     parser.add_argument('-g', '--grid', type=str, default=GRID_DEFAULT, choices=GRID_CHOICES,
                         help='Coordinate grid to display on the paper map')
     parser.add_argument('-w', '--nb_workers', type=int, default=NB_WORKERS_DEFAULT,
                         metavar='NUMBER', help='Number of workers (for parallelization)')
-    parser.add_argument('-o', '--open', action='store_true', help='Open paper map after generating')
-    parser.add_argument('-l', '--landscape', action='store_true', help='Use landscape orientation')
-    parser.add_argument('-q', '--quiet', action='store_true', help='Activate quiet mode')
-    parser.add_argument('-v', '--version', action='version', help=f'Display the current version of {NAME}')
+    parser.add_argument('-o', '--open', action='store_true',
+                        help='Open paper map after generating')
+    parser.add_argument('-l', '--landscape', action='store_true',
+                        help='Use landscape orientation')
+    parser.add_argument('-q', '--quiet', action='store_true',
+                        help='Activate quiet mode')
+    parser.add_argument('-v', '--version', action='version',
+                        help=f'Display the current version of {NAME}')
 
     # wgs84 subparser arguments
     wgs84_parser = subparsers.add_parser('wgs84')
-    wgs84_parser.add_argument('lat', type=float, metavar='LAT', help='Latitude')
-    wgs84_parser.add_argument('lon', type=float, metavar='LON', help='Longitude')
+    wgs84_parser.add_argument(
+        'lat', type=float, metavar='LAT', help='Latitude')
+    wgs84_parser.add_argument(
+        'lon', type=float, metavar='LON', help='Longitude')
 
     # utm subparser arguments
     utm_parser = subparsers.add_parser('utm')
-    utm_parser.add_argument('east', type=float, metavar='EASTING', help='Easting')
-    utm_parser.add_argument('north', type=float, metavar='NORTHING', help='Northing')
-    utm_parser.add_argument('zone', type=int, metavar='NUMBER', help='Zone number')
-    utm_parser.add_argument('letter', type=str, metavar='LETTER', help='Zone letter')
+    utm_parser.add_argument(
+        'east', type=float, metavar='EASTING', help='Easting')
+    utm_parser.add_argument('north', type=float,
+                            metavar='NORTHING', help='Northing')
+    utm_parser.add_argument(
+        'zone', type=int, metavar='NUMBER', help='Zone number')
+    utm_parser.add_argument(
+        'letter', type=str, metavar='LETTER', help='Zone letter')
 
     # rd subparser arguments
     rd_parser = subparsers.add_parser('rd')
@@ -460,7 +504,8 @@ def main():
 
     # gpx subparser arguments
     gpx_parser = subparsers.add_parser('gpx')
-    gpx_parser.add_argument('gpx_file', type=str, metavar='PATH', help='File path to the GPX file')
+    gpx_parser.add_argument('gpx_file', type=str,
+                            metavar='PATH', help='File path to the GPX file')
     gpx_parser.add_argument('-tc', '--track_color', type=str, default=TRACK_COLOR_DEFAULT,
                             metavar='COLOR', help='Color to render tracks as')
     gpx_parser.add_argument('-wc', '--waypoint_color', type=str, default=WAYPOINT_COLOR_DEFAULT,
@@ -472,14 +517,16 @@ def main():
     if args.input == 'wgs84':
         pass
     elif args.input == 'utm':
-        args.lat, args.lon = utm_to_wgs84(args.east, args.north, args.zone, args.letter)
+        args.lat, args.lon = utm_to_wgs84(
+            args.east, args.north, args.zone, args.letter)
     elif args.input == 'rd':
         args.lat, args.lon = rd_to_wgs84(args.x, args.y)
     elif args.input == 'gpx':
         args.gpx = GPX(args.gpx_file, args.track_color, args.waypoint_color)
         args.lat, args.lon = args.gpx.center
     else:
-        raise ValueError('Invalid input method. Please choose one of: wgs84, utm, rd or gpx')
+        raise ValueError(
+            'Invalid input method. Please choose one of: wgs84, utm, rd or gpx')
 
     # initialize the paper map
     pm = PaperMap(**vars(args))
@@ -492,7 +539,8 @@ def main():
         pm.save(args.file)
     except PermissionError:
         if not args.quiet:
-            raise RuntimeError('Could not save paper map, please make sure you don\'t have it opened elsewhere')
+            raise RuntimeError(
+                'Could not save paper map, please make sure you don\'t have it opened elsewhere')
         sys.exit()
 
     # open it

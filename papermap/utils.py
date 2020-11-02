@@ -833,9 +833,11 @@ def intersection(lat1: float, lon1: float, brng1: float, lat2: float, lon2: floa
     α2 = θ21 - θ23  # angle 1-2-3
 
     if sin(α1) == 0 and sin(α2) == 0:  # infinite intersections
-        raise ValueError(f'Infinite intersections for ({lat1}, {lon1}) @ {brng1} and ({lat2}, {lon2}) @ {brng2}')
+        raise ValueError(
+            f'Infinite intersections for ({lat1}, {lon1}) @ {brng1} and ({lat2}, {lon2}) @ {brng2}')
     if sin(α1) * sin(α2) < 0:  # ambiguous intersection
-        raise ValueError(f'Ambiguous intersection for ({lat1}, {lon1}) @ {brng1} and ({lat2}, {lon2}) @ {brng2}')
+        raise ValueError(
+            f'Ambiguous intersection for ({lat1}, {lon1}) @ {brng1} and ({lat2}, {lon2}) @ {brng2}')
 
     # compute spherical coordinates (lat, lon) of the intersection
     cosα3 = -cos(α1) * cos(α2) + sin(α1) * sin(α2) * cos(δ12)

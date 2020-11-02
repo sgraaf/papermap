@@ -1,13 +1,11 @@
 import random
 import unittest
 
-from papermap import PaperMap
-from papermap.utils import (zoom_to_scale, scale_to_zoom, dd_to_dms, destination,
-                            dms_to_dd, distance, initial_brng,
-                            lat_to_y, lon_to_x, mm_to_px, px_to_mm,
-                            rd_to_wgs84, utm_to_wgs84, wgs84_to_rd,
-                            wgs84_to_utm, wgs84_to_zone_number, x_to_lon,
-                            y_to_lat, wrap90, wrap180)
+from papermap.utils import (dd_to_dms, destination, distance, dms_to_dd,
+                            initial_brng, lat_to_y, lon_to_x, mm_to_px,
+                            px_to_mm, rd_to_wgs84, scale_to_zoom, utm_to_wgs84,
+                            wgs84_to_rd, wgs84_to_utm, wgs84_to_zone_number,
+                            wrap90, wrap180, x_to_lon, y_to_lat, zoom_to_scale)
 
 
 class TestUtils(unittest.TestCase):

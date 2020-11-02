@@ -8,7 +8,7 @@ with open('requirements.txt', 'r', encoding='utf-8') as f:
 
 setuptools.setup(
     name='papermap',
-    version='0.2',
+    version='0.2.1',
     license='GNU General Public License (GNU GPL v3 or above)',
     author='Steven van de Graaf',
     author_email='steven@vandegraaf.xyz',
@@ -26,6 +26,8 @@ setuptools.setup(
     classifiers=[
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
         'License :: OSI Approved :: GNU General Public License (GPL)',
         'Intended Audience :: Developers',
         'Operating System :: OS Independent',

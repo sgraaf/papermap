@@ -8,9 +8,11 @@ from PIL import Image, ImageDraw
 
 from .defaults import (MAP_MARKER_FILE, TRACK_COLOR_DEFAULT,
                        WAYPOINT_COLOR_DEFAULT)
-from .utils import convert_color, lat_to_y, lon_to_x, x_to_px, y_to_px, distance, midpoint
+from .utils import (convert_color, distance, lat_to_y, lon_to_x, midpoint,
+                    x_to_px, y_to_px)
 
-class Waypoint(object):
+
+class Waypoint:
 
     def __init__(self, wpt: etree.Element, NSMAP: dict) -> None:
         self.lat = float(wpt.xpath('@lat')[0])
@@ -25,7 +27,7 @@ class Waypoint(object):
         return f'Waypoint({self.lat:.5f}, {self.lon:.5f})'
 
 
-class Track(object):
+class Track:
 
     def __init__(self, trk: etree.Element, NSMAP: dict) -> None:
         self.points = [(float(point.xpath('@lat')[0]), float(point.xpath('@lon')[0]))
@@ -50,7 +52,7 @@ class Track(object):
         return f'Track(({self.bounds["lat_min"]:.5f}, {self.bounds["lon_min"]:.5f}), ({self.bounds["lat_max"]:.5f}, {self.bounds["lon_max"]:.5f}))'
 
 
-class GPX(object):
+class GPX:
 
     def __init__(
         self,
@@ -98,14 +100,14 @@ class GPX(object):
         }
 
         # compute the center point
-        self.center = midpoint(self.bounds['lat_min'], self.bounds['lon_min'], self.bounds['lat_max'], self.bounds['lon_max'])
+        self.center = midpoint(
+            self.bounds['lat_min'], self.bounds['lon_min'], self.bounds['lat_max'], self.bounds['lon_max'])
 
     def render_tracks(
         self,
         image: Image,
         center_coord: Tuple[int, int],
         zoom: int,
-        dpi: int = 300,
         tile_size: int = 256,
         antialias: int = 4,
         width: int = 5
@@ -135,13 +137,11 @@ class GPX(object):
         image.paste(lines_image, (0, 0), lines_image)
 
     def render_waypoints(
-        self, 
-        image: Image, 
-        center_coord: Tuple[int, int], 
-        zoom: int, 
-        dpi: int = 300, 
-        tile_size: int = 256, 
-        antialias: int = 4, 
+        self,
+        image: Image,
+        center_coord: Tuple[int, int],
+        zoom: int,
+        tile_size: int = 256,
         width: int = 50
     ):
         im_x_center, im_y_center = center_coord
