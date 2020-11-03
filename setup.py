@@ -1,9 +1,12 @@
+from pathlib import Path
 import setuptools
 
-with open('README.md', 'r', encoding='utf-8') as f:
+ROOT = Path(__file__).resolve().parent
+
+with open(ROOT / 'README.md', 'r', encoding='utf-8') as f:
     README = f.read()
 
-with open('requirements.txt', 'r', encoding='utf-8') as f:
+with open(ROOT / 'requirements.txt', 'r', encoding='utf-8') as f:
     requirements = f.read().splitlines()
 
 setuptools.setup(
@@ -24,13 +27,15 @@ setuptools.setup(
         'console_scripts': ['papermap = papermap.papermap:main']
     },
     classifiers=[
+        'Intended Audience :: Developers',
+        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
-        'License :: OSI Approved :: GNU General Public License (GPL)',
-        'Intended Audience :: Developers',
-        'Operating System :: OS Independent',
+        'Typing :: Typed',
     ],
     package_data = {
         'papermap': ['icons/map_marker.png']
