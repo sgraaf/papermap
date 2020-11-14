@@ -211,6 +211,15 @@ class PaperMap(object):
         self.map_image_scaled = Image.new(
             'RGB', (self.im_width_scaled, self.im_height_scaled), '#fff')
 
+        # initialize the used font
+        font_file = 'arial.ttf'
+        try:
+            self.font = ImageFont.truetype(font_file, 35)
+        except OSError as e:
+            self.font = None
+            if not self.quiet_mode:
+                print(f'Cannot load "{font_file}" [{str(e)}], falling back to the default font')
+
     def compute_grid_coordinates(self):
         """
         Computes the coordinates (and labels) for the grid
@@ -272,7 +281,6 @@ class PaperMap(object):
 
             draw = ImageDraw.Draw(self.map_image)
             color = '#000'
-            font = ImageFont.truetype('arial.ttf', 35)
 
             # draw vertical grid lines
             for x, label in x_grid_cs_and_labels:
@@ -280,11 +288,11 @@ class PaperMap(object):
                 draw.line(((x, 0), (x, self.im_height)), fill=color)
 
                 # draw grid label
-                text_size = draw.textsize(label, font=font)
+                text_size = draw.textsize(label, font=self.font)
                 draw.rectangle(
                     [(x - text_size[0] / 2, 0), (x + text_size[0] / 2, text_size[1])], fill='#fff')
                 draw.text((x - text_size[0] / 2, 0),
-                          label, font=font, fill=color)
+                          label, font=self.font, fill=color)
 
             # draw horizontal grid lines
             for y, label in y_grid_cs_and_labels:
@@ -292,10 +300,10 @@ class PaperMap(object):
                 draw.line(((0, y), (self.im_width, y)), fill=color)
 
                 # draw grid label
-                text_size = draw.textsize(label, font=font)
+                text_size = draw.textsize(label, font=self.font)
                 text_image = Image.new('RGB', text_size, '#fff')
                 text_draw = ImageDraw.Draw(text_image)
-                text_draw.text((0, 0), label, font=font, fill=color)
+                text_draw.text((0, 0), label, font=self.font, fill=color)
                 text_image = text_image.rotate(90, expand=1)
                 self.map_image.paste(
                     text_image, (0, int(y - text_size[0] / 2)))
@@ -308,10 +316,9 @@ class PaperMap(object):
         """
         draw = ImageDraw.Draw(self.map_image)
         color = '#000'
-        font = ImageFont.truetype('arial.ttf', 35)
 
         text = f'{self.tile_server["attribution"]}. Created with PaperMap. Scale: 1:{self.scale}'
-        text_size = draw.textsize(text, font=font)
+        text_size = draw.textsize(text, font=self.font)
         if text_size[0] <= self.im_width:
             draw.rectangle(
                 [(self.im_width - text_size[0], self.im_height -
@@ -319,7 +326,7 @@ class PaperMap(object):
                 fill='#fff'
             )
             draw.text(
-                (self.im_width - text_size[0], self.im_height - text_size[1]), text, font=font, fill=color)
+                (self.im_width - text_size[0], self.im_height - text_size[1]), text, font=self.font, fill=color)
         del draw
 
     def download_tiles(self):
