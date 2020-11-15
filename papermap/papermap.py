@@ -8,10 +8,12 @@ from itertools import count, cycle
 from math import ceil, floor, radians
 from pathlib import Path
 from subprocess import Popen
+from typing import Union
 
 import requests
 from cachecontrol import CacheControl
 from PIL import Image, ImageDraw, ImageFont
+from PIL.ImageFont import FreeTypeFont
 
 from .constants import *
 from .defaults import *
@@ -43,6 +45,7 @@ class PaperMap(object):
         nb_retries: int = NB_RETRIES_DEFAULT,
         landscape: bool = False,
         quiet: bool = False,
+        font: FreeTypeFont = FONT_DEFAULT,
         gpx: GPX = None,
         **kwargs
     ) -> None:
@@ -81,6 +84,7 @@ class PaperMap(object):
         self.nb_retries = nb_retries
         self.use_landscape = landscape
         self.quiet_mode = quiet
+        self.font = font
         self.gpx = gpx
 
         # get the right tile server
@@ -210,15 +214,6 @@ class PaperMap(object):
         self.paper_map = Image.new('RGB', (self.width, self.height), '#fff')
         self.map_image_scaled = Image.new(
             'RGB', (self.im_width_scaled, self.im_height_scaled), '#fff')
-
-        # initialize the used font
-        font_file = 'arial.ttf'
-        try:
-            self.font = ImageFont.truetype(font_file, 35)
-        except OSError as e:
-            self.font = None
-            if not self.quiet_mode:
-                print(f'Cannot load "{font_file}" [{str(e)}], falling back to the default font')
 
     def compute_grid_coordinates(self):
         """
@@ -477,6 +472,8 @@ def main():
                         help='Coordinate grid to display on the paper map')
     parser.add_argument('-w', '--nb_workers', type=int, default=NB_WORKERS_DEFAULT,
                         metavar='NUMBER', help='Number of workers (for parallelization)')
+    parser.add_argument('-f', '--font', type=str, default=str(FONT_FILE_DEFAULT),
+                        metavar='PATH', help='Filename or -path to the font')
     parser.add_argument('-o', '--open', action='store_true',
                         help='Open paper map after generating')
     parser.add_argument('-l', '--landscape', action='store_true',
@@ -534,6 +531,14 @@ def main():
     else:
         raise ValueError(
             'Invalid input method. Please choose one of: wgs84, utm, rd or gpx')
+
+    # parse font
+    try:
+        args.font = ImageFont.truetype(args.font, FONT_SIZE_DEFAULT)
+    except OSError:
+        if not args.quiet:
+            raise ValueError(f'Either {args.font} does not exist, or it is not a TrueType or OpenType font.')
+        sys.exit()
 
     # initialize the paper map
     pm = PaperMap(**vars(args))

@@ -38,6 +38,6 @@ setuptools.setup(
         'Typing :: Typed',
     ],
     package_data = {
-        'papermap': ['icons/map_marker.png']
+        'papermap': ['assets/map_marker.png', 'assets/Roboto-Regular.ttf']
     },
 )

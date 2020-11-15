@@ -4,6 +4,8 @@ import os
 from collections import OrderedDict
 from pathlib import Path
 
+from PIL import ImageFont
+
 API_KEY_DEFAULT = None
 SCALE_DEFAULT = 25000
 MARGIN_DEFAULT = 12
@@ -12,6 +14,7 @@ NB_WORKERS_DEFAULT = os.cpu_count()
 NB_RETRIES_DEFAULT = 3
 TRACK_COLOR_DEFAULT = 'blue'
 WAYPOINT_COLOR_DEFAULT = 'blue'
+
 
 SIZES_DICT = OrderedDict(
     [
@@ -333,4 +336,8 @@ TILE_SERVER_DEFAULT = 'OpenStreetMap'
 GRID_CHOICES = ['utm', 'rd']
 GRID_DEFAULT = None
 
-MAP_MARKER_FILE = Path(__file__).resolve().parent / 'icons' / 'map_marker.png'
+ASSETS_DIR = Path(__file__).resolve().parent / 'assets'
+MAP_MARKER_FILE = ASSETS_DIR / 'map_marker.png'
+FONT_FILE_DEFAULT = ASSETS_DIR / 'Roboto-Regular.ttf'
+FONT_SIZE_DEFAULT = 35
+FONT_DEFAULT = ImageFont.truetype(str(FONT_FILE_DEFAULT), FONT_SIZE_DEFAULT)
