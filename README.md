@@ -106,6 +106,14 @@ papermap [GLOBAL OPTIONS] {wgs84,utm,rd,gpx} [ARGS] PATH
 
 For a visual reference of the different tile servers at your disposal, please refer to [`example.pdf`](https://github.com/sgraaf/papermap/blob/master/example.pdf).
 
+## Wishlist
+Currently, my wishlist for future additions and improvements to PaperMap are as follows:
+* Implement CI/CD (via GitHub Actions or similar)
+* Add proper documentation (via Sphinx + Read the Docs)
+* Replace PIL with a different, suitable package for the creation of proper PDF documents
+
+Should you have any suggestion for a possible addition or improvement to PaperMap, please feel free to [open an issue](https://github.com/sgraaf/papermap/issues/new/choose)!
+
 ### Attribution and alternatives
 PaperMap (and its functionality) draws inspiration from various sources. You can find some of these listed below:
 * [StaticMap](https://github.com/komoot/staticmap), a small, python-based library for creating map images with lines and markers
