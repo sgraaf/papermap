@@ -386,7 +386,6 @@ class PaperMap(object):
                 self.map_image_scaled,
                 (self.x_center, self.y_center),
                 self.zoom_scaled,
-                self.dpi,
                 TILE_SIZE
             )
             # render the waypoints
@@ -394,7 +393,6 @@ class PaperMap(object):
                 self.map_image_scaled,
                 (self.x_center, self.y_center),
                 self.zoom_scaled,
-                self.dpi,
                 TILE_SIZE
             )
 
