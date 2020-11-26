@@ -4,7 +4,7 @@ from math import pi as π
 
 NAME = 'papermap'
 DESCRIPTION = 'A python package and CLI for creating paper maps'  # description of papermap
-VERSION = '0.2.1'  # current version of papermap
+VERSION = '0.2.2'  # current version of papermap
 HEADERS = {  # headers used for requests
     'User-Agent': f'{NAME}v{VERSION}',
     'Accept': 'image/png,image/*;q=0.9,*/*;q=0.8'

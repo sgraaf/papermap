@@ -11,7 +11,7 @@ with open(ROOT / 'requirements.txt', 'r', encoding='utf-8') as f:
 
 setuptools.setup(
     name='papermap',
-    version='0.2.1',
+    version='0.2.2',
     license='GNU General Public License (GNU GPL v3 or above)',
     author='Steven van de Graaf',
     author_email='steven@vandegraaf.xyz',
