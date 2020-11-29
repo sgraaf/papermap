@@ -108,9 +108,12 @@ For a visual reference of the different tile servers at your disposal, please re
 
 ## Wishlist
 Currently, my wishlist for future additions and improvements to PaperMap are as follows:
+* Add tests until full coverage is reached
 * Implement CI/CD (via GitHub Actions or similar)
 * Add proper documentation (via Sphinx + Read the Docs)
 * Replace PIL with a different, suitable package for the creation of proper PDF documents
+* Implement geocoding (via [Geocoder](https://github.com/DenisCarriere/geocoder), [Nominatim](https://nominatim.org/) or similar)
+* Implement more trig-functions based on ellipsoidal earth model
 
 Should you have any suggestion for a possible addition or improvement to PaperMap, please feel free to [open an issue](https://github.com/sgraaf/papermap/issues/new/choose)!
 
