@@ -215,7 +215,9 @@ def dms_to_dd(dms: Tuple[int, int, float]) -> float:
         dms (tuple): quantity to be converted to dd
     """
     d, m, s = dms
-    return d + m / 60 + s / 3600
+    is_positive = d >= 0
+    d = d if is_positive else -d
+    return round((d + m / 60 + s / 3600) * (1 if is_positive else -1), 6)
 
 
 def spherical_to_cartesian(lat: float, lon: float, r: float = R) -> Tuple[float, float, float]:
