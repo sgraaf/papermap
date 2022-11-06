@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from decimal import Decimal
 from math import (acos, asin, atan, atan2, cos, degrees, hypot, isclose, log,
                   radians, sin, sinh, sqrt, tan)
 from string import Formatter
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Iterator
 
 from PIL import Image, ImageColor
 
@@ -192,6 +193,26 @@ def px_to_mm(px: int, dpi: int = 300) -> float:
     return px * 25.4 / dpi
 
 
+def mm_to_pt(mm: float) -> float:
+    """
+    Convert millimeters to points.
+
+    Args:
+        mm (float): quantity in millimeters
+    """
+    return mm * 72 / 25.4
+
+
+def pt_to_mm(pt: float) -> float:
+    """
+    Convert points to millimeters.
+
+    Args:
+        pt (int): quantity in pixels
+    """
+    return pt * 25.4 / 72
+
+
 def dd_to_dms(dd: float) -> Tuple[int, int, float]:
     """
     Convert a quantity in dd to dms
@@ -315,7 +336,7 @@ def wgs84_to_rd(lat: float, lon: float) -> Tuple[float, float]:
         lon (float): longitude (in dd)
 
     References:
-        Schreutelkamp, F. H., & van Hees, G. S. (2001). Benaderingsformules voor de transformatie 
+        Schreutelkamp, F. H., & van Hees, G. S. (2001). Benaderingsformules voor de transformatie
             tussen RD-en WGS84-kaartcoördinaten. NGT Geodesia, februari, 64-69.
     """
 
@@ -371,7 +392,7 @@ def rd_to_wgs84(x, y):
         y (float)
 
     References:
-        Schreutelkamp, F. H., & van Hees, G. S. (2001). Benaderingsformules voor de transformatie 
+        Schreutelkamp, F. H., & van Hees, G. S. (2001). Benaderingsformules voor de transformatie
             tussen RD-en WGS84-kaartcoördinaten. NGT Geodesia, februari, 64-69.
     """
 
@@ -747,7 +768,7 @@ def intermediate_point(lat1: float, lon1: float, lat2: float, lon2: float, frac:
 
 def destination(lat1: float, lon1: float, d: int, brng: float) -> Tuple[float, float]:
     """
-    Calculate the destination point from a given initial point, having travelled the given distance on the 
+    Calculate the destination point from a given initial point, having travelled the given distance on the
     given initial bearing.
     Adapted from: https://www.movable-type.co.uk/scripts/latlong.html
 
@@ -914,3 +935,8 @@ def is_out_of_bounds(test: Dict[str, float], bounds: Dict[str, float]) -> bool:
     elif test['lon_max'] > bounds['lat_max']:
         return True
     return False
+
+def drange(start: Decimal, stop: Decimal, step: Decimal) -> Iterator[Decimal]:
+    while start < stop:
+        yield start
+        start += step
