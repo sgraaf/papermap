@@ -3,17 +3,17 @@
 import argparse
 import sys
 from concurrent.futures import ThreadPoolExecutor
+from decimal import Decimal
 from io import BytesIO
 from itertools import count, cycle
 from math import ceil, floor, radians
 from pathlib import Path
 from subprocess import Popen
-from typing import Union
 
 import requests
 from cachecontrol import CacheControl
-from PIL import Image, ImageDraw, ImageFont
-from PIL.ImageFont import FreeTypeFont
+from fpdf import FPDF
+from PIL import Image
 
 from .constants import *
 from .defaults import *
@@ -22,7 +22,7 @@ from .tile import Tile
 from .utils import (get_string_formatting_arguments, is_out_of_bounds,
                     lat_to_y, lon_to_x, mm_to_px, rd_to_wgs84, scale_to_zoom,
                     utm_to_wgs84, wgs84_to_rd, wgs84_to_utm, x_to_lon,
-                    y_to_lat)
+                    y_to_lat, pt_to_mm, drange)
 
 
 class PaperMap(object):
@@ -45,7 +45,6 @@ class PaperMap(object):
         nb_retries: int = NB_RETRIES_DEFAULT,
         landscape: bool = False,
         quiet: bool = False,
-        font: FreeTypeFont = FONT_DEFAULT,
         gpx: GPX = None,
         **kwargs
     ) -> None:
@@ -76,15 +75,14 @@ class PaperMap(object):
         self.api_key = api_key
         self.scale = scale
         self.dpi = dpi
-        self.margin_top = mm_to_px(margin_top, self.dpi)
-        self.margin_bottom = mm_to_px(margin_bottom, self.dpi)
-        self.margin_left = mm_to_px(margin_left, self.dpi)
-        self.margin_right = mm_to_px(margin_right, self.dpi)
+        self.margin_top = margin_top
+        self.margin_bottom = margin_bottom
+        self.margin_left = margin_left
+        self.margin_right = margin_right
         self.nb_workers = nb_workers
         self.nb_retries = nb_retries
         self.use_landscape = landscape
         self.quiet_mode = quiet
-        self.font = font
         self.gpx = gpx
 
         # get the right tile server
@@ -123,7 +121,20 @@ class PaperMap(object):
                     f'Invalid grid. Please choose one of {GRID_CHOICES}')
         self.grid = grid
 
-        # convert lat and lon to radians
+        # get the width and height of the paper (incl. margins, in mm)
+        self.width = self.size['h'] if self.use_landscape else self.size['w']
+        self.height = self.size['w'] if self.use_landscape else self.size['h']
+
+        # compute the width and height of the image (in mm)
+        self.im_width = self.width - self.margin_left - self.margin_right
+        self.im_height = self.height - self.margin_top - self.margin_bottom
+
+         # compute the proper grid size (in mm)
+        self.grid_size = Decimal(GRID_SIZE / self.scale)
+
+        # perform conversions
+        self.im_width_px = mm_to_px(self.im_width, self.dpi)
+        self.im_height_px = mm_to_px(self.im_height, self.dpi)
         self.φ = radians(self.lat)
         self.λ = radians(self.lon)
 
@@ -138,22 +149,9 @@ class PaperMap(object):
                 raise ValueError('Scale out of bounds')
             sys.exit()
 
-        # compute the proper grid size (in px)
-        self.grid_size = mm_to_px(GRID_SIZE / self.scale, self.dpi)
-
-        # get the width and height of the paper (incl. margins, in px)
-        self.width = mm_to_px(
-            self.size['h'] if self.use_landscape else self.size['w'], self.dpi)
-        self.height = mm_to_px(
-            self.size['w'] if self.use_landscape else self.size['h'], self.dpi)
-
-        # compute the width and height of the image (in px)
-        self.im_width = self.width - self.margin_left - self.margin_right
-        self.im_height = self.height - self.margin_top - self.margin_bottom
-
         # compute the scaled width and height of the image (in px)
-        self.im_width_scaled = round(self.im_width * self.resize_factor)
-        self.im_height_scaled = round(self.im_height * self.resize_factor)
+        self.im_width_scaled_px = round(self.im_width_px * self.resize_factor)
+        self.im_height_scaled_px = round(self.im_height_px * self.resize_factor)
 
         # determine the center tile
         self.x_center = lon_to_x(self.lon, self.zoom_scaled)
@@ -161,13 +159,13 @@ class PaperMap(object):
 
         # determine the tiles required to produce the map image
         self.x_min = floor(
-            self.x_center - (0.5 * self.im_width_scaled / TILE_SIZE))
+            self.x_center - (0.5 * self.im_width_scaled_px / TILE_SIZE))
         self.y_min = floor(
-            self.y_center - (0.5 * self.im_height_scaled / TILE_SIZE))
+            self.y_center - (0.5 * self.im_height_scaled_px / TILE_SIZE))
         self.x_max = ceil(
-            self.x_center + (0.5 * self.im_width_scaled / TILE_SIZE))
+            self.x_center + (0.5 * self.im_width_scaled_px / TILE_SIZE))
         self.y_max = ceil(
-            self.y_center + (0.5 * self.im_height_scaled / TILE_SIZE))
+            self.y_center + (0.5 * self.im_height_scaled_px / TILE_SIZE))
 
         # compute the coordinate bounds
         self.bounds = {
@@ -195,13 +193,13 @@ class PaperMap(object):
 
                 bbox = (
                     round((x_tile - self.x_center) *
-                          TILE_SIZE + self.im_width_scaled / 2),
+                          TILE_SIZE + self.im_width_scaled_px / 2),
                     round((y_tile - self.y_center) *
-                          TILE_SIZE + self.im_height_scaled / 2),
+                          TILE_SIZE + self.im_height_scaled_px / 2),
                     round((x_tile + 1 - self.x_center) *
-                          TILE_SIZE + self.im_width_scaled / 2),
+                          TILE_SIZE + self.im_width_scaled_px / 2),
                     round((y_tile + 1 - self.y_center) *
-                          TILE_SIZE + self.im_height_scaled / 2),
+                          TILE_SIZE + self.im_height_scaled_px / 2),
                 )
 
                 self.tiles.append(Tile(x_tile, y_tile, self.zoom_scaled, bbox))
@@ -210,10 +208,23 @@ class PaperMap(object):
         self.session = CacheControl(requests.Session())
         self.session.headers = HEADERS
 
-        # initialize paper map and scaled map image
-        self.paper_map = Image.new('RGB', (self.width, self.height), '#fff')
+        # initialize scaled map image
         self.map_image_scaled = Image.new(
-            'RGB', (self.im_width_scaled, self.im_height_scaled), '#fff')
+            'RGB', (self.im_width_scaled_px, self.im_height_scaled_px), '#fff')
+
+        # initialize the pdf document
+        self.pdf = FPDF(
+            orientation="Landscape" if self.use_landscape else "Portrait",
+            unit="mm",
+            format=(self.width, self.height)
+        )
+        self.pdf.set_font('Helvetica')
+        self.pdf.set_fill_color(255, 255, 255)
+        self.pdf.set_top_margin(self.margin_top)
+        self.pdf.set_auto_page_break(True, self.margin_bottom)
+        self.pdf.set_left_margin(self.margin_left)
+        self.pdf.set_right_margin(self.margin_right)
+        self.pdf.add_page()
 
     def compute_grid_coordinates(self):
         """
@@ -229,29 +240,25 @@ class PaperMap(object):
         x_rnd = round(x, -3)
         y_rnd = round(y, -3)
 
-        # compute distance between RD and RD_rnd in mm
-        dx_mm = (x - x_rnd) / self.scale * 1000
-        dy_mm = (y - y_rnd) / self.scale * 1000
+        # compute distance between x/y and x/y_rnd in mm
+        dx = Decimal((x - x_rnd) / self.scale * 1000)
+        dy = Decimal((y - y_rnd) / self.scale * 1000)
 
-        # convert distance from mm to px
-        dx_px = mm_to_px(dx_mm, self.dpi)
-        dy_px = mm_to_px(dy_mm, self.dpi)
+        # determine center grid coordinate (in mm)
+        x_grid_center = Decimal(self.im_width / 2) - dx
+        y_grid_center = Decimal(self.im_height / 2) - dy
 
-        # determine center grid coordinate (in px)
-        x_grid_center = int(self.im_width / 2 - dx_px)
-        y_grid_center = int(self.im_height / 2 - dy_px)
-
-        # determine start grid coordinate (in px)
+        # determine start grid coordinate (in mm)
         x_grid_start = x_grid_center % self.grid_size
         y_grid_start = y_grid_center % self.grid_size
 
         # determine the start grid coordinate label
-        x_label_start = int(x_rnd / 1000 - x_grid_center // self.grid_size)
-        y_label_start = int(y_rnd / 1000 + y_grid_center // self.grid_size)
+        x_label_start = int(Decimal(x_rnd / 1000) - x_grid_center // self.grid_size)
+        y_label_start = int(Decimal(y_rnd / 1000) + y_grid_center // self.grid_size)
 
-        # determine the grid coordinates (in px)
-        x_grid_cs = range(x_grid_start, self.im_width, self.grid_size)
-        y_grid_cs = range(y_grid_start, self.im_height, self.grid_size)
+        # determine the grid coordinates (in mm)
+        x_grid_cs = list(drange(x_grid_start, Decimal(self.im_width), self.grid_size))
+        y_grid_cs = list(drange(y_grid_start, Decimal(self.im_height), self.grid_size))
 
         # determine the grid coordinates labels
         x_labels = [x_label_start + i for i in range(len(x_grid_cs))]
@@ -271,58 +278,51 @@ class PaperMap(object):
         Adds a grid to the image
         """
         if self.grid is not None:
+            self.pdf.set_draw_color(0, 0, 0)
+            self.pdf.set_line_width(0.1)
+            self.pdf.set_font_size(8)
+
             # get grid coordinates
             x_grid_cs_and_labels, y_grid_cs_and_labels = self.compute_grid_coordinates()
 
-            draw = ImageDraw.Draw(self.map_image)
-            color = '#000'
-
             # draw vertical grid lines
             for x, label in x_grid_cs_and_labels:
-                # draw grid line
-                draw.line(((x, 0), (x, self.im_height)), fill=color)
+                x = float(x + self.margin_left)
+                label_width = self.pdf.get_string_width(label)
 
-                # draw grid label
-                text_size = draw.textsize(label, font=self.font)
-                draw.rectangle(
-                    [(x - text_size[0] / 2, 0), (x + text_size[0] / 2, text_size[1])], fill='#fff')
-                draw.text((x - text_size[0] / 2, 0),
-                          label, font=self.font, fill=color)
+                # draw grid line
+                self.pdf.line(x, self.margin_top, x, self.margin_top + self.pdf.eph)
+
+                # draw label
+                self.pdf.set_xy(x - label_width / 2, self.margin_top)
+                self.pdf.cell(w=label_width, txt=label, align='C', fill=True)
 
             # draw horizontal grid lines
             for y, label in y_grid_cs_and_labels:
-                # draw grid line
-                draw.line(((0, y), (self.im_width, y)), fill=color)
+                y = float(y + self.margin_top)
+                label_width = self.pdf.get_string_width(label)
+                label_height = pt_to_mm(self.pdf.font_size)
 
-                # draw grid label
-                text_size = draw.textsize(label, font=self.font)
-                text_image = Image.new('RGB', text_size, '#fff')
-                text_draw = ImageDraw.Draw(text_image)
-                text_draw.text((0, 0), label, font=self.font, fill=color)
-                text_image = text_image.rotate(90, expand=1)
-                self.map_image.paste(
-                    text_image, (0, int(y - text_size[0] / 2)))
-                del text_draw
-            del draw
+                # draw grid line
+                self.pdf.line(self.margin_left, y, self.margin_left + self.pdf.epw, y)
+
+                # draw label
+                self.pdf.set_xy(self.margin_left, y + label_width / 2)
+                with self.pdf.rotation(90):
+                    self.pdf.cell(w=label_width, txt=label, align='C', fill=True)
+
+            self.pdf.set_font_size(12)
 
     def render_attribution_and_scale(self):
         """
         Adds the attribution and scale to the image
         """
-        draw = ImageDraw.Draw(self.map_image)
-        color = '#000'
-
         text = f'{self.tile_server["attribution"]}. Created with PaperMap. Scale: 1:{self.scale}'
-        text_size = draw.textsize(text, font=self.font)
-        if text_size[0] <= self.im_width:
-            draw.rectangle(
-                [(self.im_width - text_size[0], self.im_height -
-                  text_size[1]), (self.im_width, self.im_height)],
-                fill='#fff'
-            )
-            draw.text(
-                (self.im_width - text_size[0], self.im_height - text_size[1]), text, font=self.font, fill=color)
-        del draw
+        self.pdf.set_xy(
+            self.margin_left + self.pdf.epw - self.pdf.get_string_width(text),
+            self.margin_top + self.pdf.eph - pt_to_mm(self.pdf.font_size_pt)
+        )
+        self.pdf.cell(w=0, txt=text, align='R', fill=True)
 
     def download_tiles(self):
         # download the tile images
@@ -405,7 +405,10 @@ class PaperMap(object):
 
         # resize the scaled map image
         self.map_image = self.map_image_scaled.resize(
-            (self.im_width, self.im_height), Image.LANCZOS)
+            (self.im_width_px, self.im_height_px), Image.LANCZOS)
+
+        # paste the map image onto the paper map
+        self.pdf.image(self.map_image, w=self.im_width, h=self.im_height)
 
         # add the coordinate grid
         self.render_grid()
@@ -413,23 +416,15 @@ class PaperMap(object):
         # add the attribution and scale to the map
         self.render_attribution_and_scale()
 
-        # paste the map image onto the paper map
-        self.paper_map.paste(
-            self.map_image,
-            (self.margin_left, self.margin_top)
-        )
-
     def show(self):
-        self.paper_map.show()
+        self.map_image.show()
 
     def save(self, file: Path, title: str = NAME, author: str = NAME):
         self.file = file
-        self.paper_map.save(
-            self.file,
-            resolution=self.dpi,
-            title=title,
-            author=author
-        )
+        self.pdf.set_title(title)
+        self.pdf.set_author(author)
+        self.pdf.set_creator(f"{NAME} v{VERSION}")
+        self.pdf.output(self.file)
 
     def open(self):
         Popen([str(self.file)], shell=True)
@@ -441,7 +436,6 @@ class PaperMap(object):
 def main():
     # cli arguments
     parser = argparse.ArgumentParser(prog=NAME, description=DESCRIPTION)
-    parser.version = VERSION
     subparsers = parser.add_subparsers(
         title='inputs', dest='input', required=True)
 
@@ -470,15 +464,13 @@ def main():
                         help='Coordinate grid to display on the paper map')
     parser.add_argument('-w', '--nb_workers', type=int, default=NB_WORKERS_DEFAULT,
                         metavar='NUMBER', help='Number of workers (for parallelization)')
-    parser.add_argument('-f', '--font', type=str, default=str(FONT_FILE_DEFAULT),
-                        metavar='PATH', help='Filename or -path to the font')
     parser.add_argument('-o', '--open', action='store_true',
                         help='Open paper map after generating')
     parser.add_argument('-l', '--landscape', action='store_true',
                         help='Use landscape orientation')
     parser.add_argument('-q', '--quiet', action='store_true',
                         help='Activate quiet mode')
-    parser.add_argument('-v', '--version', action='version',
+    parser.add_argument('-v', '--version', action='version', version=f'%(prog)s v{VERSION}',
                         help=f'Display the current version of {NAME}')
 
     # wgs84 subparser arguments
@@ -529,14 +521,6 @@ def main():
     else:
         raise ValueError(
             'Invalid input method. Please choose one of: wgs84, utm, rd or gpx')
-
-    # parse font
-    try:
-        args.font = ImageFont.truetype(args.font, FONT_SIZE_DEFAULT)
-    except OSError:
-        if not args.quiet:
-            raise ValueError(f'Either {args.font} does not exist, or it is not a TrueType or OpenType font.')
-        sys.exit()
 
     # initialize the paper map
     pm = PaperMap(**vars(args))
