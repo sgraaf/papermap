@@ -1,129 +1,111 @@
+<!-- start docs-include-index -->
+
 # PaperMap
 
-A python package and CLI for creating paper maps.
+[![PyPI](https://img.shields.io/pypi/v/papermap)](https://img.shields.io/pypi/v/papermap)
+[![Supported Python Versions](https://img.shields.io/pypi/pyversions/papermap)](https://pypi.org/project/papermap/)
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/sgraaf/papermap/main.svg)](https://results.pre-commit.ci/latest/github/sgraaf/papermap/main)
+[![Test](https://github.com/sgraaf/papermap/actions/workflows/test.yml/badge.svg)](https://github.com/sgraaf/papermap/actions/workflows/test.yml)
+[![Documentation Status](https://readthedocs.org/projects/papermap/badge/?version=latest)](https://papermap.readthedocs.io/en/latest/?badge=latest)
+[![PyPI - License](https://img.shields.io/pypi/l/papermap)](https://img.shields.io/pypi/l/papermap)
 
-## Example
-Below, you'll find two examples on how to use PaperMap. Both of these examples accomplish the exact same thing: creating an A4 map of Bangkok at scale 1:25000.
+PaperMap is a Python package and CLI for creating ready-to-print paper maps.
 
-### Package
-```python
-from papermap import PaperMap
-pm = PaperMap(13.75889, 100.49722)
-pm.render()
-pm.save('Bangkok.pdf')
-```
-
-### CLI
-```bash
-papermap wgs84 13.75889 100.49722 Bangkok.pdf
-```
+<!-- end docs-include-index -->
 
 ## Installation
-### Using pip
+
+<!-- start docs-include-installation -->
+
+### From PyPI
+
+PaperMap is available on [PyPI](https://pypi.org/project/papermap/).
+
+#### As a package
+
+For use as a package, install PaperMap with `pip` or your package manager of choice:
+
 ```bash
-pip install --upgrade papermap
+pip install papermap
+```
+
+#### As a CLI tool
+
+For use as a CLI tool, we recommend installing PaperMap with [`pipx`](https://pypa.github.io/pipx/):
+
+```bash
+pipx install papermap
 ```
 
 ### From source
+
+If you'd like, you can also install PaperMap from source (with [`flit`](https://flit.readthedocs.io/en/latest/)):
+
 ```bash
 git clone https://github.com/sgraaf/papermap.git
 cd papermap
-python setup.py install
+python3 -m pip install flit
+flit install
 ```
+
+<!-- end docs-include-installation -->
+
+## Documentation
+
+Check out the [PaperMap documentation](https://papermap.readthedocs.io/en/stable/) for the [User's Guide](https://papermap.readthedocs.io/en/stable/usage.html) and [API Reference](https://papermap.readthedocs.io/en/stable/api.html).
 
 ## Usage
 
-### Package
-#### Create a new PaperMap instance
+PaperMap can be used both in your own applications as a package, as well as a CLI tool.
+
+#### As a package
+
+Using the default values, the example below will create an portrait-oriented, A4-sized map of Bangkok at scale 1:25000:
+
 ```python
-pm = PaperMap(lat, lon, tile_server, scale, size, dpi, margin_top, margin_bottom, margin_left, margin_right, grid, nb_workers, nb_retries, landscape, quiet, gpx)
+>>> from papermap import PaperMap
+>>> pm = PaperMap(13.75889, 100.49722)
+>>> pm.render()
+>>> pm.save("Bangkok.pdf")
 ```
 
-#### Arguments
-    lat (float):            latitude (in DD)
-    lon (float):            longitude (in DD)
-    tile_server (str):      tile server to serve as the base of the paper map. Default: OpenStreetMap
-    api_key (str):          API key for the chosen tile server (if applicable). Default: None
-    scale (int):            scale of the paper map (in cm). Default: 25000
-    size (str):             size of the paper map. Default: A4
-    margin_top (int):       top margin (in mm), Default: 12
-    margin_bottom (int):    bottom margin (in mm), Default: 12
-    margin_left (int):      left margin (in mm), Default: 12
-    margin_right (int):     right margin (in mm), Default: 12
-    dpi (int):              dots per inch. Default: 300
-    grid (str):             coordinate grid to display on the paper map. Default: None
-    nb_workers (int):       number of workers (for parallelization). Default: 4
-    nb_retries (int):       number of retries (for failed tiles). Default: 3
-    landscape (bool):       use landscape orientation. Default: False
-    quiet (bool):           activate quiet mode. Default: False
-    gpx (GPX):              GPX object. Default: None
-    
-### CLI
-```bash
-papermap [GLOBAL OPTIONS] {wgs84,utm,rd,gpx} [ARGS] PATH
+You can easily customize the generated map by changing the tile server, size, orientation, etc. For an exhaustive list of all available options, please see the [API Reference](https://papermap.readthedocs.io/en/stable/api.html#papermap.papermap.PaperMap).
+
+For example, the example below will create a landscape-oriented, A3-sized map of Madrid using the [Stamen Terrein](https://stamen.com/say-hello-to-global-stamen-terrain-maps-c195b3bb71e0/) tile server, with a UTM grid overlay, at scale 1:50000:
+
+```python
+>>> from papermap import PaperMap
+>>> pm = PaperMap(
+...     lat=40.416775,
+...     lon=-3.703790,
+...     tile_server="Stamen Terrain",
+...     size="a3",
+...     landscape=True,
+...     scale=50_000,
+...     add_grid=True,
+>>> )
+>>> pm.render()
+>>> pm.save("Madrid.pdf")
 ```
 
-#### Global Options
-    -t, --tile_server {OpenStreetMap,
-    OpenStreetMap Monochrome,
-    OpenTopoMap,
-    Thunderforest Landscape,
-    Thunderforest Outdoors,
-    Thunderforest Transport,
-    ESRI Standard,
-    ESRI Satellite,
-    ESRI Topo,
-    ESRI Dark Gray,
-    ESRI Light Gray,
-    ESRI Transportation,
-    Google Maps,
-    Google Maps Sattelite,
-    Google Maps Sattelite Hybrid,
-    Google Maps Terrain,
-    Google Maps Terrain Hybrid,
-    Stamen Terrain,
-    Stamen Toner,
-    Stamen Toner Lite,
-    Komoot,
-    Wikimedia,
-    Hike & Bike}                        Tile server to serve as the base of the paper map
-    -a, --api_key                       API key for the chosen tile server (if applicable)
-    -sz, --size {A0,A1,A2,A3,
-    A4,A5,A6,A7,Letter,Legal}           Size of the paper map
-    -sc, --scale CENTIMETERS            Scale of the paper map
-    -mt, --margin_top MILLIMETERS       Top margin
-    -mb, --margin_bottom MILLIMETERS    Bottom margin
-    -ml, --margin_left MILLIMETERS      Left margin
-    -mr, --margin_right MILLIMETERS     Right margin
-    -d, --dpi NUMBER                    Dots per inch
-    -g, --grid {utm, rd}                Coordinate grid to display on the paper map
-    -w, --nb_workers NUMBER             Number of workers (for parallelization)
-    -r, --nb_retries NUMBER             Number of retries (for failed tiles)
-    -o, --open                          Open paper map after generating
-    -l, --landscape                     Use landscape orientation
-    -q, --quiet                         Activate quiet mode
-    -v, --version                       Display the current version of PaperMap
+#### As a CLI tool
 
-For a visual reference of the different tile servers at your disposal, please refer to [`example.pdf`](https://github.com/sgraaf/papermap/blob/master/example.pdf).
+Similarly, using the default values, the example below will create an portrait-oriented, A4-sized map of Bangkok at scale 1:25000:
 
-## Wishlist
-Currently, my wishlist for future additions and improvements to PaperMap are as follows:
-* Add tests until full coverage is reached
-* Implement CI/CD (via GitHub Actions or similar)
-* Add proper documentation (via Sphinx + Read the Docs)
-* Replace PIL with a different, suitable package for the creation of proper PDF documents
-* Implement geocoding (via [Geocoder](https://github.com/DenisCarriere/geocoder), [Nominatim](https://nominatim.org/) or similar)
-* Implement more trig-functions based on ellipsoidal earth model
+```shell
+$ papermap latlon -- 13.75889 100.49722 Bangkok.pdf
+```
 
-Should you have any suggestion for a possible addition or improvement to PaperMap, please feel free to [open an issue](https://github.com/sgraaf/papermap/issues/new/choose)!
+As with the package, maps generated through the CLI are also highly customizable. Please see the [CLI Reference](https://papermap.readthedocs.io/en/stable/cli.html) for an exhaustive list of all available options.
 
-### Attribution and alternatives
-PaperMap (and its functionality) draws inspiration from various sources. You can find some of these listed below:
-* [StaticMap](https://github.com/komoot/staticmap), a small, python-based library for creating map images with lines and markers
-* [ScoutingTools.nl](https://scoutingtools.nl/), a Dutch website dedicated to useful tools for scouts (e.g. generating maps)
-* [rijksdriehoek](https://github.com/djvanderlaan/rijksdriehoek), a collection of functions to convert WGS84 coordinates into RD coordinates in various programming languages
-* [Movable Type](https://www.movable-type.co.uk/scripts/latlong.html), a collection of calculations and code relevant to WGS84 coordinates
+The example below will create a landscape-oriented, A3-sized map of Madrid using the [Stamen Terrein](https://stamen.com/say-hello-to-global-stamen-terrain-maps-c195b3bb71e0/) tile server, with a UTM grid overlay, at scale 1:50000:
 
-
-### License
-PaperMap is open-source and licensed under GNU GPL, Version 3.
+```shell
+$ papermap latlon \
+    --tile-server "Stamen Terrain" \
+    --size a3 \
+    --landscape \
+    --scale 50000 \
+    --grid \
+    -- 40.416775 -3.703790 Madrid.pdf
+```

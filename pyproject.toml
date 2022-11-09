@@ -1,0 +1,67 @@
+[build-system]
+requires = ["flit_core >=3.2,<4"]
+build-backend = "flit_core.buildapi"
+
+[project]
+name = "papermap"
+authors = [{name = "Steven van de Graaf", email = "steven@vandegraaf.xyz"}]
+readme = "README.md"
+license = {file = "LICENSE"}
+keywords = ["paper", "map", "topography", "osm", "openstreetmap"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Typing :: Typed",
+]
+requires-python = "~=3.7"
+dependencies = [
+    "click",
+    "click_default_group",
+    "fpdf2",
+    "Pillow",
+    "requests",
+]
+dynamic = ["version", "description"]
+
+[project.optional-dependencies]
+dev = [
+    "autoflake",
+    "black",
+    "flake8",
+    "isort",
+    "mypy",
+    "pre-commit",
+    "pyupgrade",
+]
+docs = [
+    "furo",
+    "myst-parser",
+    "sphinx",
+    "sphinx-copybutton",
+    "sphinxext-opengraph",
+]
+tests = [
+    "cog",
+    "pytest",
+]
+
+[project.urls]
+Documentation = "https://papermap.readthedocs.io/en/stable/"
+Changelog = "https://papermap.readthedocs.io/en/stable/changelog.html"
+"Source code" = "https://github.com/sgraaf/papermap"
+Issues = "https://github.com/sgraaf/papermap/issues"
+
+[project.scripts]
+papermap = "papermap.cli:cli"
+
+[tool.isort]
+profile = "black"
