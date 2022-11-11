@@ -3,7 +3,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
 from io import BytesIO
-from itertools import count, cycle
+from itertools import count
 from math import ceil, floor, radians
 from pathlib import Path
 from typing import List, Optional, Tuple, Union
@@ -11,6 +11,7 @@ from typing import List, Optional, Tuple, Union
 from fpdf import FPDF
 from PIL import Image
 from requests import Session
+from requests.exceptions import HTTPError
 
 from . import __version__
 from .constants import HEADERS, NAME, TILE_SIZE
@@ -345,31 +346,20 @@ class PaperMap:
                     responses = executor.map(
                         session.get,
                         [
-                            self.tile_server.url_template.format(
-                                mirror=mirror,
-                                x=tile.x,
-                                y=tile.y,
-                                zoom=tile.zoom,
-                                api_key=self.api_key,
+                            self.tile_server.format_url_template(
+                                tile=tile, api_key=self.api_key
                             )
-                            for tile, mirror in zip(tiles, cycle(self.mirrors))
-                            if not tile.success
+                            for tile in tiles
                         ],
                     )
 
                     for tile, r in zip(tiles, responses):
                         try:
-                            if r.status_code == 200:
-                                # open the tile image and mark it a success
-                                tile.image = Image.open(BytesIO(r.content)).convert(
-                                    "RGBA"
-                                )
-                                tile.success = True
-                            else:
-                                print(f"Request failed [{r.status_code}]: {r.url}")
-                        except ConnectionError as e:
-                            print(f"Connection error for URL: {str(r.url)}")
-                            print(str(e))
+                            r.raise_for_status()
+                            # set tile image
+                            tile.image = Image.open(BytesIO(r.content)).convert("RGBA")
+                        except HTTPError:
+                            pass
 
     def render_base_layer(self) -> None:
         # download all the required tiles
