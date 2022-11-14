@@ -28,7 +28,14 @@ def clip(val: float, lower: float, upper: float) -> float:
 
     Returns:
         The value clipped to [lower, upper] range.
+
+    Raises:
+        ValueError: If lower > upper.
     """
+    if lower > upper:
+        raise ValueError(
+            f"Lower bound must be less than or equal to upper bound: {lower} > {upper}"
+        )
     return min(max(val, lower), upper)
 
 
@@ -44,7 +51,6 @@ def wrap(angle: Angle, limit: Angle) -> Angle:
     """
     if -limit <= angle <= limit:  # angle already in [-limit, limit] range
         return angle
-    # angle %= limit
     return (angle + limit) % (2 * limit) - limit
 
 
