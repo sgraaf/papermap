@@ -1,5 +1,10 @@
 ci:
+  autofix_commit_msg: |
+    :art: [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
   autoupdate_schedule: monthly
+  autoupdate_commit_msg: ":arrow_up: [pre-commit.ci] pre-commit autoupdate"
 
 default_language_version:
   python: python3.10
@@ -14,23 +19,38 @@ repos:
       - id: check-yaml
       - id: end-of-file-fixer
       - id: trailing-whitespace
+  - repo: https://github.com/abravalheri/validate-pyproject
+    rev: v0.12.1
+    hooks:
+      - id: validate-pyproject
+        name: validate pyproject.toml
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.22.0
+    hooks:
+      - id: check-github-workflows
+        name: validate github workflows
+      - id: check-readthedocs
+        name: validate readthedocs config
   - repo: https://github.com/charliermarsh/ruff-pre-commit
     rev: v0.0.256
     hooks:
       - id: ruff
-        args: [--fix, --exit-non-zero-on-fix]
+        args:
+          - --fix
+          - --exit-non-zero-on-fix
+          - --show-fixes
   - repo: https://github.com/psf/black
     rev: 23.1.0
     hooks:
       - id: black
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.0.1
+    rev: v1.1.1
     hooks:
       - id: mypy
         additional_dependencies:
           - types-requests
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.2
+    rev: v2.2.4
     hooks:
       - id: codespell
   - repo: https://github.com/pre-commit/mirrors-prettier
