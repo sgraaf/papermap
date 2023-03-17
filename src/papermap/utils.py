@@ -1,7 +1,21 @@
 from decimal import Decimal
-from math import asinh, atan, atan2, atanh, cos, cosh, degrees, hypot, log
+from math import (
+    asinh,
+    atan,
+    atan2,
+    atanh,
+    cos,
+    cosh,
+    degrees,
+    hypot,
+    log,
+    radians,
+    sin,
+    sinh,
+    sqrt,
+    tan,
+)
 from math import pi as π
-from math import radians, sin, sinh, sqrt, tan
 from string import Formatter
 from typing import Dict, Iterator, List, Union
 

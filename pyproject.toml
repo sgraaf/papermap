@@ -34,13 +34,10 @@ dynamic = ["version", "description"]
 
 [project.optional-dependencies]
 dev = [
-    "autoflake",
     "black",
-    "flake8",
-    "isort",
     "mypy",
     "pre-commit",
-    "pyupgrade",
+    "ruff",
 ]
 docs = [
     "furo",
@@ -63,5 +60,20 @@ Issues = "https://github.com/sgraaf/papermap/issues"
 [project.scripts]
 papermap = "papermap.cli:cli"
 
-[tool.isort]
-profile = "black"
+[tool.ruff]
+select = [
+    "B",
+    "C90",
+    "E",
+    "F",
+    "I",
+    "UP",
+    "RUF100",
+    "W",
+]
+ignore = ["E501"]
+src = ["src"]
+target-version = "py37"
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]

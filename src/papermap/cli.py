@@ -19,7 +19,7 @@ from .defaults import (
 from .papermap import PaperMap
 from .utils import utm_to_spherical
 
-CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
+CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 
 
 def margin_option(side: str) -> Callable:
