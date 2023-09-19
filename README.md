@@ -71,7 +71,7 @@ Using the default values, the example below will create an portrait-oriented, A4
 
 You can easily customize the generated map by changing the tile server, size, orientation, etc. For an exhaustive list of all available options, please see the [API Reference](https://papermap.readthedocs.io/en/stable/api.html#papermap.papermap.PaperMap).
 
-For example, the example below will create a landscape-oriented, A3-sized map of Madrid using the [Stamen Terrein](https://stamen.com/say-hello-to-global-stamen-terrain-maps-c195b3bb71e0/) tile server, with a UTM grid overlay, at scale 1:50000:
+For example, the example below will create a landscape-oriented, A3-sized map of Madrid using the [Stamen Terrain](https://stamen.com/say-hello-to-global-stamen-terrain-maps-c195b3bb71e0/) tile server, with a UTM grid overlay, at scale 1:50000:
 
 ```python
 >>> from papermap import PaperMap
@@ -98,7 +98,7 @@ $ papermap latlon -- 13.75889 100.49722 Bangkok.pdf
 
 As with the package, maps generated through the CLI are also highly customizable. Please see the [CLI Reference](https://papermap.readthedocs.io/en/stable/cli.html) for an exhaustive list of all available options.
 
-The example below will create a landscape-oriented, A3-sized map of Madrid using the [Stamen Terrein](https://stamen.com/say-hello-to-global-stamen-terrain-maps-c195b3bb71e0/) tile server, with a UTM grid overlay, at scale 1:50000:
+The example below will create a landscape-oriented, A3-sized map of Madrid using the [Stamen Terrain](https://stamen.com/say-hello-to-global-stamen-terrain-maps-c195b3bb71e0/) tile server, with a UTM grid overlay, at scale 1:50000:
 
 ```shell
 $ papermap latlon \
