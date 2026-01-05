@@ -1,4 +1,5 @@
 """Type information used throughout `papermap`."""
+
 from typing import Tuple, Union
 
 Degree = float
