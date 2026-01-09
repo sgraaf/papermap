@@ -1,11 +1,9 @@
-from typing import Dict
-
 from . import __version__
 
 NAME: str = "PaperMap"
 
 # headers used for requests
-HEADERS: Dict[str, str] = {
+HEADERS: dict[str, str] = {
     "User-Agent": f"{NAME}v{__version__}",
     "Accept": "image/png,image/*;q=0.9,*/*;q=0.8",
 }

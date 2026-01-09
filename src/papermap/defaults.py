@@ -1,8 +1,6 @@
-from typing import Dict, Tuple
-
 from .tile_server import TileServer
 
-SIZE_TO_DIMENSIONS_MAP: Dict[str, Tuple[int, int]] = dict(
+SIZE_TO_DIMENSIONS_MAP: dict[str, tuple[int, int]] = dict(
     [
         ("a0", (841, 1189)),
         ("a1", (594, 841)),
@@ -19,7 +17,7 @@ SIZE_TO_DIMENSIONS_MAP: Dict[str, Tuple[int, int]] = dict(
 SIZES = tuple(SIZE_TO_DIMENSIONS_MAP.keys())
 DEFAULT_SIZE: str = "a4"
 
-TILE_SERVERS_MAP: Dict[str, TileServer] = dict(
+TILE_SERVERS_MAP: dict[str, TileServer] = dict(
     [
         (
             "OpenStreetMap",

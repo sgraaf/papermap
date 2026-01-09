@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
 from itertools import cycle
-from typing import List, Optional, Union
 
 from .tile import Tile
 
@@ -27,13 +26,13 @@ class TileServer:
     url_template: str
     zoom_min: int
     zoom_max: int
-    mirrors: Optional[List[Optional[Union[str, int]]]] = None
+    mirrors: list[str | int | None] | None = None
     mirrors_cycle: cycle = field(init=False)
 
     def __post_init__(self) -> None:
         self.mirrors_cycle = cycle(self.mirrors or [None])
 
-    def format_url_template(self, tile: Tile, api_key: Optional[str] = None) -> str:
+    def format_url_template(self, tile: Tile, api_key: str | None = None) -> str:
         """Format the URL template with the tile's coordinates and zoom level.
 
         Args:

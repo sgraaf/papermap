@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from decimal import Decimal
 from math import (
     asinh,
@@ -17,7 +18,6 @@ from math import (
 )
 from math import pi as π
 from string import Formatter
-from typing import Dict, Iterator, List, Union
 
 from .constants import FALSE_EASTING, FALSE_NORTHING, TILE_SIZE, WGS84_ELLIPSOID, C, R
 from .defaults import DEFAULT_DPI
@@ -119,7 +119,7 @@ def lon_to_x(lon: Degree, zoom: int) -> float:
     return x
 
 
-def x_to_lon(x: Union[int, float], zoom: int) -> Degree:
+def x_to_lon(x: int | float, zoom: int) -> Degree:
     """Converts x (tile coordinate) to longitude, given a zoom level.
 
     Args:
@@ -155,7 +155,7 @@ def lat_to_y(lat: Degree, zoom: int) -> float:
     return y
 
 
-def y_to_lat(y: Union[int, float], zoom: int) -> Degree:
+def y_to_lat(y: int | float, zoom: int) -> Degree:
     """Converts y (tile coordinate) to latitude, given a zoom level.
 
     Args:
@@ -610,11 +610,11 @@ def utm_to_spherical(x: float, y: float, zone: int, hemisphere: str) -> Spherica
     return lat, lon
 
 
-def get_string_formatting_arguments(s: str) -> List[str]:
+def get_string_formatting_arguments(s: str) -> list[str]:
     return [t[1] for t in Formatter().parse(s) if t[1] is not None]
 
 
-def is_out_of_bounds(test: Dict[str, float], bounds: Dict[str, float]) -> bool:
+def is_out_of_bounds(test: dict[str, float], bounds: dict[str, float]) -> bool:
     if test["lat_min"] < bounds["lat_min"]:
         return True
     elif test["lon_min"] < bounds["lon_min"]:
