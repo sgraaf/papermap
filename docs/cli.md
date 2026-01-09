@@ -11,6 +11,7 @@ def help(args):
     cog.out(output)
     cog.out("```\n\n")
 ]]] -->
+
 <!-- [[[end]]] -->
 
 The `papermap` CLI tool provides two commands to generate papermaps, which boil down to the two different coordinate systems through which you can define the location that the map should cover.

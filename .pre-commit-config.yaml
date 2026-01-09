@@ -6,12 +6,9 @@ ci:
   autoupdate_schedule: monthly
   autoupdate_commit_msg: ":arrow_up: [pre-commit.ci] pre-commit autoupdate"
 
-default_language_version:
-  python: python3.10
-
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
+    rev: v6.0.0
     hooks:
       - id: check-json
       - id: check-toml
@@ -20,42 +17,43 @@ repos:
       - id: end-of-file-fixer
       - id: trailing-whitespace
   - repo: https://github.com/abravalheri/validate-pyproject
-    rev: v0.12.1
+    rev: v0.24.1
     hooks:
       - id: validate-pyproject
-        name: validate pyproject.toml
+        additional_dependencies: ["validate-pyproject-schema-store[all]"]
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.22.0
+    rev: 0.36.0
     hooks:
       - id: check-github-workflows
-        name: validate github workflows
       - id: check-readthedocs
-        name: validate readthedocs config
-  - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: v0.0.256
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.10
     hooks:
-      - id: ruff
+      - id: ruff-check
         args:
           - --fix
-          - --exit-non-zero-on-fix
+          - --unsafe-fixes
           - --show-fixes
-  - repo: https://github.com/psf/black
-    rev: 23.1.0
-    hooks:
-      - id: black
+      - id: ruff-format
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.1.1
+    rev: v1.19.1
     hooks:
       - id: mypy
         additional_dependencies:
           - types-requests
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.2.4
+    rev: v2.4.1
     hooks:
       - id: codespell
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v2.7.1
+  - repo: https://github.com/hukkin/mdformat
+    rev: 1.0.0
+    hooks:
+      - id: mdformat
+        additional_dependencies:
+          - mdformat-myst
+          - mdformat-ruff
+  - repo: https://github.com/rbubley/mirrors-prettier
+    rev: v3.7.4
     hooks:
       - id: prettier
-        additional_dependencies:
-          - prettier@2.8.4
+        types: [yaml]
