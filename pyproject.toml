@@ -61,17 +61,32 @@ Issues = "https://github.com/sgraaf/papermap/issues"
 papermap = "papermap.cli:cli"
 
 [tool.ruff.lint]
-select = [
-    "B",
-    "C90",
-    "E",
-    "F",
-    "I",
-    "UP",
-    "RUF100",
-    "W",
+select = ["ALL"]
+ignore = [
+    "COM812",  # missing-trailing-comma (flake8-commas), handled by the formatter
+    "D100",  # undocumented-public-module (pydocstyle)
+    "D102",  # undocumented-public-method (pydocstyle)
+    "D105",  # undocumented-magic-method (pydocstyle)
+    "D107",  # undocumented-public-init (pydocstyle)
+    "E501",  # line-too-long (pycodestyle), handled by the formatter
+    "PLC2401",  # non-ascii-name (Pylint)
 ]
-ignore = ["E501"]
+pydocstyle.convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
-"__init__.py" = ["F401"]
+"__init__.py" = [
+    "F401",  # unused-import (Pyflakes)
+]
+"docs/conf.py" = [
+    "INP001",  # implicit-namespace-package (flake8-no-pep420)
+]
+"src/papermap/cli.py" = [
+    "ANN401",  # any-type (flake8-annotations)
+]
+"src/papermap/utils.py" = [
+    "N806",  # non-lowercase-variable-in-function (pep8-naming)
+    "PLR2004",  # magic-value-comparison (Pylint)
+]
+
+[tool.mypy]
+python_version = "3.10"

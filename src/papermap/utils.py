@@ -10,13 +10,14 @@ from math import (
     degrees,
     hypot,
     log,
+    log2,
     radians,
     sin,
     sinh,
     sqrt,
     tan,
 )
-from math import pi as π
+from math import pi as π  # noqa: PLC2403
 from string import Formatter
 
 from .constants import FALSE_EASTING, FALSE_NORTHING, TILE_SIZE, WGS84_ELLIPSOID, C, R
@@ -58,7 +59,6 @@ def wrap(angle: Angle, limit: Angle) -> Angle:
     """
     if -limit <= angle <= limit:  # angle already in [-limit, limit] range
         return angle
-    # angle %= limit
     return (angle + limit) % (2 * limit) - limit
 
 
@@ -75,7 +75,7 @@ def wrap90(angle: Degree) -> Degree:
 
 
 def wrap180(angle: Degree) -> Degree:
-    """Wraps an angle to [-180, 180] range
+    """Wraps an angle to [-180, 180] range.
 
     Args:
         angle: The angle.
@@ -87,7 +87,7 @@ def wrap180(angle: Degree) -> Degree:
 
 
 def wrap360(angle: Degree) -> Degree:
-    """Wraps an angle to [0, 360) range
+    """Wraps an angle to [0, 360) range.
 
     Args:
         angle: The angle.
@@ -114,12 +114,10 @@ def lon_to_x(lon: Degree, zoom: int) -> float:
     lon = wrap180(lon)
 
     # convert lon to [0, 1] range
-    x = ((lon + 180.0) / 360) * 2**zoom
-
-    return x
+    return ((lon + 180.0) / 360) * 2**zoom
 
 
-def x_to_lon(x: int | float, zoom: int) -> Degree:
+def x_to_lon(x: float, zoom: int) -> Degree:
     """Converts x (tile coordinate) to longitude, given a zoom level.
 
     Args:
@@ -129,8 +127,7 @@ def x_to_lon(x: int | float, zoom: int) -> Degree:
     Returns:
         The longitude.
     """
-    lon = x / (2**zoom) * 360 - 180
-    return lon
+    return x / (2**zoom) * 360 - 180
 
 
 def lat_to_y(lat: Degree, zoom: int) -> float:
@@ -150,12 +147,10 @@ def lat_to_y(lat: Degree, zoom: int) -> float:
     φ = radians(lat)
 
     # convert lat to [0, 1] range
-    y = ((1 - log(tan(φ) + 1 / cos(φ)) / π) / 2) * 2**zoom
-
-    return y
+    return ((1 - log(tan(φ) + 1 / cos(φ)) / π) / 2) * 2**zoom
 
 
-def y_to_lat(y: int | float, zoom: int) -> Degree:
+def y_to_lat(y: float, zoom: int) -> Degree:
     """Converts y (tile coordinate) to latitude, given a zoom level.
 
     Args:
@@ -165,8 +160,7 @@ def y_to_lat(y: int | float, zoom: int) -> Degree:
     Returns:
         The latitude.
     """
-    lat = atan(sinh(π * (1 - 2 * y / (2**zoom)))) / π * 180
-    return lat
+    return atan(sinh(π * (1 - 2 * y / (2**zoom)))) / π * 180
 
 
 def x_to_px(x: int, x_center: int, width: Pixel, tile_size: Pixel = TILE_SIZE) -> Pixel:
@@ -187,7 +181,7 @@ def x_to_px(x: int, x_center: int, width: Pixel, tile_size: Pixel = TILE_SIZE) -
 def y_to_px(
     y: int, y_center: int, height: Pixel, tile_size: Pixel = TILE_SIZE
 ) -> Pixel:
-    """Convert y (tile coordinate) to pixel
+    """Convert y (tile coordinate) to pixel.
 
     Args:
         y: The tile coordinate.
@@ -348,12 +342,11 @@ def scale_to_zoom(scale: int, lat: Degree, dpi: int = DEFAULT_DPI) -> float:
 
     # compute the zoom level
     scale_px = scale * 25.4 / (1000 * dpi)
-    zoom = log(C * cos(φ) / scale_px, 2) - 8
-    return zoom
+    return log2(C * cos(φ) / scale_px) - 8
 
 
 def zoom_to_scale(zoom: int, lat: Degree, dpi: int = DEFAULT_DPI) -> float:
-    """Compute the scale, given the latitude, zoom level and dpi
+    """Compute the scale, given the latitude, zoom level and dpi.
 
     Args:
         zoom: The zoom level.
@@ -368,8 +361,7 @@ def zoom_to_scale(zoom: int, lat: Degree, dpi: int = DEFAULT_DPI) -> float:
 
     # compute the scale
     scale_px = C * cos(φ) / 2 ** (zoom + 8)
-    scale = scale_px * dpi * 1000 / 25.4
-    return scale
+    return scale_px * dpi * 1000 / 25.4
 
 
 def spherical_to_zone(lat: Degree, lon: Degree) -> int:
@@ -388,11 +380,11 @@ def spherical_to_zone(lat: Degree, lon: Degree) -> int:
     if 72 <= lat <= 84 and lon >= 0:
         if lon < 9:
             return 31
-        elif lon < 21:
+        if lon < 21:
             return 33
-        elif lon < 33:
+        if lon < 33:
             return 35
-        elif lon < 42:
+        if lon < 42:
             return 37
 
     return int((lon + 180) / 6) + 1
@@ -430,9 +422,8 @@ def spherical_to_utm(lat: Degree, lon: Degree) -> UTM_Coordinate:
 
     # ensure lat is not out of range for conversion
     if not -80.0 <= lat <= 84.0:
-        raise ValueError(
-            f"Latitude out of range [-80.0, 84.0] for UTM conversion: {lat}"
-        )
+        msg = f"Latitude out of range [-80.0, 84.0] for UTM conversion: {lat}"
+        raise ValueError(msg)
 
     # get the zone number and letter
     zone = spherical_to_zone(lat, lon)
@@ -514,7 +505,7 @@ def spherical_to_utm(lat: Degree, lon: Degree) -> UTM_Coordinate:
     return x, y, zone, hemisphere
 
 
-def utm_to_spherical(x: float, y: float, zone: int, hemisphere: str) -> Spherical_2D:
+def utm_to_spherical(x: float, y: float, z: int, l: str) -> Spherical_2D:  # noqa: E741, ARG001
     """Convert a UTM coordinate to a spherical coordinate (i.e. lat, lon).
 
     Based on formulas from (Karney, 2011).
@@ -532,7 +523,7 @@ def utm_to_spherical(x: float, y: float, zone: int, hemisphere: str) -> Spherica
     """
     # shift easting and northing from false origins
     x -= FALSE_EASTING
-    if hemisphere == "S":
+    if l == "S":
         y -= FALSE_NORTHING
 
     # compute some quantities used throughout the equations below
@@ -611,22 +602,46 @@ def utm_to_spherical(x: float, y: float, zone: int, hemisphere: str) -> Spherica
 
 
 def get_string_formatting_arguments(s: str) -> list[str]:
+    """Extracts field names from a format string.
+
+    Args:
+        s: A format string (e.g., "{name} is {age}").
+
+    Returns:
+        List of field names found in the format string.
+    """
     return [t[1] for t in Formatter().parse(s) if t[1] is not None]
 
 
 def is_out_of_bounds(test: dict[str, float], bounds: dict[str, float]) -> bool:
-    if test["lat_min"] < bounds["lat_min"]:
-        return True
-    elif test["lon_min"] < bounds["lon_min"]:
-        return True
-    elif test["lat_max"] > bounds["lat_max"]:
-        return True
-    elif test["lon_max"] > bounds["lon_max"]:
-        return True
-    return False
+    """Checks if a bounding box exceeds the specified bounds.
+
+    Args:
+        test: Bounding box with keys 'lat_min', 'lat_max', 'lon_min', 'lon_max'.
+        bounds: Reference bounds with the same keys.
+
+    Returns:
+        True if test exceeds bounds in any direction, False otherwise.
+    """
+    return bool(
+        test["lat_min"] < bounds["lat_min"]
+        or test["lon_min"] < bounds["lon_min"]
+        or test["lat_max"] > bounds["lat_max"]
+        or test["lon_max"] > bounds["lon_max"]
+    )
 
 
 def drange(start: Decimal, stop: Decimal, step: Decimal) -> Iterator[Decimal]:
+    """Yields `Decimal` values from *start* to *stop* with the given *step* size.
+
+    Args:
+        start: The first value to yield.
+        stop: The upper bound (exclusive).
+        step: The increment applied on each iteration.
+
+    Yields:
+        Decimal values in the range *[start, stop)* incremented by *step*.
+    """
     while start < stop:
         yield start
         start += step

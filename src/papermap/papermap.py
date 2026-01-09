@@ -10,7 +10,6 @@ from pathlib import Path
 from fpdf import FPDF
 from PIL import Image
 from requests import Session
-from requests.exceptions import HTTPError
 
 from . import __version__
 from .constants import HEADERS, NAME, TILE_SIZE
@@ -72,14 +71,14 @@ class PaperMap:
         ValueError: If the scale is "out of bounds".
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0915
         self,
         lat: float,
         lon: float,
         tile_server: str = DEFAULT_TILE_SERVER,
         api_key: str | None = None,
         size: str = DEFAULT_SIZE,
-        use_landscape: bool = False,
+        use_landscape: bool = False,  # noqa: FBT001, FBT002
         margin_top: int = DEFAULT_MARGIN,
         margin_right: int = DEFAULT_MARGIN,
         margin_bottom: int = DEFAULT_MARGIN,
@@ -87,7 +86,7 @@ class PaperMap:
         scale: int = DEFAULT_SCALE,
         dpi: int = DEFAULT_DPI,
         background_color: str = DEFAULT_BACKGROUND_COLOR,
-        add_grid: bool = False,
+        add_grid: bool = False,  # noqa: FBT001, FBT002
         grid_size: int = DEFAULT_GRID_SIZE,
     ) -> None:
         self.lat = lat
@@ -108,9 +107,8 @@ class PaperMap:
         if tile_server in TILE_SERVERS_MAP:
             self.tile_server = TILE_SERVERS_MAP[tile_server]
         else:
-            raise ValueError(
-                f"Invalid tile server. Please choose one of {', '.join(TILE_SERVERS)}"
-            )
+            msg = f"Invalid tile server. Please choose one of {', '.join(TILE_SERVERS)}"
+            raise ValueError(msg)
 
         # get the tile server mirrors
         self.mirrors = self.tile_server.mirrors if self.tile_server.mirrors else []
@@ -120,7 +118,8 @@ class PaperMap:
             "a" in get_string_formatting_arguments(self.tile_server.url_template)
             and self.api_key is None
         ):
-            raise ValueError(f"No API key specified for {tile_server} tile server")
+            msg = f"No API key specified for {tile_server} tile server"
+            raise ValueError(msg)
 
         # get the paper size (in mm)
         if size in SIZE_TO_DIMENSIONS_MAP:
@@ -128,9 +127,8 @@ class PaperMap:
             if self.use_landscape:
                 self.width, self.height = self.height, self.width
         else:
-            raise ValueError(
-                f"Invalid paper size. Please choose one of {', '.join(SIZES)}"
-            )
+            msg = f"Invalid paper size. Please choose one of {', '.join(SIZES)}"
+            raise ValueError(msg)
 
         # compute the zoom and resize factor
         self.zoom = scale_to_zoom(self.scale, self.lat, self.dpi)
@@ -142,7 +140,8 @@ class PaperMap:
             self.zoom_scaled < self.tile_server.zoom_min
             or self.zoom_scaled > self.tile_server.zoom_max
         ):
-            raise ValueError(f"Scale out of bounds for {tile_server} tile server.")
+            msg = f"Scale out of bounds for {tile_server} tile server."
+            raise ValueError(msg)
 
         # compute the width and height of the image (in mm)
         self.image_width = self.width - self.margin_left - self.margin_right
@@ -217,7 +216,7 @@ class PaperMap:
         self.pdf.set_font("Helvetica")
         self.pdf.set_fill_color(255, 255, 255)
         self.pdf.set_top_margin(self.margin_top)
-        self.pdf.set_auto_page_break(True, self.margin_bottom)
+        self.pdf.set_auto_page_break(True, self.margin_bottom)  # noqa: FBT003
         self.pdf.set_left_margin(self.margin_left)
         self.pdf.set_right_margin(self.margin_right)
         self.pdf.add_page()
@@ -334,9 +333,8 @@ class PaperMap:
 
             # break if max number of retries exceeded
             if num_retry >= num_retries:
-                raise RuntimeError(
-                    f"Could not download {len(tiles)}/{len(self.tiles)} tiles after {num_retries} retries."
-                )
+                msg = f"Could not download {len(tiles)}/{len(self.tiles)} tiles after {num_retries} retries."
+                raise RuntimeError(msg)
 
             with Session() as session:
                 session.headers.update(HEADERS)
@@ -353,12 +351,8 @@ class PaperMap:
                     )
 
                     for tile, r in zip(tiles, responses, strict=True):
-                        try:
-                            r.raise_for_status()
-                            # set tile image
+                        if r.ok:
                             tile.image = Image.open(BytesIO(r.content)).convert("RGBA")
-                        except HTTPError:
-                            pass
 
     def render_base_layer(self) -> None:
         # download all the required tiles
