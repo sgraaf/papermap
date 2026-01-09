@@ -6,7 +6,6 @@ from io import BytesIO
 from itertools import count
 from math import ceil, floor, radians
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
 
 from fpdf import FPDF
 from PIL import Image
@@ -78,7 +77,7 @@ class PaperMap:
         lat: float,
         lon: float,
         tile_server: str = DEFAULT_TILE_SERVER,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         size: str = DEFAULT_SIZE,
         use_landscape: bool = False,
         margin_top: int = DEFAULT_MARGIN,
@@ -225,7 +224,7 @@ class PaperMap:
 
     def compute_grid_coordinates(
         self,
-    ) -> Tuple[List[Tuple[Decimal, str]], List[Tuple[Decimal, str]]]:
+    ) -> tuple[list[tuple[Decimal, str]], list[tuple[Decimal, str]]]:
         # convert WGS 84 point (lat, lon) into UTM coordinate (x, y, zone_number, hemisphere)
         x, y, _, _ = spherical_to_utm(self.lat, self.lon)
 
@@ -265,8 +264,8 @@ class PaperMap:
         x_labels = [x_label_start + i for i in range(len(x_grid_cs))]
         y_labels = [y_label_start - i for i in range(len(y_grid_cs))]
 
-        x_grid_cs_and_labels = list(zip(x_grid_cs, map(str, x_labels)))
-        y_grid_cs_and_labels = list(zip(y_grid_cs, map(str, y_labels)))
+        x_grid_cs_and_labels = list(zip(x_grid_cs, map(str, x_labels), strict=True))
+        y_grid_cs_and_labels = list(zip(y_grid_cs, map(str, y_labels), strict=True))
 
         return x_grid_cs_and_labels, y_grid_cs_and_labels
 
@@ -318,7 +317,7 @@ class PaperMap:
         self.pdf.cell(w=0, txt=text, align="R", fill=True)
 
     def download_tiles(
-        self, num_retries: int = 3, sleep_between_retries: Optional[int] = None
+        self, num_retries: int = 3, sleep_between_retries: int | None = None
     ) -> None:
         # download the tile images
         for num_retry in count():
@@ -353,7 +352,7 @@ class PaperMap:
                         ],
                     )
 
-                    for tile, r in zip(tiles, responses):
+                    for tile, r in zip(tiles, responses, strict=True):
                         try:
                             r.raise_for_status()
                             # set tile image
@@ -396,9 +395,7 @@ class PaperMap:
         # render the attribution and scale to the map
         self.render_attribution_and_scale()
 
-    def save(
-        self, file: Union[str, Path], title: str = NAME, author: str = NAME
-    ) -> None:
+    def save(self, file: str | Path, title: str = NAME, author: str = NAME) -> None:
         """Save the paper map to a file.
 
         Args:

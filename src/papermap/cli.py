@@ -1,6 +1,6 @@
+from collections.abc import Callable
 from functools import wraps
 from pathlib import Path
-from typing import Callable, Optional
 
 import click
 from click_default_group import DefaultGroup
@@ -124,7 +124,7 @@ def latlon(
     lon: float,
     file: Path,
     tile_server: str = DEFAULT_TILE_SERVER,
-    api_key: Optional[str] = None,
+    api_key: str | None = None,
     size: str = DEFAULT_SIZE,
     use_landscape: bool = False,
     margin_top: int = DEFAULT_MARGIN,
@@ -175,7 +175,7 @@ def utm(
     hemisphere: str,
     file: Path,
     tile_server: str = DEFAULT_TILE_SERVER,
-    api_key: Optional[str] = None,
+    api_key: str | None = None,
     size: str = DEFAULT_SIZE,
     use_landscape: bool = False,
     margin_top: int = DEFAULT_MARGIN,

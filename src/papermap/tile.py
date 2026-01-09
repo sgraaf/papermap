@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional, Tuple
 
 from PIL.Image import Image
 
@@ -19,8 +18,8 @@ class Tile:
     x: int
     y: int
     zoom: int
-    bbox: Tuple[int, int, int, int]
-    image: Optional[Image] = None
+    bbox: tuple[int, int, int, int]
+    image: Image | None = None
 
     @property
     def success(self) -> bool:
@@ -30,8 +29,8 @@ class Tile:
     def format_url_template(
         self,
         url_template: str,
-        mirror: Optional[str] = None,
-        api_key: Optional[str] = None,
+        mirror: str | None = None,
+        api_key: str | None = None,
     ) -> str:
         """Format a URL template with the tile's coordinates and zoom level.
 
