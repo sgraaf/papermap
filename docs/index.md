@@ -1,6 +1,8 @@
 ```{include} ../README.md
-:start-after: <!-- start docs-include-index -->
-:end-before: <!-- end docs-include-index -->
+---
+start-after: <!-- start docs-include-index -->
+end-before: <!-- end docs-include-index -->
+---
 ```
 
 ## User's Guide
@@ -9,7 +11,6 @@
 ---
 maxdepth: 2
 ---
-
 installation
 usage
 ```
@@ -20,7 +21,6 @@ usage
 ---
 maxdepth: 2
 ---
-
 api
 ```
 
@@ -30,7 +30,6 @@ api
 ---
 maxdepth: 2
 ---
-
 cli
 ```
 
@@ -40,6 +39,5 @@ cli
 ---
 maxdepth: 2
 ---
-
 changelog
 ```

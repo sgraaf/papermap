@@ -1,5 +1,4 @@
 """Type information used throughout `papermap`."""
-from typing import Union
 
 Degree = float
 """Angle in degrees."""
@@ -7,7 +6,7 @@ Degree = float
 Radian = float
 """Angle in radians."""
 
-Angle = Union[Degree, Radian]
+Angle = Degree | Radian
 """Angle in either degrees or radians."""
 
 Pixel = int
