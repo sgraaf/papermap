@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from functools import wraps
 from pathlib import Path
+from typing import Any
 
 import click
 from click_default_group import DefaultGroup
@@ -19,10 +20,11 @@ from .defaults import (
 from .papermap import PaperMap
 from .utils import utm_to_spherical
 
-CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"])
+CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 
 
 def margin_option(side: str) -> Callable:
+    """Attaches a margin option for the given side to the command."""
     return click.option(
         f"--margin-{side}",
         type=int,
@@ -32,7 +34,7 @@ def margin_option(side: str) -> Callable:
     )
 
 
-def common_parameters(func: Callable) -> Callable:
+def common_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator to add common parameters (arguments and options) to a click command.
 
     Adapted from: https://github.com/pallets/click/issues/108#issuecomment-280489786
@@ -95,7 +97,7 @@ def common_parameters(func: Callable) -> Callable:
         help="Size of the grid squares (if applicable).",
     )
     @wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
         return func(*args, **kwargs)
 
     return wrapper
@@ -108,7 +110,7 @@ def common_parameters(func: Callable) -> Callable:
     context_settings=CONTEXT_SETTINGS,
 )
 @click.version_option(__version__, "-v", "--version")
-def cli():
+def cli() -> None:
     """PaperMap is a Python package and CLI for creating ready-to-print paper maps.
 
     Documentation: https://papermap.readthedocs.io/en/stable/
@@ -119,23 +121,23 @@ def cli():
 @click.argument("lat", type=float, metavar="LATITUDE")
 @click.argument("lon", type=float, metavar="LONGITUDE")
 @common_parameters
-def latlon(
+def latlon(  # noqa: PLR0913
     lat: float,
     lon: float,
     file: Path,
     tile_server: str = DEFAULT_TILE_SERVER,
     api_key: str | None = None,
     size: str = DEFAULT_SIZE,
-    use_landscape: bool = False,
+    use_landscape: bool = False,  # noqa: FBT001, FBT002
     margin_top: int = DEFAULT_MARGIN,
     margin_right: int = DEFAULT_MARGIN,
     margin_bottom: int = DEFAULT_MARGIN,
     margin_left: int = DEFAULT_MARGIN,
     scale: int = DEFAULT_SCALE,
     dpi: int = DEFAULT_DPI,
-    add_grid: bool = False,
+    add_grid: bool = False,  # noqa: FBT001, FBT002
     grid_size: int = DEFAULT_GRID_SIZE,
-):
+) -> None:
     """Generates a paper map for the given spherical coordinate (i.e. lat, lon) and outputs it to file."""
     # initialize PaperMap object
     pm = PaperMap(
@@ -168,7 +170,7 @@ def latlon(
 @click.argument("zone", type=int, metavar="ZONE-NUMBER")
 @click.argument("hemisphere", type=str, metavar="HEMISPHERE")
 @common_parameters
-def utm(
+def utm(  # noqa: PLR0913
     easting: float,
     northing: float,
     zone: int,
@@ -177,16 +179,16 @@ def utm(
     tile_server: str = DEFAULT_TILE_SERVER,
     api_key: str | None = None,
     size: str = DEFAULT_SIZE,
-    use_landscape: bool = False,
+    use_landscape: bool = False,  # noqa: FBT001, FBT002
     margin_top: int = DEFAULT_MARGIN,
     margin_right: int = DEFAULT_MARGIN,
     margin_bottom: int = DEFAULT_MARGIN,
     margin_left: int = DEFAULT_MARGIN,
     scale: int = DEFAULT_SCALE,
     dpi: int = DEFAULT_DPI,
-    add_grid: bool = False,
+    add_grid: bool = False,  # noqa: FBT001, FBT002
     grid_size: int = DEFAULT_GRID_SIZE,
-):
+) -> None:
     """Generates a paper map for the given UTM coordinate and outputs it to file."""
     # convert UTM coordinate to spherical (i.e. lat, lon)
     lat, lon = utm_to_spherical(easting, northing, zone, hemisphere)
