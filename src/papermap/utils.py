@@ -621,7 +621,7 @@ def is_out_of_bounds(test: Dict[str, float], bounds: Dict[str, float]) -> bool:
         return True
     elif test["lat_max"] > bounds["lat_max"]:
         return True
-    elif test["lon_max"] > bounds["lat_max"]:
+    elif test["lon_max"] > bounds["lon_max"]:
         return True
     return False
 
