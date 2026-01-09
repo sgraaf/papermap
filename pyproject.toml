@@ -1,9 +1,11 @@
 [build-system]
-requires = ["flit_core >=3.2,<4"]
-build-backend = "flit_core.buildapi"
+requires = ["uv_build>=0.9.11,<0.10.0"]
+build-backend = "uv_build"
 
 [project]
 name = "papermap"
+version = "2026.1.0"
+description = "PaperMap is a Python package and CLI for creating ready-to-print paper maps."
 authors = [{name = "Steven van de Graaf", email = "steven@vandegraaf.xyz"}]
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -30,7 +32,6 @@ dependencies = [
     "Pillow",
     "requests",
 ]
-dynamic = ["version", "description"]
 
 [project.optional-dependencies]
 dev = [
