@@ -49,6 +49,9 @@ tests = [
 ]
 typing = [
     "mypy",
+    "pyrefly",
+    "ty",
+    "types-requests",
 ]
 dev = [
     { include-group = "docs" },
@@ -100,6 +103,10 @@ pydocstyle.convention = "google"
 ]
 "tests/conftest.py" = [
     "D401",  # non-imperative-mood (pydocstyle)
+]
+"tests/smoke_test.py" = [
+    "PLR2004",   # magic-value-comparison (Pylint)
+    "S101",  # assert (flake8-bandit)
 ]
 
 [tool.mypy]
