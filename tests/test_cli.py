@@ -1,5 +1,6 @@
 """Integration tests for papermap CLI."""
 
+from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -22,7 +23,7 @@ def runner() -> CliRunner:
 
 
 @pytest.fixture
-def mock_papermap():
+def mock_papermap() -> Generator[tuple[MagicMock, MagicMock], None, None]:
     """Mock PaperMap class to avoid actual tile downloads."""
     with patch("papermap.cli.PaperMap") as mock:
         instance = MagicMock()
@@ -68,7 +69,10 @@ class TestLatLonCommand:
     """Tests for the latlon command."""
 
     def test_latlon_basic(
-        self, runner: CliRunner, mock_papermap, tmp_path: Path
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
     ) -> None:
         mock_class, mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
@@ -86,7 +90,10 @@ class TestLatLonCommand:
         mock_instance.save.assert_called_once()
 
     def test_latlon_with_negative_longitude(
-        self, runner: CliRunner, mock_papermap, tmp_path: Path
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
     ) -> None:
         """Test with negative longitude using -- separator."""
         mock_class, _mock_instance = mock_papermap
@@ -103,7 +110,10 @@ class TestLatLonCommand:
         assert call_kwargs["lon"] == -74.0060
 
     def test_latlon_with_tile_server(
-        self, runner: CliRunner, mock_papermap, tmp_path: Path
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
     ) -> None:
         mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
@@ -125,7 +135,10 @@ class TestLatLonCommand:
         assert call_kwargs["tile_server"] == "Google Maps"
 
     def test_latlon_with_size(
-        self, runner: CliRunner, mock_papermap, tmp_path: Path
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
     ) -> None:
         mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
@@ -140,7 +153,10 @@ class TestLatLonCommand:
         assert call_kwargs["size"] == "a3"
 
     def test_latlon_with_landscape(
-        self, runner: CliRunner, mock_papermap, tmp_path: Path
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
     ) -> None:
         mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
@@ -161,7 +177,10 @@ class TestLatLonCommand:
         assert call_kwargs["use_landscape"] is True
 
     def test_latlon_with_scale(
-        self, runner: CliRunner, mock_papermap, tmp_path: Path
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
     ) -> None:
         mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
@@ -183,7 +202,10 @@ class TestLatLonCommand:
         assert call_kwargs["scale"] == 10000
 
     def test_latlon_with_dpi(
-        self, runner: CliRunner, mock_papermap, tmp_path: Path
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
     ) -> None:
         mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
@@ -198,7 +220,10 @@ class TestLatLonCommand:
         assert call_kwargs["dpi"] == 150
 
     def test_latlon_with_grid(
-        self, runner: CliRunner, mock_papermap, tmp_path: Path
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
     ) -> None:
         mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
@@ -222,7 +247,10 @@ class TestLatLonCommand:
         assert call_kwargs["grid_size"] == 500
 
     def test_latlon_with_margins(
-        self, runner: CliRunner, mock_papermap, tmp_path: Path
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
     ) -> None:
         mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
@@ -253,7 +281,10 @@ class TestLatLonCommand:
         assert call_kwargs["margin_left"] == 10
 
     def test_latlon_with_api_key(
-        self, runner: CliRunner, mock_papermap, tmp_path: Path
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
     ) -> None:
         mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
@@ -356,7 +387,10 @@ class TestDefaultCommand:
     """Tests for default command behavior."""
 
     def test_default_is_latlon(
-        self, runner: CliRunner, mock_papermap, tmp_path: Path
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
     ) -> None:
         mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
@@ -381,7 +415,7 @@ class TestTileServerChoices:
     def test_common_tile_servers_work(
         self,
         runner: CliRunner,
-        mock_papermap,
+        mock_papermap: tuple[MagicMock, MagicMock],
         tmp_path: Path,
         tile_server: str,
     ) -> None:
@@ -412,7 +446,7 @@ class TestPaperSizeChoices:
     def test_all_sizes_work(
         self,
         runner: CliRunner,
-        mock_papermap,
+        mock_papermap: tuple[MagicMock, MagicMock],
         tmp_path: Path,
         size: str,
     ) -> None:
@@ -440,7 +474,10 @@ class TestCliDefaults:
     """Tests for CLI default values."""
 
     def test_default_values(
-        self, runner: CliRunner, mock_papermap, tmp_path: Path
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
     ) -> None:
         mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
@@ -483,7 +520,10 @@ class TestCliErrorHandling:
         assert result.exit_code != 0
 
     def test_papermap_error_propagates(
-        self, runner: CliRunner, mock_papermap, tmp_path: Path
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
     ) -> None:
         mock_class, _mock_instance = mock_papermap
         mock_class.side_effect = ValueError("Scale out of bounds")

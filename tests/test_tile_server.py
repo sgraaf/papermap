@@ -1,7 +1,9 @@
 """Unit tests for papermap.tile_server module."""
 
+from papermap.defaults import TILE_SERVERS_MAP
 from papermap.tile import Tile
 from papermap.tile_server import TileServer
+from papermap.utils import get_string_formatting_arguments
 
 
 class TestTileServerInit:
@@ -237,8 +239,6 @@ class TestRealTileServers:
     """Tests using real tile server configurations from defaults."""
 
     def test_openstreetmap_config(self) -> None:
-        from papermap.defaults import TILE_SERVERS_MAP
-
         osm = TILE_SERVERS_MAP["OpenStreetMap"]
         assert osm.zoom_min == 0
         assert osm.zoom_max == 19
@@ -246,8 +246,6 @@ class TestRealTileServers:
         assert "OpenStreetMap" in osm.attribution
 
     def test_google_maps_config(self) -> None:
-        from papermap.defaults import TILE_SERVERS_MAP
-
         google = TILE_SERVERS_MAP["Google Maps"]
         assert google.zoom_min == 0
         assert google.zoom_max == 19
@@ -255,8 +253,6 @@ class TestRealTileServers:
         assert "Google" in google.attribution
 
     def test_esri_config(self) -> None:
-        from papermap.defaults import TILE_SERVERS_MAP
-
         esri = TILE_SERVERS_MAP["ESRI Standard"]
         assert esri.zoom_min == 0
         assert esri.zoom_max == 17
@@ -264,16 +260,11 @@ class TestRealTileServers:
         assert "Esri" in esri.attribution
 
     def test_thunderforest_requires_api_key(self) -> None:
-        from papermap.defaults import TILE_SERVERS_MAP
-        from papermap.utils import get_string_formatting_arguments
-
         tf = TILE_SERVERS_MAP["Thunderforest Landscape"]
         args = get_string_formatting_arguments(tf.url_template)
         assert "api_key" in args
 
     def test_all_tile_servers_have_required_fields(self) -> None:
-        from papermap.defaults import TILE_SERVERS_MAP
-
         for name, ts in TILE_SERVERS_MAP.items():
             assert ts.attribution, f"{name} missing attribution"
             assert ts.url_template, f"{name} missing url_template"

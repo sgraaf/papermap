@@ -1,34 +1,33 @@
 """Shared fixtures for PaperMap tests."""
 
+import io
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
 from PIL import Image
 
+from papermap.tile import Tile
+from papermap.tile_server import TileServer
+
 
 @pytest.fixture
-def sample_tile():
-    """Create a sample tile for testing."""
-    from papermap.tile import Tile
-
+def sample_tile() -> Tile:
+    """Return a sample tile for testing."""
     return Tile(x=123, y=456, zoom=10, bbox=(0, 0, 256, 256))
 
 
 @pytest.fixture
-def sample_tile_with_image():
-    """Create a sample tile with an image for testing."""
-    from papermap.tile import Tile
-
+def sample_tile_with_image() -> Tile:
+    """Return a sample tile with an image for testing."""
     tile = Tile(x=123, y=456, zoom=10, bbox=(0, 0, 256, 256))
     tile.image = Image.new("RGBA", (256, 256), color="blue")
     return tile
 
 
 @pytest.fixture
-def sample_tile_server():
-    """Create a sample tile server for testing."""
-    from papermap.tile_server import TileServer
-
+def sample_tile_server() -> TileServer:
+    """Return a sample tile server for testing."""
     return TileServer(
         attribution="Test Attribution",
         url_template="https://example.com/{zoom}/{x}/{y}.png",
@@ -38,10 +37,8 @@ def sample_tile_server():
 
 
 @pytest.fixture
-def sample_tile_server_with_mirrors():
-    """Create a sample tile server with mirrors for testing."""
-    from papermap.tile_server import TileServer
-
+def sample_tile_server_with_mirrors() -> TileServer:
+    """Return a sample tile server with mirrors for testing."""
     return TileServer(
         attribution="Test Attribution",
         url_template="https://{mirror}.example.com/{zoom}/{x}/{y}.png",
@@ -52,10 +49,8 @@ def sample_tile_server_with_mirrors():
 
 
 @pytest.fixture
-def sample_tile_server_with_api_key():
-    """Create a sample tile server requiring an API key for testing."""
-    from papermap.tile_server import TileServer
-
+def sample_tile_server_with_api_key() -> TileServer:
+    """Return a sample tile server requiring an API key for testing."""
     return TileServer(
         attribution="Test Attribution",
         url_template="https://example.com/{zoom}/{x}/{y}.png?api_key={api_key}",
@@ -66,15 +61,13 @@ def sample_tile_server_with_api_key():
 
 @pytest.fixture
 def mock_tile_image() -> Image.Image:
-    """Create a mock tile image for testing."""
+    """Return a mock tile image for testing."""
     return Image.new("RGBA", (256, 256), color="green")
 
 
 @pytest.fixture
 def mock_response(mock_tile_image: Image.Image) -> MagicMock:
-    """Create a mock HTTP response for tile downloads."""
-    import io
-
+    """Return a mock HTTP response for tile downloads."""
     buffer = io.BytesIO()
     mock_tile_image.save(buffer, format="PNG")
     buffer.seek(0)
@@ -86,7 +79,7 @@ def mock_response(mock_tile_image: Image.Image) -> MagicMock:
 
 
 # Well-known coordinate test cases
-COORDINATE_TEST_CASES = {
+COORDINATE_TEST_CASES: dict[str, dict[str, float]] = {
     "new_york": {"lat": 40.7128, "lon": -74.0060},
     "london": {"lat": 51.5074, "lon": -0.1278},
     "tokyo": {"lat": 35.6762, "lon": 139.6503},
@@ -101,6 +94,6 @@ COORDINATE_TEST_CASES = {
 
 
 @pytest.fixture
-def coordinate_test_cases() -> dict:
-    """Provide well-known coordinate test cases."""
+def coordinate_test_cases() -> dict[str, Any]:
+    """Return well-known coordinate test cases."""
     return COORDINATE_TEST_CASES

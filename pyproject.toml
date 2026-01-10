@@ -89,19 +89,12 @@ pydocstyle.convention = "google"
     "PLR2004",  # magic-value-comparison (Pylint)
 ]
 "tests/**/test_*.py" = [
-    "ANN",  # flake8-annotations
-    "ARG",  # flake8-unused-arguments (fixtures trigger these)
     "D",  # pydocstyle
-    "ERA001",  # commented-out-code (ruff)
-    "PLC0415",  # import-outside-top-level (Pylint)
     "PLR2004",  # magic-value-comparison (Pylint)
-    "PTH123",  # builtin-open (flake8-use-pathlib)
     "S101",  # assert (flake8-bandit)
 ]
 "tests/conftest.py" = [
-    "ANN",  # flake8-annotations
-    "D",  # pydocstyle
-    "PLC0415",  # import-outside-top-level (Pylint)
+    "D401",  # non-imperative-mood (pydocstyle)
 ]
 
 [tool.mypy]

@@ -1,7 +1,9 @@
 """Unit tests for papermap.papermap module."""
 
+import io
 from decimal import Decimal
 from math import isclose
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -11,6 +13,7 @@ from papermap.defaults import (
     DEFAULT_DPI,
     DEFAULT_SCALE,
     SIZE_TO_DIMENSIONS_MAP,
+    SIZES,
 )
 from papermap.papermap import PaperMap
 
@@ -133,8 +136,6 @@ class TestPaperMapValidation:
             PaperMap(lat=40.7128, lon=-74.0060, size="nonexistent_size")
 
     def test_valid_paper_sizes(self) -> None:
-        from papermap.defaults import SIZES
-
         for size in SIZES:
             pm = PaperMap(lat=40.7128, lon=-74.0060, size=size)
             expected_width, expected_height = SIZE_TO_DIMENSIONS_MAP[size]
@@ -327,7 +328,7 @@ class TestPaperMapZoomCalculations:
 
     def test_resize_factor_compensates_for_zoom_rounding(self) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
-        # resize_factor = 2^zoom_scaled / 2^zoom
+        # The resize factor equals 2^zoom_scaled divided by 2^zoom
         expected = 2**pm.zoom_scaled / 2**pm.zoom
         assert isclose(pm.resize_factor, expected, rel_tol=1e-6)
 
@@ -340,8 +341,6 @@ class TestPaperMapDownloadTiles:
 
         # Create mock response
         mock_image = Image.new("RGBA", (256, 256), color="green")
-        import io
-
         buffer = io.BytesIO()
         mock_image.save(buffer, format="PNG")
         buffer.seek(0)
@@ -366,7 +365,7 @@ class TestPaperMapDownloadTiles:
 
         call_count = 0
 
-        def side_effect(*args, **kwargs):
+        def side_effect(*_args: object, **_kwargs: object) -> MagicMock:
             nonlocal call_count
             call_count += 1
             mock_response = MagicMock()
@@ -376,8 +375,6 @@ class TestPaperMapDownloadTiles:
             else:
                 # Second attempt succeeds
                 mock_image = Image.new("RGBA", (256, 256), color="green")
-                import io
-
                 buffer = io.BytesIO()
                 mock_image.save(buffer, format="PNG")
                 buffer.seek(0)
@@ -415,8 +412,6 @@ class TestPaperMapRenderBaseLayer:
 
         # Mock tile download
         mock_image = Image.new("RGBA", (256, 256), color="green")
-        import io
-
         buffer = io.BytesIO()
         mock_image.save(buffer, format="PNG")
         buffer.seek(0)
@@ -439,13 +434,11 @@ class TestPaperMapRenderBaseLayer:
 class TestPaperMapSave:
     """Tests for save method."""
 
-    def test_save_creates_file(self, tmp_path) -> None:
+    def test_save_creates_file(self, tmp_path: Path) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         # Mock tile download
         mock_image = Image.new("RGBA", (256, 256), color="green")
-        import io
-
         buffer = io.BytesIO()
         mock_image.save(buffer, format="PNG")
         buffer.seek(0)
@@ -467,13 +460,11 @@ class TestPaperMapSave:
             assert output_file.exists()
             assert output_file.stat().st_size > 0
 
-    def test_save_with_custom_metadata(self, tmp_path) -> None:
+    def test_save_with_custom_metadata(self, tmp_path: Path) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         # Mock tile download
         mock_image = Image.new("RGBA", (256, 256), color="green")
-        import io
-
         buffer = io.BytesIO()
         mock_image.save(buffer, format="PNG")
         buffer.seek(0)

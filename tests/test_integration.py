@@ -5,6 +5,7 @@ using mocked HTTP responses to avoid network dependencies.
 """
 
 import io
+from collections.abc import Generator
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -36,7 +37,7 @@ def create_mock_session(response: MagicMock) -> MagicMock:
 
 
 @pytest.fixture
-def mock_tile_download():
+def mock_tile_download() -> Generator[MagicMock, None, None]:
     """Mock the tile download process."""
     response = create_mock_tile_response()
 
@@ -46,10 +47,11 @@ def mock_tile_download():
         yield mock_session
 
 
+@pytest.mark.usefixtures("mock_tile_download")
 class TestFullPipeline:
     """End-to-end tests for the complete map generation pipeline."""
 
-    def test_basic_map_generation(self, mock_tile_download, tmp_path: Path) -> None:
+    def test_basic_map_generation(self, tmp_path: Path) -> None:
         """Test generating a basic map with default settings."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
         pm.render()
@@ -60,7 +62,7 @@ class TestFullPipeline:
         assert output_file.exists()
         assert output_file.stat().st_size > 0
 
-    def test_map_with_grid(self, mock_tile_download, tmp_path: Path) -> None:
+    def test_map_with_grid(self, tmp_path: Path) -> None:
         """Test generating a map with UTM grid overlay."""
         pm = PaperMap(lat=40.7128, lon=-74.0060, add_grid=True, grid_size=1000)
         pm.render()
@@ -71,7 +73,7 @@ class TestFullPipeline:
         assert output_file.exists()
         assert output_file.stat().st_size > 0
 
-    def test_map_landscape(self, mock_tile_download, tmp_path: Path) -> None:
+    def test_map_landscape(self, tmp_path: Path) -> None:
         """Test generating a map in landscape orientation."""
         pm = PaperMap(lat=40.7128, lon=-74.0060, use_landscape=True)
         pm.render()
@@ -82,7 +84,7 @@ class TestFullPipeline:
         assert output_file.exists()
         assert pm.width > pm.height
 
-    def test_map_different_sizes(self, mock_tile_download, tmp_path: Path) -> None:
+    def test_map_different_sizes(self, tmp_path: Path) -> None:
         """Test generating maps with different paper sizes."""
         for size in ["a3", "a4", "a5", "letter"]:
             pm = PaperMap(lat=40.7128, lon=-74.0060, size=size)
@@ -93,7 +95,7 @@ class TestFullPipeline:
 
             assert output_file.exists()
 
-    def test_map_different_scales(self, mock_tile_download, tmp_path: Path) -> None:
+    def test_map_different_scales(self, tmp_path: Path) -> None:
         """Test generating maps with different scales."""
         for scale in [10000, 25000, 50000]:
             pm = PaperMap(lat=40.7128, lon=-74.0060, scale=scale)
@@ -104,7 +106,7 @@ class TestFullPipeline:
 
             assert output_file.exists()
 
-    def test_map_custom_margins(self, mock_tile_download, tmp_path: Path) -> None:
+    def test_map_custom_margins(self, tmp_path: Path) -> None:
         """Test generating a map with custom margins."""
         pm = PaperMap(
             lat=40.7128,
@@ -123,7 +125,7 @@ class TestFullPipeline:
         assert pm.image_width == pm.width - 10 - 15
         assert pm.image_height == pm.height - 20 - 25
 
-    def test_map_with_metadata(self, mock_tile_download, tmp_path: Path) -> None:
+    def test_map_with_metadata(self, tmp_path: Path) -> None:
         """Test generating a map with custom PDF metadata."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
         pm.render()
@@ -134,6 +136,7 @@ class TestFullPipeline:
         assert output_file.exists()
 
 
+@pytest.mark.usefixtures("mock_tile_download")
 class TestDifferentLocations:
     """Tests for map generation at various global locations."""
 
@@ -150,7 +153,7 @@ class TestDifferentLocations:
         ],
     )
     def test_map_at_location(
-        self, mock_tile_download, tmp_path: Path, lat: float, lon: float, name: str
+        self, tmp_path: Path, lat: float, lon: float, name: str
     ) -> None:
         """Test generating maps at various global locations."""
         pm = PaperMap(lat=lat, lon=lon)
@@ -161,7 +164,7 @@ class TestDifferentLocations:
 
         assert output_file.exists()
 
-    def test_map_near_date_line_east(self, mock_tile_download, tmp_path: Path) -> None:
+    def test_map_near_date_line_east(self, tmp_path: Path) -> None:
         """Test generating a map near the date line (east side)."""
         pm = PaperMap(lat=0.0, lon=179.5)
         pm.render()
@@ -171,7 +174,7 @@ class TestDifferentLocations:
 
         assert output_file.exists()
 
-    def test_map_near_date_line_west(self, mock_tile_download, tmp_path: Path) -> None:
+    def test_map_near_date_line_west(self, tmp_path: Path) -> None:
         """Test generating a map near the date line (west side)."""
         pm = PaperMap(lat=0.0, lon=-179.5)
         pm.render()
@@ -185,7 +188,7 @@ class TestDifferentLocations:
 class TestTileDownloadBehavior:
     """Tests for tile download behavior and error handling."""
 
-    def test_successful_tile_download(self, tmp_path: Path) -> None:
+    def test_successful_tile_download(self) -> None:
         """Test that tiles are downloaded and marked as successful."""
         response = create_mock_tile_response()
 
@@ -200,12 +203,12 @@ class TestTileDownloadBehavior:
             for tile in pm.tiles:
                 assert tile.success is True
 
-    def test_tile_download_retry_on_failure(self, tmp_path: Path) -> None:
+    def test_tile_download_retry_on_failure(self) -> None:
         """Test that tile downloads are retried on failure."""
         call_count = [0]
         total_tiles = [0]
 
-        def get_response(*args, **kwargs):
+        def get_response(*_args: object, **_kwargs: object) -> MagicMock:
             call_count[0] += 1
             response = MagicMock()
             if call_count[0] <= total_tiles[0]:
@@ -236,7 +239,7 @@ class TestTileDownloadBehavior:
             for tile in pm.tiles:
                 assert tile.success is True
 
-    def test_tile_download_max_retries_exceeded(self, tmp_path: Path) -> None:
+    def test_tile_download_max_retries_exceeded(self) -> None:
         """Test that an error is raised when max retries are exceeded."""
         response = MagicMock()
         response.ok = False
@@ -251,10 +254,11 @@ class TestTileDownloadBehavior:
                 pm.download_tiles(num_retries=2)
 
 
+@pytest.mark.usefixtures("mock_tile_download")
 class TestRenderMethods:
     """Tests for individual render methods."""
 
-    def test_render_base_layer_creates_image(self, mock_tile_download) -> None:
+    def test_render_base_layer_creates_image(self) -> None:
         """Test that render_base_layer creates the map image."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
         pm.render_base_layer()
@@ -263,14 +267,14 @@ class TestRenderMethods:
         assert pm.map_image is not None
         assert pm.map_image.size == (pm.image_width_px, pm.image_height_px)
 
-    def test_render_base_layer_uses_background_color(self, mock_tile_download) -> None:
+    def test_render_base_layer_uses_background_color(self) -> None:
         """Test that render_base_layer uses the specified background color."""
         pm = PaperMap(lat=40.7128, lon=-74.0060, background_color="#ff0000")
         pm.render_base_layer()
 
         assert hasattr(pm, "map_image_scaled")
 
-    def test_render_grid_only_when_enabled(self, mock_tile_download) -> None:
+    def test_render_grid_only_when_enabled(self) -> None:
         """Test that grid is only rendered when add_grid is True."""
         pm_no_grid = PaperMap(lat=40.7128, lon=-74.0060, add_grid=False)
         pm_with_grid = PaperMap(lat=40.7128, lon=-74.0060, add_grid=True)
@@ -282,7 +286,7 @@ class TestRenderMethods:
         pm_no_grid.render_grid()
         pm_with_grid.render_grid()
 
-    def test_render_attribution_and_scale(self, mock_tile_download) -> None:
+    def test_render_attribution_and_scale(self) -> None:
         """Test that attribution and scale are rendered."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
         pm.render_base_layer()
@@ -291,10 +295,11 @@ class TestRenderMethods:
         pm.render_attribution_and_scale()
 
 
+@pytest.mark.usefixtures("mock_tile_download")
 class TestImageProcessing:
     """Tests for image processing in the pipeline."""
 
-    def test_tiles_are_composited(self, mock_tile_download) -> None:
+    def test_tiles_are_composited(self) -> None:
         """Test that tiles are composited into the final image."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
         pm.render_base_layer()
@@ -306,7 +311,7 @@ class TestImageProcessing:
         # The final map image should be resized
         assert pm.map_image.size == (pm.image_width_px, pm.image_height_px)
 
-    def test_resize_factor_applied(self, mock_tile_download) -> None:
+    def test_resize_factor_applied(self) -> None:
         """Test that the resize factor is applied correctly."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
@@ -322,12 +327,11 @@ class TestImageProcessing:
         )
 
 
+@pytest.mark.usefixtures("mock_tile_download")
 class TestPdfOutput:
     """Tests for PDF output characteristics."""
 
-    def test_pdf_has_correct_dimensions(
-        self, mock_tile_download, tmp_path: Path
-    ) -> None:
+    def test_pdf_has_correct_dimensions(self, tmp_path: Path) -> None:
         """Test that the PDF has correct page dimensions."""
         pm = PaperMap(lat=40.7128, lon=-74.0060, size="a4")
         pm.render()
@@ -339,7 +343,7 @@ class TestPdfOutput:
         assert pm.width == 210
         assert pm.height == 297
 
-    def test_pdf_content_is_valid(self, mock_tile_download, tmp_path: Path) -> None:
+    def test_pdf_content_is_valid(self, tmp_path: Path) -> None:
         """Test that the PDF content is valid."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
         pm.render()
@@ -348,15 +352,16 @@ class TestPdfOutput:
         pm.save(output_file)
 
         # Check PDF magic bytes
-        with open(output_file, "rb") as f:
+        with output_file.open("rb") as f:
             header = f.read(8)
             assert header.startswith(b"%PDF-")
 
 
+@pytest.mark.usefixtures("mock_tile_download")
 class TestEdgeCases:
     """Tests for edge cases and boundary conditions."""
 
-    def test_very_small_map(self, mock_tile_download, tmp_path: Path) -> None:
+    def test_very_small_map(self, tmp_path: Path) -> None:
         """Test generating a very small map (A7)."""
         pm = PaperMap(lat=40.7128, lon=-74.0060, size="a7")
         pm.render()
@@ -366,7 +371,7 @@ class TestEdgeCases:
 
         assert output_file.exists()
 
-    def test_large_margins(self, mock_tile_download, tmp_path: Path) -> None:
+    def test_large_margins(self, tmp_path: Path) -> None:
         """Test generating a map with large margins."""
         pm = PaperMap(
             lat=40.7128,
@@ -383,7 +388,7 @@ class TestEdgeCases:
 
         assert output_file.exists()
 
-    def test_zero_margins(self, mock_tile_download, tmp_path: Path) -> None:
+    def test_zero_margins(self, tmp_path: Path) -> None:
         """Test generating a map with zero margins."""
         pm = PaperMap(
             lat=40.7128,
@@ -401,6 +406,7 @@ class TestEdgeCases:
         assert output_file.exists()
 
 
+@pytest.mark.usefixtures("mock_tile_download")
 class TestTileServerConfiguration:
     """Tests for different tile server configurations."""
 
@@ -408,9 +414,7 @@ class TestTileServerConfiguration:
         "tile_server",
         ["OpenStreetMap", "Google Maps", "ESRI Standard"],
     )
-    def test_different_tile_servers(
-        self, mock_tile_download, tmp_path: Path, tile_server: str
-    ) -> None:
+    def test_different_tile_servers(self, tmp_path: Path, tile_server: str) -> None:
         """Test generating maps with different tile servers."""
         pm = PaperMap(lat=40.7128, lon=-74.0060, tile_server=tile_server)
         pm.render()
@@ -420,7 +424,7 @@ class TestTileServerConfiguration:
 
         assert output_file.exists()
 
-    def test_tile_server_attribution_in_output(self, mock_tile_download) -> None:
+    def test_tile_server_attribution_in_output(self) -> None:
         """Test that tile server attribution is included in output."""
         pm = PaperMap(lat=40.7128, lon=-74.0060, tile_server="OpenStreetMap")
         pm.render()
@@ -429,10 +433,11 @@ class TestTileServerConfiguration:
         assert "OpenStreetMap" in pm.tile_server.attribution
 
 
+@pytest.mark.usefixtures("mock_tile_download")
 class TestGridCoordinates:
     """Tests for UTM grid coordinate calculations."""
 
-    def test_grid_coordinates_calculated(self, mock_tile_download) -> None:
+    def test_grid_coordinates_calculated(self) -> None:
         """Test that grid coordinates are calculated correctly."""
         pm = PaperMap(lat=40.7128, lon=-74.0060, add_grid=True, grid_size=1000)
 
@@ -449,7 +454,7 @@ class TestGridCoordinates:
         for _y, label in y_coords:
             assert isinstance(label, str)
 
-    def test_grid_size_affects_coordinate_count(self, mock_tile_download) -> None:
+    def test_grid_size_affects_coordinate_count(self) -> None:
         """Test that grid size affects the number of grid lines."""
         pm_small = PaperMap(lat=40.7128, lon=-74.0060, add_grid=True, grid_size=500)
         pm_large = PaperMap(lat=40.7128, lon=-74.0060, add_grid=True, grid_size=2000)
