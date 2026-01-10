@@ -121,15 +121,12 @@ class TestPaperMapValidation:
         assert pm.api_key == "test_key"
 
     def test_thunderforest_works_without_api_key(self) -> None:
-        # Note: The current implementation checks for "a" placeholder, not "api_key"
-        # So Thunderforest doesn't actually require API key at init time
-        # (it will fail at tile download time instead)
-        pm = PaperMap(
-            lat=40.7128,
-            lon=-74.0060,
-            tile_server="Thunderforest Landscape",
-        )
-        assert pm.api_key is None
+        with pytest.raises(ValueError, match="No API key specified"):
+            PaperMap(
+                lat=40.7128,
+                lon=-74.0060,
+                tile_server="Thunderforest Landscape",
+            )
 
     def test_invalid_paper_size_raises_error(self) -> None:
         with pytest.raises(ValueError, match="Invalid paper size"):

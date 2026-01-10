@@ -173,12 +173,11 @@ class TestTileServerEquality:
             zoom_min=0,
             zoom_max=19,
         )
-        # Note: dataclass equality doesn't compare cycle objects well
-        # but the base attributes should match
         assert ts1.attribution == ts2.attribution
         assert ts1.url_template == ts2.url_template
         assert ts1.zoom_min == ts2.zoom_min
         assert ts1.zoom_max == ts2.zoom_max
+        assert ts1.mirrors == ts2.mirrors
 
     def test_different_attribution(self) -> None:
         ts1 = TileServer(

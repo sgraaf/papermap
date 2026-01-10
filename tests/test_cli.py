@@ -1,6 +1,7 @@
 """Integration tests for papermap CLI."""
 
 from collections.abc import Generator
+from importlib import import_module, metadata
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -9,6 +10,8 @@ from click.testing import CliRunner
 
 from papermap.cli import cli
 from papermap.defaults import DEFAULT_DPI, DEFAULT_SCALE, SIZES
+
+from .utils import run_command_in_shell
 
 # Use London coordinates (positive values) for most tests to avoid
 # Click interpreting negative longitude as an option
@@ -29,6 +32,30 @@ def mock_papermap() -> Generator[tuple[MagicMock, MagicMock], None, None]:
         instance = MagicMock()
         mock.return_value = instance
         yield mock, instance
+
+
+def test_main_module() -> None:
+    """Exercise (most of) the code in the `__main__` module."""
+    import_module("papermap.__main__")
+
+
+def test_run_as_module() -> None:
+    """Is the script runnable as a Python module?"""
+    result = run_command_in_shell("python -m papermap --help")
+    assert result.exit_code == 0
+
+
+def test_run_as_executable() -> None:
+    """Is the script installed (as a `console_script`) and runnable as an executable?"""
+    result = run_command_in_shell("papermap --help")
+    assert result.exit_code == 0
+
+
+def test_version_runner(runner: CliRunner) -> None:
+    """Does `--version` display the correct version?"""
+    result = runner.invoke(cli, ["--version"])
+    assert result.exit_code == 0
+    assert result.output == f"cli, version {metadata.version('papermap')}\n"
 
 
 class TestCliHelp:

@@ -11,7 +11,7 @@ author = "Steven van de Graaf"
 copyright = f"2019, {author}"  # noqa: A001
 
 # The full version, including alpha/beta/rc tags.
-release = metadata.version("gpx")
+release = metadata.version("papermap")
 # The short X.Y version.
 version = release.rsplit(".", 1)[0]
 

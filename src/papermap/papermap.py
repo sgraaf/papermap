@@ -2,6 +2,7 @@ import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
+from importlib import metadata
 from io import BytesIO
 from itertools import count
 from math import ceil, floor, radians
@@ -11,7 +12,6 @@ from fpdf import FPDF
 from PIL import Image
 from requests import Session
 
-from . import __version__
 from .constants import HEADERS, NAME, TILE_SIZE
 from .defaults import (
     DEFAULT_BACKGROUND_COLOR,
@@ -115,7 +115,7 @@ class PaperMap:
 
         # check whether an API key is provided, if it is needed
         if (
-            "a" in get_string_formatting_arguments(self.tile_server.url_template)
+            "api_key" in get_string_formatting_arguments(self.tile_server.url_template)
             and self.api_key is None
         ):
             msg = f"No API key specified for {tile_server} tile server"
@@ -288,7 +288,7 @@ class PaperMap:
                 # draw label
                 if x_ + label_width < self.margin_left + self.pdf.epw:
                     self.pdf.set_xy(x_ - label_width / 2, self.margin_top)
-                    self.pdf.cell(w=label_width, txt=label, align="C", fill=True)
+                    self.pdf.cell(w=label_width, text=label, align="C", fill=True)
 
             # draw horizontal grid lines
             for y, label in y_grid_cs_and_labels:
@@ -303,7 +303,7 @@ class PaperMap:
                 if y_ + label_width < self.margin_top + self.pdf.eph:
                     self.pdf.set_xy(self.margin_left, y_ + label_width / 2)
                     with self.pdf.rotation(90):
-                        self.pdf.cell(w=label_width, txt=label, align="C", fill=True)
+                        self.pdf.cell(w=label_width, text=label, align="C", fill=True)
 
             self.pdf.set_font_size(12)
 
@@ -313,7 +313,7 @@ class PaperMap:
             self.margin_left + self.pdf.epw - self.pdf.get_string_width(text),
             self.margin_top + self.pdf.eph - pt_to_mm(self.pdf.font_size_pt),
         )
-        self.pdf.cell(w=0, txt=text, align="R", fill=True)
+        self.pdf.cell(w=0, text=text, align="R", fill=True)
 
     def download_tiles(
         self, num_retries: int = 3, sleep_between_retries: int | None = None
@@ -400,7 +400,7 @@ class PaperMap:
         self.file = Path(file)
         self.pdf.set_title(title)
         self.pdf.set_author(author)
-        self.pdf.set_creator(f"{NAME} v{__version__}")
+        self.pdf.set_creator(f"{NAME} v{metadata.version('papermap')}")
         self.pdf.output(self.file)
 
     def __repr__(self) -> str:
