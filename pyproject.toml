@@ -33,23 +33,28 @@ dependencies = [
     "requests",
 ]
 
-[project.optional-dependencies]
-dev = [
-    "black",
-    "mypy",
-    "pre-commit",
-    "ruff",
-]
+[dependency-groups]
 docs = [
+    "cogapp",
     "furo",
     "myst-parser",
     "sphinx",
+    "sphinx-autobuild",
     "sphinx-copybutton",
     "sphinxext-opengraph",
 ]
 tests = [
-    "cog",
     "pytest",
+    "pytest-cov",
+]
+typing = [
+    "mypy",
+]
+dev = [
+    { include-group = "docs" },
+    { include-group = "tests" },
+    { include-group = "typing" },
+    "prek",
 ]
 
 [project.urls]
@@ -87,6 +92,14 @@ pydocstyle.convention = "google"
 "src/papermap/utils.py" = [
     "N806",  # non-lowercase-variable-in-function (pep8-naming)
     "PLR2004",  # magic-value-comparison (Pylint)
+]
+"tests/**/test_*.py" = [
+    "D",  # pydocstyle
+    "PLR2004",  # magic-value-comparison (Pylint)
+    "S101",  # assert (flake8-bandit)
+]
+"tests/conftest.py" = [
+    "D401",  # non-imperative-mood (pydocstyle)
 ]
 
 [tool.mypy]

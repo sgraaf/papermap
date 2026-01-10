@@ -1,12 +1,12 @@
 from collections.abc import Callable
 from functools import wraps
+from importlib import metadata
 from pathlib import Path
 from typing import Any
 
 import click
 from click_default_group import DefaultGroup
 
-from . import __version__
 from .defaults import (
     DEFAULT_DPI,
     DEFAULT_GRID_SIZE,
@@ -109,7 +109,7 @@ def common_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
     default_if_no_args=True,
     context_settings=CONTEXT_SETTINGS,
 )
-@click.version_option(__version__, "-v", "--version")
+@click.version_option(metadata.version("papermap"), "-v", "--version")
 def cli() -> None:
     """PaperMap is a Python package and CLI for creating ready-to-print paper maps.
 

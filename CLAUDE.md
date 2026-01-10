@@ -400,7 +400,7 @@ for num_retry in count():
 
 ```python
 self.pdf.set_xy(x, y)
-self.pdf.cell(w=width, txt=text, align="C", fill=True)
+self.pdf.cell(w=width, text=text, align="C", fill=True)
 ```
 
 ### Important Implementation Details

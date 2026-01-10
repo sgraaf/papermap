@@ -1,10 +1,10 @@
-from . import __version__
+from importlib import metadata
 
 NAME: str = "PaperMap"
 
 # headers used for requests
 HEADERS: dict[str, str] = {
-    "User-Agent": f"{NAME}v{__version__}",
+    "User-Agent": f"{NAME}v{metadata.version('papermap')}",
     "Accept": "image/png,image/*;q=0.9,*/*;q=0.8",
 }
 
