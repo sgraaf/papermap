@@ -372,7 +372,7 @@ class PaperMap:
 
         # resize the scaled map image
         self.map_image = self.map_image_scaled.resize(
-            (self.image_width_px, self.image_height_px), Image.LANCZOS
+            (self.image_width_px, self.image_height_px), Image.Resampling.LANCZOS
         )
 
     def render(self) -> None:
@@ -401,7 +401,7 @@ class PaperMap:
         self.pdf.set_title(title)
         self.pdf.set_author(author)
         self.pdf.set_creator(f"{NAME} v{metadata.version('papermap')}")
-        self.pdf.output(self.file)
+        self.pdf.output(self.file)  # pyrefly: ignore
 
     def __repr__(self) -> str:
         return f"PaperMap({self.lat}, {self.lon})"

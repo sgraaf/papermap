@@ -201,7 +201,7 @@ class TestTileDownloadBehavior:
 
             # All tiles should be marked as successful
             for tile in pm.tiles:
-                assert tile.success is True
+                assert tile.success
 
     def test_tile_download_retry_on_failure(self) -> None:
         """Test that tile downloads are retried on failure."""
@@ -237,7 +237,7 @@ class TestTileDownloadBehavior:
 
             # All tiles should eventually be successful
             for tile in pm.tiles:
-                assert tile.success is True
+                assert tile.success
 
     def test_tile_download_max_retries_exceeded(self) -> None:
         """Test that an error is raised when max retries are exceeded."""
@@ -275,7 +275,7 @@ class TestRenderMethods:
         assert hasattr(pm, "map_image_scaled")
 
     def test_render_grid_only_when_enabled(self) -> None:
-        """Test that grid is only rendered when add_grid is True."""
+        """Test that grid is only rendered when add_grid ."""
         pm_no_grid = PaperMap(lat=40.7128, lon=-74.0060, add_grid=False)
         pm_with_grid = PaperMap(lat=40.7128, lon=-74.0060, add_grid=True)
 

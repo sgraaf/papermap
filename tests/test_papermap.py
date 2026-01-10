@@ -60,7 +60,7 @@ class TestPaperMapInit:
 
     def test_init_with_grid(self) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060, add_grid=True, grid_size=500)
-        assert pm.add_grid is True
+        assert pm.add_grid
         assert pm.grid_size == 500
 
     def test_init_stores_api_key(self) -> None:

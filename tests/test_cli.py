@@ -1,8 +1,12 @@
 """Integration tests for papermap CLI."""
 
-from collections.abc import Generator
+import subprocess
+from collections.abc import Generator, Sequence
+from dataclasses import dataclass
 from importlib import import_module, metadata
+from os import PathLike
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -11,7 +15,38 @@ from click.testing import CliRunner
 from papermap.cli import cli
 from papermap.defaults import DEFAULT_DPI, DEFAULT_SCALE, SIZES
 
-from .utils import run_command_in_shell
+# copied from `typeshed`
+StrOrBytesPath = str | bytes | PathLike
+Command = StrOrBytesPath | Sequence[StrOrBytesPath]
+
+
+@dataclass
+class CommandResult:
+    """Holds the captured result of an invoked command.
+
+    Inspired by `click.testing.Result`.
+    """
+
+    exit_code: int
+    stdout: str
+    stderr: str
+
+
+def run_command_in_shell(command: Command, **kwargs: Any) -> CommandResult:  # noqa: ANN401
+    """Execute a command through the shell, capturing the exit code and output."""
+    result = subprocess.run(  # noqa: S602
+        command,
+        shell=True,
+        capture_output=True,
+        check=False,
+        **kwargs,
+    )
+    return CommandResult(
+        result.returncode,
+        result.stdout.decode().replace("\r\n", "\n"),
+        result.stderr.decode().replace("\r\n", "\n"),
+    )
+
 
 # Use London coordinates (positive values) for most tests to avoid
 # Click interpreting negative longitude as an option
@@ -201,7 +236,7 @@ class TestLatLonCommand:
 
         assert result.exit_code == 0
         call_kwargs = mock_class.call_args[1]
-        assert call_kwargs["use_landscape"] is True
+        assert call_kwargs["use_landscape"]
 
     def test_latlon_with_scale(
         self,
@@ -270,7 +305,7 @@ class TestLatLonCommand:
 
         assert result.exit_code == 0
         call_kwargs = mock_class.call_args[1]
-        assert call_kwargs["add_grid"] is True
+        assert call_kwargs["add_grid"]
         assert call_kwargs["grid_size"] == 500
 
     def test_latlon_with_margins(
@@ -519,10 +554,10 @@ class TestCliDefaults:
         # Check defaults
         assert call_kwargs["tile_server"] == "OpenStreetMap"
         assert call_kwargs["size"] == "a4"
-        assert call_kwargs["use_landscape"] is False
+        assert not call_kwargs["use_landscape"]
         assert call_kwargs["scale"] == DEFAULT_SCALE
         assert call_kwargs["dpi"] == DEFAULT_DPI
-        assert call_kwargs["add_grid"] is False
+        assert not call_kwargs["add_grid"]
         assert call_kwargs["margin_top"] == 10
         assert call_kwargs["margin_right"] == 10
         assert call_kwargs["margin_bottom"] == 10

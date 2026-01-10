@@ -31,22 +31,22 @@ class TestTileSuccess:
     """Tests for Tile.success property."""
 
     def test_success_false_when_no_image(self, sample_tile: Tile) -> None:
-        assert sample_tile.success is False
+        assert not sample_tile.success
 
     def test_success_true_when_image_present(
         self, sample_tile_with_image: Tile
     ) -> None:
-        assert sample_tile_with_image.success is True
+        assert sample_tile_with_image.success
 
     def test_success_false_when_image_is_none(self) -> None:
         tile = Tile(x=0, y=0, zoom=0, bbox=(0, 0, 256, 256))
         tile.image = None
-        assert tile.success is False
+        assert not tile.success
 
     def test_success_true_after_setting_image(self, sample_tile: Tile) -> None:
-        assert sample_tile.success is False
+        assert not sample_tile.success
         sample_tile.image = Image.new("RGBA", (256, 256), color="red")
-        assert sample_tile.success is True
+        assert sample_tile.success
 
 
 class TestTileFormatUrlTemplate:
@@ -139,6 +139,6 @@ class TestTileImageHandling:
         assert tile.image is img2
 
     def test_clearing_image(self, sample_tile_with_image: Tile) -> None:
-        assert sample_tile_with_image.success is True
+        assert sample_tile_with_image.success
         sample_tile_with_image.image = None
-        assert sample_tile_with_image.success is False
+        assert not sample_tile_with_image.success

@@ -39,8 +39,25 @@ repos:
     rev: v1.19.1
     hooks:
       - id: mypy
-        additional_dependencies:
-          - types-requests
+        entry: uv run mypy
+        language: system
+  - repo: https://github.com/facebook/pyrefly-pre-commit
+    rev: 0.47.0
+    hooks:
+      - id: pyrefly-check
+        entry: uv run pyrefly check
+        language: system
+  - repo: local
+    hooks:
+      - id: ty-check
+        name: ty check
+        description: "Run 'ty check' for extremely fast Python type checking."
+        entry: uv run ty check
+        language: system
+        types_or: [python, pyi]
+        pass_filenames: false
+        require_serial: true
+        stages: [pre-commit, pre-merge-commit, pre-push, manual]
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.1
     hooks:
