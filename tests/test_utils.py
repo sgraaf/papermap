@@ -456,7 +456,7 @@ class TestCartesianToSpherical:
         assert isclose(lon, 90, abs_tol=1e-6)
 
     def test_at_z_axis(self) -> None:
-        lat, lon = cartesian_to_spherical(0, 0, 6378137)
+        lat, _lon = cartesian_to_spherical(0, 0, 6378137)
         assert isclose(lat, 90, abs_tol=1e-6)
 
 
@@ -688,33 +688,58 @@ class TestIsOutOfBounds:
     """Tests for is_out_of_bounds function."""
 
     def test_within_bounds(self) -> None:
-        test = {"lat_min": 10, "lat_max": 20, "lon_min": 30, "lon_max": 40}
-        bounds = {"lat_min": 0, "lat_max": 90, "lon_min": -180, "lon_max": 180}
+        test = {"lat_min": 10.0, "lat_max": 20.0, "lon_min": 30.0, "lon_max": 40.0}
+        bounds = {"lat_min": 0.0, "lat_max": 90.0, "lon_min": -180.0, "lon_max": 180.0}
         assert not is_out_of_bounds(test, bounds)
 
     def test_lat_min_out_of_bounds(self) -> None:
-        test = {"lat_min": -100, "lat_max": 20, "lon_min": 30, "lon_max": 40}
-        bounds = {"lat_min": -90, "lat_max": 90, "lon_min": -180, "lon_max": 180}
+        test = {"lat_min": -100.0, "lat_max": 20.0, "lon_min": 30.0, "lon_max": 40.0}
+        bounds = {
+            "lat_min": -90.0,
+            "lat_max": 90.0,
+            "lon_min": -180.0,
+            "lon_max": 180.0,
+        }
         assert is_out_of_bounds(test, bounds)
 
     def test_lat_max_out_of_bounds(self) -> None:
-        test = {"lat_min": 10, "lat_max": 100, "lon_min": 30, "lon_max": 40}
-        bounds = {"lat_min": -90, "lat_max": 90, "lon_min": -180, "lon_max": 180}
+        test = {"lat_min": 10.0, "lat_max": 100.0, "lon_min": 30.0, "lon_max": 40.0}
+        bounds = {
+            "lat_min": -90.0,
+            "lat_max": 90.0,
+            "lon_min": -180.0,
+            "lon_max": 180.0,
+        }
         assert is_out_of_bounds(test, bounds)
 
     def test_lon_min_out_of_bounds(self) -> None:
-        test = {"lat_min": 10, "lat_max": 20, "lon_min": -200, "lon_max": 40}
-        bounds = {"lat_min": -90, "lat_max": 90, "lon_min": -180, "lon_max": 180}
+        test = {"lat_min": 10.0, "lat_max": 20.0, "lon_min": -200.0, "lon_max": 40.0}
+        bounds = {
+            "lat_min": -90.0,
+            "lat_max": 90.0,
+            "lon_min": -180.0,
+            "lon_max": 180.0,
+        }
         assert is_out_of_bounds(test, bounds)
 
     def test_lon_max_out_of_bounds(self) -> None:
-        test = {"lat_min": 10, "lat_max": 20, "lon_min": 30, "lon_max": 200}
-        bounds = {"lat_min": -90, "lat_max": 90, "lon_min": -180, "lon_max": 180}
+        test = {"lat_min": 10.0, "lat_max": 20.0, "lon_min": 30.0, "lon_max": 200.0}
+        bounds = {
+            "lat_min": -90.0,
+            "lat_max": 90.0,
+            "lon_min": -180.0,
+            "lon_max": 180.0,
+        }
         assert is_out_of_bounds(test, bounds)
 
     def test_exactly_at_bounds(self) -> None:
-        test = {"lat_min": -90, "lat_max": 90, "lon_min": -180, "lon_max": 180}
-        bounds = {"lat_min": -90, "lat_max": 90, "lon_min": -180, "lon_max": 180}
+        test = {"lat_min": -90.0, "lat_max": 90.0, "lon_min": -180.0, "lon_max": 180.0}
+        bounds = {
+            "lat_min": -90.0,
+            "lat_max": 90.0,
+            "lon_min": -180.0,
+            "lon_max": 180.0,
+        }
         assert not is_out_of_bounds(test, bounds)
 
 
@@ -722,14 +747,14 @@ class TestDrange:
     """Tests for drange function."""
 
     def test_basic_range(self) -> None:
-        result = list(drange(Decimal("0"), Decimal("10"), Decimal("2")))
-        expected = [Decimal("0"), Decimal("2"), Decimal("4"), Decimal("6"), Decimal("8")]
+        result = list(drange(Decimal(0), Decimal(10), Decimal(2)))
+        expected = [Decimal(0), Decimal(2), Decimal(4), Decimal(6), Decimal(8)]
         assert result == expected
 
     def test_decimal_step(self) -> None:
-        result = list(drange(Decimal("0"), Decimal("1"), Decimal("0.25")))
+        result = list(drange(Decimal(0), Decimal(1), Decimal("0.25")))
         expected = [
-            Decimal("0"),
+            Decimal(0),
             Decimal("0.25"),
             Decimal("0.50"),
             Decimal("0.75"),
@@ -737,9 +762,9 @@ class TestDrange:
         assert result == expected
 
     def test_start_equals_stop(self) -> None:
-        result = list(drange(Decimal("5"), Decimal("5"), Decimal("1")))
+        result = list(drange(Decimal(5), Decimal(5), Decimal(1)))
         assert result == []
 
     def test_single_value(self) -> None:
-        result = list(drange(Decimal("0"), Decimal("1"), Decimal("2")))
-        assert result == [Decimal("0")]
+        result = list(drange(Decimal(0), Decimal(1), Decimal(2)))
+        assert result == [Decimal(0)]

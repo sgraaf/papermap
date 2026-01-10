@@ -88,6 +88,21 @@ pydocstyle.convention = "google"
     "N806",  # non-lowercase-variable-in-function (pep8-naming)
     "PLR2004",  # magic-value-comparison (Pylint)
 ]
+"tests/**/test_*.py" = [
+    "ANN",  # flake8-annotations
+    "ARG",  # flake8-unused-arguments (fixtures trigger these)
+    "D",  # pydocstyle
+    "ERA001",  # commented-out-code (ruff)
+    "PLC0415",  # import-outside-top-level (Pylint)
+    "PLR2004",  # magic-value-comparison (Pylint)
+    "PTH123",  # builtin-open (flake8-use-pathlib)
+    "S101",  # assert (flake8-bandit)
+]
+"tests/conftest.py" = [
+    "ANN",  # flake8-annotations
+    "D",  # pydocstyle
+    "PLC0415",  # import-outside-top-level (Pylint)
+]
 
 [tool.mypy]
 python_version = "3.10"

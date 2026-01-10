@@ -1,7 +1,5 @@
 """Unit tests for papermap.tile_server module."""
 
-import pytest
-
 from papermap.tile import Tile
 from papermap.tile_server import TileServer
 
@@ -11,7 +9,9 @@ class TestTileServerInit:
 
     def test_basic_init(self, sample_tile_server: TileServer) -> None:
         assert sample_tile_server.attribution == "Test Attribution"
-        assert sample_tile_server.url_template == "https://example.com/{zoom}/{x}/{y}.png"
+        assert (
+            sample_tile_server.url_template == "https://example.com/{zoom}/{x}/{y}.png"
+        )
         assert sample_tile_server.zoom_min == 0
         assert sample_tile_server.zoom_max == 19
         assert sample_tile_server.mirrors is None

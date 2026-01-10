@@ -9,7 +9,6 @@ from click.testing import CliRunner
 from papermap.cli import cli
 from papermap.defaults import DEFAULT_DPI, DEFAULT_SCALE, SIZES
 
-
 # Use London coordinates (positive values) for most tests to avoid
 # Click interpreting negative longitude as an option
 TEST_LAT = 51.5074
@@ -90,7 +89,7 @@ class TestLatLonCommand:
         self, runner: CliRunner, mock_papermap, tmp_path: Path
     ) -> None:
         """Test with negative longitude using -- separator."""
-        mock_class, mock_instance = mock_papermap
+        mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
 
         # Use -- to prevent negative longitude from being interpreted as an option
@@ -106,7 +105,7 @@ class TestLatLonCommand:
     def test_latlon_with_tile_server(
         self, runner: CliRunner, mock_papermap, tmp_path: Path
     ) -> None:
-        mock_class, mock_instance = mock_papermap
+        mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
 
         result = runner.invoke(
@@ -128,7 +127,7 @@ class TestLatLonCommand:
     def test_latlon_with_size(
         self, runner: CliRunner, mock_papermap, tmp_path: Path
     ) -> None:
-        mock_class, mock_instance = mock_papermap
+        mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
 
         result = runner.invoke(
@@ -143,7 +142,7 @@ class TestLatLonCommand:
     def test_latlon_with_landscape(
         self, runner: CliRunner, mock_papermap, tmp_path: Path
     ) -> None:
-        mock_class, mock_instance = mock_papermap
+        mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
 
         result = runner.invoke(
@@ -164,7 +163,7 @@ class TestLatLonCommand:
     def test_latlon_with_scale(
         self, runner: CliRunner, mock_papermap, tmp_path: Path
     ) -> None:
-        mock_class, mock_instance = mock_papermap
+        mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
 
         result = runner.invoke(
@@ -186,7 +185,7 @@ class TestLatLonCommand:
     def test_latlon_with_dpi(
         self, runner: CliRunner, mock_papermap, tmp_path: Path
     ) -> None:
-        mock_class, mock_instance = mock_papermap
+        mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
 
         result = runner.invoke(
@@ -201,7 +200,7 @@ class TestLatLonCommand:
     def test_latlon_with_grid(
         self, runner: CliRunner, mock_papermap, tmp_path: Path
     ) -> None:
-        mock_class, mock_instance = mock_papermap
+        mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
 
         result = runner.invoke(
@@ -225,7 +224,7 @@ class TestLatLonCommand:
     def test_latlon_with_margins(
         self, runner: CliRunner, mock_papermap, tmp_path: Path
     ) -> None:
-        mock_class, mock_instance = mock_papermap
+        mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
 
         result = runner.invoke(
@@ -256,7 +255,7 @@ class TestLatLonCommand:
     def test_latlon_with_api_key(
         self, runner: CliRunner, mock_papermap, tmp_path: Path
     ) -> None:
-        mock_class, mock_instance = mock_papermap
+        mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
 
         result = runner.invoke(
@@ -359,7 +358,7 @@ class TestDefaultCommand:
     def test_default_is_latlon(
         self, runner: CliRunner, mock_papermap, tmp_path: Path
     ) -> None:
-        mock_class, mock_instance = mock_papermap
+        mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
 
         # Without specifying a subcommand, should use latlon
@@ -386,7 +385,7 @@ class TestTileServerChoices:
         tmp_path: Path,
         tile_server: str,
     ) -> None:
-        mock_class, mock_instance = mock_papermap
+        mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
 
         result = runner.invoke(
@@ -417,7 +416,7 @@ class TestPaperSizeChoices:
         tmp_path: Path,
         size: str,
     ) -> None:
-        mock_class, mock_instance = mock_papermap
+        mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
 
         result = runner.invoke(
@@ -443,7 +442,7 @@ class TestCliDefaults:
     def test_default_values(
         self, runner: CliRunner, mock_papermap, tmp_path: Path
     ) -> None:
-        mock_class, mock_instance = mock_papermap
+        mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
 
         result = runner.invoke(
@@ -486,7 +485,7 @@ class TestCliErrorHandling:
     def test_papermap_error_propagates(
         self, runner: CliRunner, mock_papermap, tmp_path: Path
     ) -> None:
-        mock_class, mock_instance = mock_papermap
+        mock_class, _mock_instance = mock_papermap
         mock_class.side_effect = ValueError("Scale out of bounds")
         output_file = tmp_path / "test.pdf"
 

@@ -1,1 +1,1 @@
-# Tests for PaperMap package
+"""PaperMap test suite."""

@@ -9,13 +9,8 @@ from PIL import Image
 
 from papermap.defaults import (
     DEFAULT_DPI,
-    DEFAULT_GRID_SIZE,
-    DEFAULT_MARGIN,
     DEFAULT_SCALE,
-    DEFAULT_SIZE,
-    DEFAULT_TILE_SERVER,
     SIZE_TO_DIMENSIONS_MAP,
-    TILE_SERVERS,
 )
 from papermap.papermap import PaperMap
 
@@ -183,8 +178,12 @@ class TestPaperMapLandscape:
     """Tests for landscape orientation."""
 
     def test_landscape_swaps_dimensions(self) -> None:
-        pm_portrait = PaperMap(lat=40.7128, lon=-74.0060, size="a4", use_landscape=False)
-        pm_landscape = PaperMap(lat=40.7128, lon=-74.0060, size="a4", use_landscape=True)
+        pm_portrait = PaperMap(
+            lat=40.7128, lon=-74.0060, size="a4", use_landscape=False
+        )
+        pm_landscape = PaperMap(
+            lat=40.7128, lon=-74.0060, size="a4", use_landscape=True
+        )
 
         assert pm_portrait.width == 210
         assert pm_portrait.height == 297
@@ -256,7 +255,7 @@ class TestPaperMapComputeGridCoordinates:
 
     def test_compute_grid_coordinates_spacing(self) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060, add_grid=True, grid_size=1000)
-        x_coords, y_coords = pm.compute_grid_coordinates()
+        x_coords, _y_coords = pm.compute_grid_coordinates()
 
         # Check that grid spacing is consistent
         if len(x_coords) > 1:
@@ -288,8 +287,8 @@ class TestPaperMapTileCalculations:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         # Should have tiles in a grid pattern
-        x_values = sorted(set(t.x for t in pm.tiles))
-        y_values = sorted(set(t.y for t in pm.tiles))
+        x_values = sorted({t.x for t in pm.tiles})
+        y_values = sorted({t.y for t in pm.tiles})
 
         # Should be contiguous
         for i in range(len(x_values) - 1):
@@ -329,7 +328,7 @@ class TestPaperMapZoomCalculations:
     def test_resize_factor_compensates_for_zoom_rounding(self) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
         # resize_factor = 2^zoom_scaled / 2^zoom
-        expected = 2 ** pm.zoom_scaled / 2 ** pm.zoom
+        expected = 2**pm.zoom_scaled / 2**pm.zoom
         assert isclose(pm.resize_factor, expected, rel_tol=1e-6)
 
 

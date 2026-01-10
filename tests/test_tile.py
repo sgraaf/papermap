@@ -1,6 +1,5 @@
 """Unit tests for papermap.tile module."""
 
-import pytest
 from PIL import Image
 
 from papermap.tile import Tile
@@ -70,9 +69,7 @@ class TestTileFormatUrlTemplate:
 
     def test_formatting_with_all_placeholders(self, sample_tile: Tile) -> None:
         template = "https://{mirror}.example.com/{zoom}/{x}/{y}.png?key={api_key}"
-        result = sample_tile.format_url_template(
-            template, mirror="b", api_key="mykey"
-        )
+        result = sample_tile.format_url_template(template, mirror="b", api_key="mykey")
         assert result == "https://b.example.com/10/123/456.png?key=mykey"
 
     def test_formatting_with_none_mirror(self, sample_tile: Tile) -> None:

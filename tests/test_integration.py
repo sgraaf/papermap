@@ -161,9 +161,7 @@ class TestDifferentLocations:
 
         assert output_file.exists()
 
-    def test_map_near_date_line_east(
-        self, mock_tile_download, tmp_path: Path
-    ) -> None:
+    def test_map_near_date_line_east(self, mock_tile_download, tmp_path: Path) -> None:
         """Test generating a map near the date line (east side)."""
         pm = PaperMap(lat=0.0, lon=179.5)
         pm.render()
@@ -173,9 +171,7 @@ class TestDifferentLocations:
 
         assert output_file.exists()
 
-    def test_map_near_date_line_west(
-        self, mock_tile_download, tmp_path: Path
-    ) -> None:
+    def test_map_near_date_line_west(self, mock_tile_download, tmp_path: Path) -> None:
         """Test generating a map near the date line (west side)."""
         pm = PaperMap(lat=0.0, lon=-179.5)
         pm.render()
@@ -267,9 +263,7 @@ class TestRenderMethods:
         assert pm.map_image is not None
         assert pm.map_image.size == (pm.image_width_px, pm.image_height_px)
 
-    def test_render_base_layer_uses_background_color(
-        self, mock_tile_download
-    ) -> None:
+    def test_render_base_layer_uses_background_color(self, mock_tile_download) -> None:
         """Test that render_base_layer uses the specified background color."""
         pm = PaperMap(lat=40.7128, lon=-74.0060, background_color="#ff0000")
         pm.render_base_layer()
@@ -345,9 +339,7 @@ class TestPdfOutput:
         assert pm.width == 210
         assert pm.height == 297
 
-    def test_pdf_content_is_valid(
-        self, mock_tile_download, tmp_path: Path
-    ) -> None:
+    def test_pdf_content_is_valid(self, mock_tile_download, tmp_path: Path) -> None:
         """Test that the PDF content is valid."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
         pm.render()
@@ -451,20 +443,16 @@ class TestGridCoordinates:
         assert len(y_coords) > 0
 
         # Each coordinate should have a position and label
-        for x, label in x_coords:
+        for _x, label in x_coords:
             assert isinstance(label, str)
 
-        for y, label in y_coords:
+        for _y, label in y_coords:
             assert isinstance(label, str)
 
     def test_grid_size_affects_coordinate_count(self, mock_tile_download) -> None:
         """Test that grid size affects the number of grid lines."""
-        pm_small = PaperMap(
-            lat=40.7128, lon=-74.0060, add_grid=True, grid_size=500
-        )
-        pm_large = PaperMap(
-            lat=40.7128, lon=-74.0060, add_grid=True, grid_size=2000
-        )
+        pm_small = PaperMap(lat=40.7128, lon=-74.0060, add_grid=True, grid_size=500)
+        pm_large = PaperMap(lat=40.7128, lon=-74.0060, add_grid=True, grid_size=2000)
 
         x_small, y_small = pm_small.compute_grid_coordinates()
         x_large, y_large = pm_large.compute_grid_coordinates()
