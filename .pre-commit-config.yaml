@@ -51,17 +51,26 @@ repos:
     hooks:
       - id: ty-check
         name: ty check
-        description: "Run 'ty check' for extremely fast Python type checking."
         entry: uv run ty check
         language: system
         types_or: [python, pyi]
         pass_filenames: false
         require_serial: true
+        description: "Run 'ty check' for extremely fast Python type checking."
         stages: [pre-commit, pre-merge-commit, pre-push, manual]
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.1
     hooks:
       - id: codespell
+  - repo: local
+    hooks:
+      - id: cog
+        name: Cog the documentation
+        entry: uv run cog -r --check
+        language: system
+        always_run: true
+        pass_filenames: false
+        args: [docs/cli.md]
   - repo: https://github.com/hukkin/mdformat
     rev: 1.0.0
     hooks:

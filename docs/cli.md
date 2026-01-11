@@ -1,15 +1,19 @@
 # CLI Reference
 
+The `papermap` command-line interface (CLI) provides for creating ready-to-print paper maps via the command-line.
+
 <!-- [[[cog
-from papermap import cli
+import cog
 from click.testing import CliRunner
-import textwrap
-def help(args):
-    cog.out("\n```shell\n")
-    result = CliRunner().invoke(cli.cli, args)
+
+from papermap.cli import cli
+
+def help_output(args):
+    result = CliRunner().invoke(cli, args)
     output = result.output.replace("Usage: cli ", "Usage: papermap ")
-    cog.out(output)
-    cog.out("```\n\n")
+    cog.out(f"\nRunning `gpx {' '.join(args)}` or `python -m gpx {' '.join(args)}` shows a list of all of the available options and arguments:\n")
+    cog.out(f"\n```sh\n{output}```\n\n")
+cog.outl()
 ]]] -->
 
 <!-- [[[end]]] -->
@@ -21,10 +25,12 @@ Running `papermap` without specifying a command runs the default command, `paper
 ## papermap --help
 
 <!-- [[[cog
-help(["--help"])
+help_output(["--help"])
 ]]] -->
 
-```shell
+Running `gpx --help` or `python -m gpx --help` shows a list of all of the available options and arguments:
+
+```sh
 Usage: papermap [OPTIONS] COMMAND [ARGS]...
 
   PaperMap is a Python package and CLI for creating ready-to-print paper maps.
@@ -49,10 +55,12 @@ Commands:
 This command generates a paper map for the given spherical coordinate (i.e. lat, lon) and outputs it to file.
 
 <!-- [[[cog
-help(["latlon", "--help"])
+help_output(["latlon", "--help"])
 ]]] -->
 
-```shell
+Running `gpx latlon --help` or `python -m gpx latlon --help` shows a list of all of the available options and arguments:
+
+```sh
 Usage: papermap latlon [OPTIONS] LATITUDE LONGITUDE FILE
 
   Generates a paper map for the given spherical coordinate (i.e. lat, lon) and
@@ -86,10 +94,12 @@ Options:
 This command generates a paper map for the given UTM coordinate (i.e. easting, northing, zone) and outputs it to file.
 
 <!-- [[[cog
-help(["utm", "--help"])
+help_output(["utm", "--help"])
 ]]] -->
 
-```shell
+Running `gpx utm --help` or `python -m gpx utm --help` shows a list of all of the available options and arguments:
+
+```sh
 Usage: papermap utm [OPTIONS] EASTING NORTHING ZONE-NUMBER HEMISPHERE FILE
 
   Generates a paper map for the given UTM coordinate and outputs it to file.

@@ -4,7 +4,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/papermap)](https://img.shields.io/pypi/v/papermap)
 [![Supported Python Versions](https://img.shields.io/pypi/pyversions/papermap)](https://pypi.org/project/papermap/)
-[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/sgraaf/papermap/main.svg)](https://results.pre-commit.ci/latest/github/sgraaf/papermap/main)
+[![CI](https://github.com/sgraaf/papermap/actions/workflows/ci.yml/badge.svg)](https://github.com/sgraaf/papermap/actions/workflows/ci.yml)
 [![Test](https://github.com/sgraaf/papermap/actions/workflows/test.yml/badge.svg)](https://github.com/sgraaf/papermap/actions/workflows/test.yml)
 [![Documentation Status](https://readthedocs.org/projects/papermap/badge/?version=latest)](https://papermap.readthedocs.io/en/latest/?badge=latest)
 [![PyPI - License](https://img.shields.io/pypi/l/papermap)](https://img.shields.io/pypi/l/papermap)
@@ -17,42 +17,17 @@ PaperMap is a Python package and CLI for creating ready-to-print paper maps.
 
 <!-- start docs-include-installation -->
 
-### From PyPI
+PaperMap is available on [PyPI](https://pypi.org/project/papermap/). Install with [uv](https://docs.astral.sh/uv/) or your package manager of choice:
 
-PaperMap is available on [PyPI](https://pypi.org/project/papermap/).
-
-#### As a package
-
-For use as a package, install PaperMap with `pip` or your package manager of choice:
-
-```bash
-pip install papermap
-```
-
-#### As a CLI tool
-
-For use as a CLI tool, we recommend installing PaperMap with [`pipx`](https://pypa.github.io/pipx/):
-
-```bash
-pipx install papermap
-```
-
-### From source
-
-If you'd like, you can also install PaperMap from source (with [`flit`](https://flit.readthedocs.io/en/latest/)):
-
-```bash
-git clone https://github.com/sgraaf/papermap.git
-cd papermap
-python3 -m pip install flit
-flit install
+```sh
+uv add papermap
 ```
 
 <!-- end docs-include-installation -->
 
 ## Documentation
 
-Check out the [PaperMap documentation](https://papermap.readthedocs.io/en/stable/) for the [User's Guide](https://papermap.readthedocs.io/en/stable/usage.html) and [API Reference](https://papermap.readthedocs.io/en/stable/api.html).
+Check out the [PaperMap documentation](https://papermap.readthedocs.io/en/stable/) for the [User's Guide](https://papermap.readthedocs.io/en/stable/usage.html), [API Reference](https://papermap.readthedocs.io/en/stable/api.html) and [CLI Reference](https://papermap.readthedocs.io/en/stable/cli.html).
 
 ## Usage
 
