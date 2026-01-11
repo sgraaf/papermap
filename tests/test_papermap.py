@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 from papermap.defaults import (
     DEFAULT_DPI,
@@ -149,6 +149,176 @@ class TestPaperMapValidation:
         # OpenStreetMap has zoom_min=0, so even very coarse scales work
         pm = PaperMap(lat=40.7128, lon=-74.0060, scale=100_000_000)
         assert pm.zoom_scaled >= 0
+
+
+class TestPaperMapEdgeCases:
+    """Tests for edge cases and boundary conditions."""
+
+    # Coordinate edge cases
+    def test_latitude_at_90_degrees(self) -> None:
+        """Test latitude at exact north pole causes error in Web Mercator."""
+        # Web Mercator cannot handle exactly ±90° (math domain error in log(tan()))
+        # Could raise either ValueError or ZeroDivisionError depending on implementation
+        try:
+            PaperMap(lat=90.0, lon=0.0)
+            msg = "Expected ValueError or ZeroDivisionError for latitude=90"
+            raise AssertionError(msg)
+        except (ValueError, ZeroDivisionError):
+            pass  # Expected
+
+    def test_latitude_at_minus_90_degrees(self) -> None:
+        """Test latitude at exact south pole causes error in Web Mercator."""
+        try:
+            PaperMap(lat=-90.0, lon=0.0)
+            msg = "Expected ValueError or ZeroDivisionError for latitude=-90"
+            raise AssertionError(msg)
+        except (ValueError, ZeroDivisionError):
+            pass  # Expected
+
+    def test_latitude_near_web_mercator_limit(self) -> None:
+        """Test latitude near Web Mercator projection limits (~85.05°)."""
+        pm_north = PaperMap(lat=85.05, lon=0.0)
+        pm_south = PaperMap(lat=-85.05, lon=0.0)
+        assert pm_north.lat == 85.05
+        assert pm_south.lat == -85.05
+
+    def test_longitude_at_180_degrees(self) -> None:
+        """Test longitude at international date line."""
+        pm_pos = PaperMap(lat=0.0, lon=180.0)
+        pm_neg = PaperMap(lat=0.0, lon=-180.0)
+        assert pm_pos.lon == 180.0
+        assert pm_neg.lon == -180.0
+
+    def test_coordinates_at_equator_prime_meridian(self) -> None:
+        """Test coordinates at (0, 0)."""
+        pm = PaperMap(lat=0.0, lon=0.0)
+        assert pm.lat == 0.0
+        assert pm.lon == 0.0
+
+    # Scale edge cases
+    def test_scale_of_one(self) -> None:
+        """Test scale of 1:1 (extremely detailed, likely invalid)."""
+        with pytest.raises(ValueError, match="Scale out of bounds"):
+            PaperMap(lat=40.7128, lon=-74.0060, scale=1)
+
+    def test_very_large_scale(self) -> None:
+        """Test extremely coarse scale."""
+        pm = PaperMap(lat=40.7128, lon=-74.0060, scale=1_000_000_000)
+        assert pm.scale == 1_000_000_000
+        assert pm.zoom_scaled >= 0
+
+    # DPI edge cases
+    def test_dpi_minimum_value(self) -> None:
+        """Test DPI at minimum reasonable value."""
+        pm = PaperMap(lat=40.7128, lon=-74.0060, dpi=1)
+        assert pm.dpi == 1
+
+    def test_very_high_dpi(self) -> None:
+        """Test very high DPI value."""
+        pm = PaperMap(lat=40.7128, lon=-74.0060, dpi=2400)
+        assert pm.dpi == 2400
+
+    # Margin edge cases
+    def test_zero_margins(self) -> None:
+        """Test with all margins set to zero."""
+        pm = PaperMap(
+            lat=40.7128,
+            lon=-74.0060,
+            margin_top=0,
+            margin_right=0,
+            margin_bottom=0,
+            margin_left=0,
+        )
+        assert pm.margin_top == 0
+        assert pm.image_width == pm.width
+        assert pm.image_height == pm.height
+
+    def test_asymmetric_margins(self) -> None:
+        """Test with highly asymmetric margins."""
+        pm = PaperMap(
+            lat=40.7128,
+            lon=-74.0060,
+            margin_top=50,
+            margin_right=5,
+            margin_bottom=10,
+            margin_left=30,
+        )
+        assert pm.margin_top == 50
+        assert pm.margin_right == 5
+        assert pm.margin_bottom == 10
+        assert pm.margin_left == 30
+
+    def test_very_large_margins_on_small_paper(self) -> None:
+        """Test large margins on A7 (smallest paper size)."""
+        # A7 is 74x105mm, leaving very little space with large margins
+        pm = PaperMap(
+            lat=40.7128,
+            lon=-74.0060,
+            size="a7",
+            margin_top=20,
+            margin_right=20,
+            margin_bottom=20,
+            margin_left=20,
+        )
+        # Should still have positive image area
+        assert pm.image_width > 0
+        assert pm.image_height > 0
+
+    # Grid size edge cases
+    def test_grid_size_very_small(self) -> None:
+        """Test very small grid size."""
+        pm = PaperMap(lat=40.7128, lon=-74.0060, add_grid=True, grid_size=100)
+        assert pm.grid_size == 100
+
+    def test_grid_size_very_large(self) -> None:
+        """Test very large grid size."""
+        pm = PaperMap(lat=40.7128, lon=-74.0060, add_grid=True, grid_size=100000)
+        assert pm.grid_size == 100000
+
+    # Tile server and API key edge cases
+    def test_api_key_empty_string(self) -> None:
+        """Test behavior with empty string API key."""
+        # Empty string is stored as-is (not validated as missing)
+        pm = PaperMap(
+            lat=40.7128,
+            lon=-74.0060,
+            tile_server="Thunderforest Landscape",
+            api_key="",
+        )
+        assert pm.api_key == ""
+
+    def test_api_key_with_special_characters(self) -> None:
+        """Test API key with special characters."""
+        pm = PaperMap(
+            lat=40.7128,
+            lon=-74.0060,
+            tile_server="Thunderforest Landscape",
+            api_key="test-key_123.456/abc",
+        )
+        assert pm.api_key == "test-key_123.456/abc"
+
+    # Combination edge cases
+    def test_extreme_combination_a0_landscape_normal_scale(self) -> None:
+        """Test A0 paper in landscape with normal scale."""
+        pm = PaperMap(
+            lat=40.7128, lon=-74.0060, size="a0", use_landscape=True, scale=25000
+        )
+        # A0 dimensions: 841x1189mm, swapped for landscape
+        expected_width, expected_height = SIZE_TO_DIMENSIONS_MAP["a0"]
+        assert pm.width == expected_height  # Swapped for landscape
+        assert pm.height == expected_width
+        assert pm.use_landscape
+        assert pm.width > pm.height  # Landscape orientation
+
+    def test_extreme_combination_a7_portrait_coarse_scale(self) -> None:
+        """Test A7 paper in portrait with coarse scale."""
+        pm = PaperMap(lat=40.7128, lon=-74.0060, size="a7", scale=100_000)
+        # A7 dimensions: 74x105mm
+        expected_width, expected_height = SIZE_TO_DIMENSIONS_MAP["a7"]
+        assert pm.width == expected_width
+        assert pm.height == expected_height
+        assert not pm.use_landscape
+        assert pm.width < pm.height  # Portrait orientation
 
 
 class TestPaperMapPaperSizes:
@@ -437,6 +607,138 @@ class TestPaperMapDownloadTiles:
             mock_sleep.assert_called_with(1)
             # Should be called at least once since we had retries
             assert mock_sleep.call_count >= 1
+
+
+class TestPaperMapHttpErrors:
+    """Tests for HTTP error handling in tile downloads."""
+
+    def test_download_tiles_404_error(self) -> None:
+        """Test handling of HTTP 404 Not Found errors."""
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+
+        mock_response = MagicMock()
+        mock_response.ok = False
+        mock_response.status_code = 404
+
+        with patch("papermap.papermap.Session") as mock_session_class:
+            mock_session = MagicMock()
+            mock_session_class.return_value.__enter__.return_value = mock_session
+            mock_session.get.return_value = mock_response
+
+            with pytest.raises(RuntimeError, match="Could not download"):
+                pm.download_tiles(num_retries=1)
+
+    def test_download_tiles_500_error(self) -> None:
+        """Test handling of HTTP 500 Server Error."""
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+
+        mock_response = MagicMock()
+        mock_response.ok = False
+        mock_response.status_code = 500
+
+        with patch("papermap.papermap.Session") as mock_session_class:
+            mock_session = MagicMock()
+            mock_session_class.return_value.__enter__.return_value = mock_session
+            mock_session.get.return_value = mock_response
+
+            with pytest.raises(RuntimeError, match="Could not download"):
+                pm.download_tiles(num_retries=1)
+
+    def test_download_tiles_403_forbidden(self) -> None:
+        """Test handling of HTTP 403 Forbidden errors (invalid API key)."""
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+
+        mock_response = MagicMock()
+        mock_response.ok = False
+        mock_response.status_code = 403
+
+        with patch("papermap.papermap.Session") as mock_session_class:
+            mock_session = MagicMock()
+            mock_session_class.return_value.__enter__.return_value = mock_session
+            mock_session.get.return_value = mock_response
+
+            with pytest.raises(RuntimeError, match="Could not download"):
+                pm.download_tiles(num_retries=1)
+
+    def test_download_tiles_empty_response(self) -> None:
+        """Test handling of empty response body."""
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+
+        mock_response = MagicMock()
+        mock_response.ok = True
+        mock_response.content = b""  # Empty content
+
+        with patch("papermap.papermap.Session") as mock_session_class:
+            mock_session = MagicMock()
+            mock_session_class.return_value.__enter__.return_value = mock_session
+            mock_session.get.return_value = mock_response
+
+            # Should raise UnidentifiedImageError when trying to parse empty content
+            with pytest.raises(UnidentifiedImageError):
+                pm.download_tiles(num_retries=1)
+
+    def test_download_tiles_invalid_image_data(self) -> None:
+        """Test handling of invalid/corrupted image data."""
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+
+        mock_response = MagicMock()
+        mock_response.ok = True
+        mock_response.content = b"This is not a valid PNG image"
+
+        with patch("papermap.papermap.Session") as mock_session_class:
+            mock_session = MagicMock()
+            mock_session_class.return_value.__enter__.return_value = mock_session
+            mock_session.get.return_value = mock_response
+
+            # Should raise UnidentifiedImageError when PIL tries to open invalid image
+            with pytest.raises(UnidentifiedImageError):
+                pm.download_tiles(num_retries=1)
+
+    def test_download_tiles_partial_success(self) -> None:
+        """Test when some tiles succeed and some fail."""
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+
+        call_count = 0
+        num_tiles = len(pm.tiles)
+
+        def side_effect(*_args: object, **_kwargs: object) -> MagicMock:
+            nonlocal call_count
+            call_count += 1
+            mock_response = MagicMock()
+
+            # Make only half the tiles succeed on first attempt
+            if call_count <= num_tiles // 2:
+                # First half succeeds
+                mock_image = Image.new("RGBA", (256, 256), color="green")
+                buffer = io.BytesIO()
+                mock_image.save(buffer, format="PNG")
+                buffer.seek(0)
+                mock_response.ok = True
+                mock_response.content = buffer.getvalue()
+            elif call_count <= num_tiles:
+                # Second half fails on first attempt
+                mock_response.ok = False
+            else:
+                # Retry succeeds
+                mock_image = Image.new("RGBA", (256, 256), color="blue")
+                buffer = io.BytesIO()
+                mock_image.save(buffer, format="PNG")
+                buffer.seek(0)
+                mock_response.ok = True
+                mock_response.content = buffer.getvalue()
+
+            return mock_response
+
+        with patch("papermap.papermap.Session") as mock_session_class:
+            mock_session = MagicMock()
+            mock_session_class.return_value.__enter__.return_value = mock_session
+            mock_session.get.side_effect = side_effect
+
+            pm.download_tiles(num_retries=2)
+
+            # All tiles should eventually succeed
+            for tile in pm.tiles:
+                assert tile.success
 
 
 class TestPaperMapRenderBaseLayer:
