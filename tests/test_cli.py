@@ -1,6 +1,8 @@
 """Integration tests for papermap CLI."""
 
+import runpy
 import subprocess
+import sys
 from collections.abc import Generator, Sequence
 from dataclasses import dataclass
 from importlib import import_module, metadata
@@ -72,6 +74,25 @@ def mock_papermap() -> Generator[tuple[MagicMock, MagicMock], None, None]:
 def test_main_module() -> None:
     """Exercise (most of) the code in the `__main__` module."""
     import_module("papermap.__main__")
+
+
+def test_main_module_execution() -> None:
+    """Test that __main__.py can be executed directly."""
+    # This simulates running the module with __name__ == "__main__"
+    # We use runpy to properly execute the module with imports
+    with patch("papermap.cli.PaperMap"):
+        # Capture sys.argv to prevent test arguments from interfering
+        original_argv = sys.argv
+        try:
+            # Set argv to just show help (avoids needing actual arguments)
+            sys.argv = ["papermap", "--help"]
+            # Run the module - this will execute the if __name__ == "__main__" block
+            with pytest.raises(SystemExit) as exc_info:
+                runpy.run_module("papermap.__main__", run_name="__main__")
+            # --help causes exit code 0
+            assert exc_info.value.code == 0
+        finally:
+            sys.argv = original_argv
 
 
 def test_run_as_module() -> None:
@@ -443,6 +464,81 @@ class TestUtmCommand:
             cli, ["utm", "583960", "4507523", "invalid", "N", str(output_file)]
         )
         assert result.exit_code != 0
+
+    def test_utm_basic_execution(
+        self,
+        runner: CliRunner,
+        tmp_path: Path,
+    ) -> None:
+        """Test that UTM command converts coordinates and creates map."""
+        output_file = tmp_path / "test.pdf"
+
+        # Mock the latlon function to avoid Click context issues
+        with patch("papermap.cli.latlon") as mock_latlon:
+            # UTM coordinates (zone 31N)
+            result = runner.invoke(
+                cli, ["utm", "430000", "4580000", "31", "N", str(output_file)]
+            )
+
+            assert result.exit_code == 0
+            mock_latlon.assert_called_once()
+            call_kwargs = mock_latlon.call_args[1]
+            # Verify coordinates were converted to valid lat/lon ranges
+            assert -90 <= call_kwargs["lat"] <= 90
+            assert -180 <= call_kwargs["lon"] <= 180
+            # Should be in northern hemisphere (zone 31N)
+            assert call_kwargs["lat"] > 0
+
+    def test_utm_southern_hemisphere(
+        self,
+        runner: CliRunner,
+        tmp_path: Path,
+    ) -> None:
+        """Test that UTM command works for southern hemisphere."""
+        output_file = tmp_path / "test.pdf"
+
+        with patch("papermap.cli.latlon") as mock_latlon:
+            # UTM coordinates for Sydney (zone 56S)
+            result = runner.invoke(
+                cli, ["utm", "334000", "6252000", "56", "S", str(output_file)]
+            )
+
+            assert result.exit_code == 0
+            call_kwargs = mock_latlon.call_args[1]
+            # Should be in southern hemisphere (negative latitude)
+            assert call_kwargs["lat"] < 0
+
+    def test_utm_with_options(
+        self,
+        runner: CliRunner,
+        tmp_path: Path,
+    ) -> None:
+        """Test that UTM command passes through options to latlon."""
+        output_file = tmp_path / "test.pdf"
+
+        with patch("papermap.cli.latlon") as mock_latlon:
+            result = runner.invoke(
+                cli,
+                [
+                    "utm",
+                    "430000",
+                    "4580000",
+                    "31",
+                    "N",
+                    str(output_file),
+                    "--scale",
+                    "10000",
+                    "--grid",
+                    "--size",
+                    "a3",
+                ],
+            )
+
+            assert result.exit_code == 0
+            call_kwargs = mock_latlon.call_args[1]
+            assert call_kwargs["scale"] == 10000
+            assert call_kwargs["add_grid"]
+            assert call_kwargs["size"] == "a3"
 
 
 class TestDefaultCommand:

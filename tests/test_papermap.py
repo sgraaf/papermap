@@ -400,6 +400,44 @@ class TestPaperMapDownloadTiles:
             with pytest.raises(RuntimeError, match="Could not download"):
                 pm.download_tiles(num_retries=2)
 
+    def test_download_tiles_retry_with_sleep(self) -> None:
+        """Test that retry logic sleeps between retries when sleep_between_retries is set."""
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+
+        call_count = 0
+
+        def side_effect(*_args: object, **_kwargs: object) -> MagicMock:
+            nonlocal call_count
+            call_count += 1
+            mock_response = MagicMock()
+            if call_count <= len(pm.tiles):
+                # First attempt fails for all tiles
+                mock_response.ok = False
+            else:
+                # Second attempt succeeds
+                mock_image = Image.new("RGBA", (256, 256), color="green")
+                buffer = io.BytesIO()
+                mock_image.save(buffer, format="PNG")
+                buffer.seek(0)
+                mock_response.ok = True
+                mock_response.content = buffer.getvalue()
+            return mock_response
+
+        with (
+            patch("papermap.papermap.Session") as mock_session_class,
+            patch("papermap.papermap.time.sleep") as mock_sleep,
+        ):
+            mock_session = MagicMock()
+            mock_session_class.return_value.__enter__.return_value = mock_session
+            mock_session.get.side_effect = side_effect
+
+            pm.download_tiles(num_retries=3, sleep_between_retries=1)
+
+            # Verify that sleep was called with the correct duration
+            mock_sleep.assert_called_with(1)
+            # Should be called at least once since we had retries
+            assert mock_sleep.call_count >= 1
+
 
 class TestPaperMapRenderBaseLayer:
     """Tests for render_base_layer method."""
