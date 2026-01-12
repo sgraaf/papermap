@@ -31,6 +31,8 @@ Check out the [PaperMap documentation](https://papermap.readthedocs.io/en/stable
 
 ## Usage
 
+<!-- start docs-include-usage -->
+
 PaperMap can be used both in your own applications as a package, as well as a CLI tool.
 
 #### As a package
@@ -84,3 +86,5 @@ $ papermap latlon \
     --grid \
     -- 40.416775 -3.703790 Madrid.pdf
 ```
+
+<!-- end docs-include-usage -->
