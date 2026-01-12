@@ -4,49 +4,13 @@ These are basic sanity checks to ensure the package is minimally functional.
 They should be fast and catch major breakages without extensive coverage.
 """
 
-import io
-from collections.abc import Generator
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 from click.testing import CliRunner
-from PIL import Image
 
 import papermap
 from papermap.cli import cli
-
-
-def create_mock_tile_response(color: str = "blue", size: int = 256) -> MagicMock:
-    """Create a mock HTTP response with a tile image."""
-    img = Image.new("RGBA", (size, size), color=color)
-    buffer = io.BytesIO()
-    img.save(buffer, format="PNG")
-    buffer.seek(0)
-
-    response = MagicMock()
-    response.ok = True
-    response.content = buffer.getvalue()
-    return response
-
-
-def create_mock_session(response: MagicMock) -> MagicMock:
-    """Create a mock session that returns the given response."""
-    mock_session = MagicMock()
-    mock_session.get.return_value = response
-    mock_session.headers = {}
-    return mock_session
-
-
-@pytest.fixture
-def mock_tile_download() -> Generator[MagicMock, None, None]:
-    """Mock the tile download process to avoid network calls."""
-    response = create_mock_tile_response()
-
-    with patch("papermap.papermap.Session") as mock_session_class:
-        mock_session = create_mock_session(response)
-        mock_session_class.return_value.__enter__.return_value = mock_session
-        yield mock_session
 
 
 class TestSmokeTests:

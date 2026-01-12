@@ -1,13 +1,13 @@
 """Unit tests for papermap.papermap module."""
 
-import io
+from collections.abc import Callable
 from decimal import Decimal
 from math import isclose
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PIL import Image, UnidentifiedImageError
+from PIL import UnidentifiedImageError
 
 from papermap.defaults import (
     DEFAULT_DPI,
@@ -503,23 +503,19 @@ class TestPaperMapZoomCalculations:
 class TestPaperMapDownloadTiles:
     """Tests for download_tiles method."""
 
-    def test_download_tiles_with_mocked_session(self) -> None:
+    def test_download_tiles_with_mocked_session(
+        self,
+        create_mock_tile_response: Callable[..., MagicMock],
+        create_mock_session: Callable[..., MagicMock],
+    ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         # Create mock response
-        mock_image = Image.new("RGBA", (256, 256), color="green")
-        buffer = io.BytesIO()
-        mock_image.save(buffer, format="PNG")
-        buffer.seek(0)
-
-        mock_response = MagicMock()
-        mock_response.ok = True
-        mock_response.content = buffer.getvalue()
+        mock_response = create_mock_tile_response()
 
         with patch("papermap.papermap.Session") as mock_session_class:
-            mock_session = MagicMock()
+            mock_session = create_mock_session(mock_response)
             mock_session_class.return_value.__enter__.return_value = mock_session
-            mock_session.get.return_value = mock_response
 
             pm.download_tiles()
 
@@ -527,7 +523,9 @@ class TestPaperMapDownloadTiles:
             for tile in pm.tiles:
                 assert tile.success
 
-    def test_download_tiles_retry_on_failure(self) -> None:
+    def test_download_tiles_retry_on_failure(
+        self, create_mock_tile_response: Callable[..., MagicMock]
+    ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         call_count = 0
@@ -535,18 +533,13 @@ class TestPaperMapDownloadTiles:
         def side_effect(*_args: object, **_kwargs: object) -> MagicMock:
             nonlocal call_count
             call_count += 1
-            mock_response = MagicMock()
             if call_count <= len(pm.tiles):
                 # First attempt fails
+                mock_response = MagicMock()
                 mock_response.ok = False
             else:
                 # Second attempt succeeds
-                mock_image = Image.new("RGBA", (256, 256), color="green")
-                buffer = io.BytesIO()
-                mock_image.save(buffer, format="PNG")
-                buffer.seek(0)
-                mock_response.ok = True
-                mock_response.content = buffer.getvalue()
+                mock_response = create_mock_tile_response()
             return mock_response
 
         with patch("papermap.papermap.Session") as mock_session_class:
@@ -556,21 +549,24 @@ class TestPaperMapDownloadTiles:
 
             pm.download_tiles(num_retries=3)
 
-    def test_download_tiles_raises_after_max_retries(self) -> None:
+    def test_download_tiles_raises_after_max_retries(
+        self, create_mock_session: Callable[..., MagicMock]
+    ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         mock_response = MagicMock()
         mock_response.ok = False
 
         with patch("papermap.papermap.Session") as mock_session_class:
-            mock_session = MagicMock()
+            mock_session = create_mock_session(mock_response)
             mock_session_class.return_value.__enter__.return_value = mock_session
-            mock_session.get.return_value = mock_response
 
             with pytest.raises(RuntimeError, match="Could not download"):
                 pm.download_tiles(num_retries=2)
 
-    def test_download_tiles_retry_with_sleep(self) -> None:
+    def test_download_tiles_retry_with_sleep(
+        self, create_mock_tile_response: Callable[..., MagicMock]
+    ) -> None:
         """Test that retry logic sleeps between retries when sleep_between_retries is set."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
@@ -579,18 +575,13 @@ class TestPaperMapDownloadTiles:
         def side_effect(*_args: object, **_kwargs: object) -> MagicMock:
             nonlocal call_count
             call_count += 1
-            mock_response = MagicMock()
             if call_count <= len(pm.tiles):
                 # First attempt fails for all tiles
+                mock_response = MagicMock()
                 mock_response.ok = False
             else:
                 # Second attempt succeeds
-                mock_image = Image.new("RGBA", (256, 256), color="green")
-                buffer = io.BytesIO()
-                mock_image.save(buffer, format="PNG")
-                buffer.seek(0)
-                mock_response.ok = True
-                mock_response.content = buffer.getvalue()
+                mock_response = create_mock_tile_response()
             return mock_response
 
         with (
@@ -612,7 +603,9 @@ class TestPaperMapDownloadTiles:
 class TestPaperMapHttpErrors:
     """Tests for HTTP error handling in tile downloads."""
 
-    def test_download_tiles_404_error(self) -> None:
+    def test_download_tiles_404_error(
+        self, create_mock_session: Callable[..., MagicMock]
+    ) -> None:
         """Test handling of HTTP 404 Not Found errors."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
@@ -621,14 +614,15 @@ class TestPaperMapHttpErrors:
         mock_response.status_code = 404
 
         with patch("papermap.papermap.Session") as mock_session_class:
-            mock_session = MagicMock()
+            mock_session = create_mock_session(mock_response)
             mock_session_class.return_value.__enter__.return_value = mock_session
-            mock_session.get.return_value = mock_response
 
             with pytest.raises(RuntimeError, match="Could not download"):
                 pm.download_tiles(num_retries=1)
 
-    def test_download_tiles_500_error(self) -> None:
+    def test_download_tiles_500_error(
+        self, create_mock_session: Callable[..., MagicMock]
+    ) -> None:
         """Test handling of HTTP 500 Server Error."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
@@ -637,14 +631,15 @@ class TestPaperMapHttpErrors:
         mock_response.status_code = 500
 
         with patch("papermap.papermap.Session") as mock_session_class:
-            mock_session = MagicMock()
+            mock_session = create_mock_session(mock_response)
             mock_session_class.return_value.__enter__.return_value = mock_session
-            mock_session.get.return_value = mock_response
 
             with pytest.raises(RuntimeError, match="Could not download"):
                 pm.download_tiles(num_retries=1)
 
-    def test_download_tiles_403_forbidden(self) -> None:
+    def test_download_tiles_403_forbidden(
+        self, create_mock_session: Callable[..., MagicMock]
+    ) -> None:
         """Test handling of HTTP 403 Forbidden errors (invalid API key)."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
@@ -653,14 +648,15 @@ class TestPaperMapHttpErrors:
         mock_response.status_code = 403
 
         with patch("papermap.papermap.Session") as mock_session_class:
-            mock_session = MagicMock()
+            mock_session = create_mock_session(mock_response)
             mock_session_class.return_value.__enter__.return_value = mock_session
-            mock_session.get.return_value = mock_response
 
             with pytest.raises(RuntimeError, match="Could not download"):
                 pm.download_tiles(num_retries=1)
 
-    def test_download_tiles_empty_response(self) -> None:
+    def test_download_tiles_empty_response(
+        self, create_mock_session: Callable[..., MagicMock]
+    ) -> None:
         """Test handling of empty response body."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
@@ -669,15 +665,16 @@ class TestPaperMapHttpErrors:
         mock_response.content = b""  # Empty content
 
         with patch("papermap.papermap.Session") as mock_session_class:
-            mock_session = MagicMock()
+            mock_session = create_mock_session(mock_response)
             mock_session_class.return_value.__enter__.return_value = mock_session
-            mock_session.get.return_value = mock_response
 
             # Should raise UnidentifiedImageError when trying to parse empty content
             with pytest.raises(UnidentifiedImageError):
                 pm.download_tiles(num_retries=1)
 
-    def test_download_tiles_invalid_image_data(self) -> None:
+    def test_download_tiles_invalid_image_data(
+        self, create_mock_session: Callable[..., MagicMock]
+    ) -> None:
         """Test handling of invalid/corrupted image data."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
@@ -686,15 +683,16 @@ class TestPaperMapHttpErrors:
         mock_response.content = b"This is not a valid PNG image"
 
         with patch("papermap.papermap.Session") as mock_session_class:
-            mock_session = MagicMock()
+            mock_session = create_mock_session(mock_response)
             mock_session_class.return_value.__enter__.return_value = mock_session
-            mock_session.get.return_value = mock_response
 
             # Should raise UnidentifiedImageError when PIL tries to open invalid image
             with pytest.raises(UnidentifiedImageError):
                 pm.download_tiles(num_retries=1)
 
-    def test_download_tiles_partial_success(self) -> None:
+    def test_download_tiles_partial_success(
+        self, create_mock_tile_response: Callable[..., MagicMock]
+    ) -> None:
         """Test when some tiles succeed and some fail."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
@@ -704,28 +702,18 @@ class TestPaperMapHttpErrors:
         def side_effect(*_args: object, **_kwargs: object) -> MagicMock:
             nonlocal call_count
             call_count += 1
-            mock_response = MagicMock()
 
             # Make only half the tiles succeed on first attempt
             if call_count <= num_tiles // 2:
                 # First half succeeds
-                mock_image = Image.new("RGBA", (256, 256), color="green")
-                buffer = io.BytesIO()
-                mock_image.save(buffer, format="PNG")
-                buffer.seek(0)
-                mock_response.ok = True
-                mock_response.content = buffer.getvalue()
+                mock_response = create_mock_tile_response(color="green")
             elif call_count <= num_tiles:
                 # Second half fails on first attempt
+                mock_response = MagicMock()
                 mock_response.ok = False
             else:
                 # Retry succeeds
-                mock_image = Image.new("RGBA", (256, 256), color="blue")
-                buffer = io.BytesIO()
-                mock_image.save(buffer, format="PNG")
-                buffer.seek(0)
-                mock_response.ok = True
-                mock_response.content = buffer.getvalue()
+                mock_response = create_mock_tile_response(color="blue")
 
             return mock_response
 
@@ -744,23 +732,19 @@ class TestPaperMapHttpErrors:
 class TestPaperMapRenderBaseLayer:
     """Tests for render_base_layer method."""
 
-    def test_render_base_layer_creates_map_image(self) -> None:
+    def test_render_base_layer_creates_map_image(
+        self,
+        create_mock_tile_response: Callable[..., MagicMock],
+        create_mock_session: Callable[..., MagicMock],
+    ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         # Mock tile download
-        mock_image = Image.new("RGBA", (256, 256), color="green")
-        buffer = io.BytesIO()
-        mock_image.save(buffer, format="PNG")
-        buffer.seek(0)
-
-        mock_response = MagicMock()
-        mock_response.ok = True
-        mock_response.content = buffer.getvalue()
+        mock_response = create_mock_tile_response()
 
         with patch("papermap.papermap.Session") as mock_session_class:
-            mock_session = MagicMock()
+            mock_session = create_mock_session(mock_response)
             mock_session_class.return_value.__enter__.return_value = mock_session
-            mock_session.get.return_value = mock_response
 
             pm.render_base_layer()
 
@@ -771,23 +755,20 @@ class TestPaperMapRenderBaseLayer:
 class TestPaperMapSave:
     """Tests for save method."""
 
-    def test_save_creates_file(self, tmp_path: Path) -> None:
+    def test_save_creates_file(
+        self,
+        tmp_path: Path,
+        create_mock_tile_response: Callable[..., MagicMock],
+        create_mock_session: Callable[..., MagicMock],
+    ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         # Mock tile download
-        mock_image = Image.new("RGBA", (256, 256), color="green")
-        buffer = io.BytesIO()
-        mock_image.save(buffer, format="PNG")
-        buffer.seek(0)
-
-        mock_response = MagicMock()
-        mock_response.ok = True
-        mock_response.content = buffer.getvalue()
+        mock_response = create_mock_tile_response()
 
         with patch("papermap.papermap.Session") as mock_session_class:
-            mock_session = MagicMock()
+            mock_session = create_mock_session(mock_response)
             mock_session_class.return_value.__enter__.return_value = mock_session
-            mock_session.get.return_value = mock_response
 
             pm.render()
 
@@ -797,23 +778,20 @@ class TestPaperMapSave:
             assert output_file.exists()
             assert output_file.stat().st_size > 0
 
-    def test_save_with_custom_metadata(self, tmp_path: Path) -> None:
+    def test_save_with_custom_metadata(
+        self,
+        tmp_path: Path,
+        create_mock_tile_response: Callable[..., MagicMock],
+        create_mock_session: Callable[..., MagicMock],
+    ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         # Mock tile download
-        mock_image = Image.new("RGBA", (256, 256), color="green")
-        buffer = io.BytesIO()
-        mock_image.save(buffer, format="PNG")
-        buffer.seek(0)
-
-        mock_response = MagicMock()
-        mock_response.ok = True
-        mock_response.content = buffer.getvalue()
+        mock_response = create_mock_tile_response()
 
         with patch("papermap.papermap.Session") as mock_session_class:
-            mock_session = MagicMock()
+            mock_session = create_mock_session(mock_response)
             mock_session_class.return_value.__enter__.return_value = mock_session
-            mock_session.get.return_value = mock_response
 
             pm.render()
 

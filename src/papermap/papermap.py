@@ -1,4 +1,3 @@
-import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
@@ -12,6 +11,7 @@ from pathlib import Path
 from fpdf import FPDF
 from PIL import Image
 from requests import Session
+from requests.adapters import HTTPAdapter
 
 from .constants import HEADERS, NAME, TILE_SIZE
 from .defaults import (
@@ -342,9 +342,12 @@ class PaperMap:
         # download the tile images
         with (
             Session() as session,
-            ThreadPoolExecutor(min(32, (os.cpu_count() or 1) + 4)) as executor,
+            ThreadPoolExecutor() as executor,
         ):
             session.headers.update(HEADERS)
+            adapter = HTTPAdapter(pool_maxsize=executor._max_workers)  # noqa: SLF001
+            session.mount("http://", adapter)
+            session.mount("https://", adapter)
 
             for num_retry in count():
                 # get the unsuccessful tiles
