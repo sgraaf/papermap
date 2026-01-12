@@ -159,14 +159,14 @@ class TestTileDownloadBehavior:
     def test_successful_tile_download(
         self,
         create_mock_tile_response: Callable[..., MagicMock],
-        create_mock_session: Callable[..., MagicMock],
+        create_mock_client: Callable[..., MagicMock],
     ) -> None:
         """Test that tiles are downloaded and marked as successful."""
         response = create_mock_tile_response()
 
-        with patch("papermap.papermap.Session") as mock_session_class:
-            mock_session = create_mock_session(response)
-            mock_session_class.return_value.__enter__.return_value = mock_session
+        with patch("papermap.papermap.httpx.Client") as mock_client_class:
+            mock_client = create_mock_client(response)
+            mock_client_class.return_value.__enter__.return_value = mock_client
 
             pm = PaperMap(lat=40.7128, lon=-74.0060)
             pm.download_tiles()
@@ -185,22 +185,21 @@ class TestTileDownloadBehavior:
             response = MagicMock()
             if call_count[0] <= total_tiles[0]:
                 # First attempt fails
-                response.ok = False
+                response.is_success = False
             else:
                 # Subsequent attempts succeed
                 img = Image.new("RGBA", (256, 256), color="green")
                 buffer = io.BytesIO()
                 img.save(buffer, format="PNG")
                 buffer.seek(0)
-                response.ok = True
+                response.is_success = True
                 response.content = buffer.getvalue()
             return response
 
-        with patch("papermap.papermap.Session") as mock_session_class:
-            mock_session = MagicMock()
-            mock_session.headers = {}
-            mock_session.get.side_effect = get_response
-            mock_session_class.return_value.__enter__.return_value = mock_session
+        with patch("papermap.papermap.httpx.Client") as mock_client_class:
+            mock_client = MagicMock()
+            mock_client.get.side_effect = get_response
+            mock_client_class.return_value.__enter__.return_value = mock_client
 
             pm = PaperMap(lat=40.7128, lon=-74.0060)
             total_tiles[0] = len(pm.tiles)
@@ -212,15 +211,15 @@ class TestTileDownloadBehavior:
                 assert tile.success
 
     def test_tile_download_max_retries_exceeded(
-        self, create_mock_session: Callable[..., MagicMock]
+        self, create_mock_client: Callable[..., MagicMock]
     ) -> None:
         """Test that an error is raised when max retries are exceeded."""
         response = MagicMock()
-        response.ok = False
+        response.is_success = False
 
-        with patch("papermap.papermap.Session") as mock_session_class:
-            mock_session = create_mock_session(response)
-            mock_session_class.return_value.__enter__.return_value = mock_session
+        with patch("papermap.papermap.httpx.Client") as mock_client_class:
+            mock_client = create_mock_client(response)
+            mock_client_class.return_value.__enter__.return_value = mock_client
 
             pm = PaperMap(lat=40.7128, lon=-74.0060)
 

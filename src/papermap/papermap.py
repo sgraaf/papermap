@@ -1,17 +1,15 @@
 import time
 from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
-from functools import partial
 from importlib import metadata
 from io import BytesIO
 from itertools import count
 from math import ceil, floor, radians
 from pathlib import Path
 
+import httpx
 from fpdf import FPDF
 from PIL import Image
-from requests import Session
-from requests.adapters import HTTPAdapter
 
 from .constants import HEADERS, NAME, TILE_SIZE
 from .defaults import (
@@ -341,14 +339,16 @@ class PaperMap:
     ) -> None:
         # download the tile images
         with (
-            Session() as session,
             ThreadPoolExecutor() as executor,
+            httpx.Client(
+                headers=HEADERS,
+                timeout=30.0,
+                limits=httpx.Limits(
+                    max_connections=executor._max_workers,  # noqa: SLF001
+                    max_keepalive_connections=executor._max_workers,  # noqa: SLF001
+                ),
+            ) as client,
         ):
-            session.headers.update(HEADERS)
-            adapter = HTTPAdapter(pool_maxsize=executor._max_workers)  # noqa: SLF001
-            session.mount("http://", adapter)
-            session.mount("https://", adapter)
-
             for num_retry in count():
                 # get the unsuccessful tiles
                 tiles = [tile for tile in self.tiles if not tile.success]
@@ -367,7 +367,7 @@ class PaperMap:
                     raise RuntimeError(msg)
 
                 responses = executor.map(
-                    partial(session.get, timeout=30),
+                    client.get,
                     [
                         self.tile_server.format_url_template(
                             tile=tile, api_key=self.api_key
@@ -377,7 +377,7 @@ class PaperMap:
                 )
 
                 for tile, r in zip(tiles, responses, strict=True):
-                    if r.ok:
+                    if r.is_success:
                         tile.image = Image.open(BytesIO(r.content)).convert("RGBA")
 
     def render_base_layer(self) -> None:

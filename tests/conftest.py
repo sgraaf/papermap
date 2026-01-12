@@ -73,7 +73,7 @@ def mock_response(mock_tile_image: Image.Image) -> MagicMock:
     buffer.seek(0)
 
     response = MagicMock()
-    response.ok = True
+    response.is_success = True
     response.content = buffer.getvalue()
     return response
 
@@ -98,7 +98,7 @@ def create_mock_tile_response() -> Callable[..., MagicMock]:
         buffer.seek(0)
 
         response = MagicMock()
-        response.ok = True
+        response.is_success = True
         response.content = buffer.getvalue()
         return response
 
@@ -106,22 +106,21 @@ def create_mock_tile_response() -> Callable[..., MagicMock]:
 
 
 @pytest.fixture
-def create_mock_session() -> Callable[..., MagicMock]:
-    """Factory fixture to create mock sessions."""
+def create_mock_client() -> Callable[..., MagicMock]:
+    """Factory fixture to create mock httpx clients."""
 
     def _create(response: MagicMock) -> MagicMock:
-        """Create a mock session that returns the given response.
+        """Create a mock httpx client that returns the given response.
 
         Args:
-            response: Mock response to return from session.get.
+            response: Mock response to return from client.get.
 
         Returns:
-            MagicMock session configured to return the response.
+            MagicMock client configured to return the response.
         """
-        mock_session = MagicMock()
-        mock_session.get.return_value = response
-        mock_session.headers = {}
-        return mock_session
+        mock_client = MagicMock()
+        mock_client.get.return_value = response
+        return mock_client
 
     return _create
 
@@ -129,16 +128,16 @@ def create_mock_session() -> Callable[..., MagicMock]:
 @pytest.fixture
 def mock_tile_download(
     create_mock_tile_response: Callable[..., MagicMock],
-    create_mock_session: Callable[..., MagicMock],
+    create_mock_client: Callable[..., MagicMock],
 ) -> Generator[MagicMock, None, None]:
     """Mock the tile download process to avoid network calls.
 
     Yields:
-        MagicMock session configured for tile downloads.
+        MagicMock client configured for tile downloads.
     """
     response = create_mock_tile_response()
 
-    with patch("papermap.papermap.Session") as mock_session_class:
-        mock_session = create_mock_session(response)
-        mock_session_class.return_value.__enter__.return_value = mock_session
-        yield mock_session
+    with patch("papermap.papermap.httpx.Client") as mock_client_class:
+        mock_client = create_mock_client(response)
+        mock_client_class.return_value.__enter__.return_value = mock_client
+        yield mock_client
