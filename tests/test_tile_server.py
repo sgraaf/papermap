@@ -9,35 +9,31 @@ from papermap.utils import get_string_formatting_arguments
 class TestTileServerInit:
     """Tests for TileServer initialization."""
 
-    def test_basic_init(self, sample_tile_server: TileServer) -> None:
-        assert sample_tile_server.attribution == "Test Attribution"
-        assert (
-            sample_tile_server.url_template == "https://example.com/{zoom}/{x}/{y}.png"
-        )
-        assert sample_tile_server.zoom_min == 0
-        assert sample_tile_server.zoom_max == 19
-        assert sample_tile_server.mirrors is None
+    def test_basic_init(self, tile_server: TileServer) -> None:
+        assert tile_server.attribution == "Test Attribution"
+        assert tile_server.url_template == "https://example.com/{zoom}/{x}/{y}.png"
+        assert tile_server.zoom_min == 0
+        assert tile_server.zoom_max == 19
+        assert tile_server.mirrors is None
 
-    def test_init_with_mirrors(
-        self, sample_tile_server_with_mirrors: TileServer
-    ) -> None:
-        assert sample_tile_server_with_mirrors.mirrors == ["a", "b", "c"]
+    def test_init_with_mirrors(self, tile_server_with_mirrors: TileServer) -> None:
+        assert tile_server_with_mirrors.mirrors == ["a", "b", "c"]
 
     def test_init_without_mirrors_creates_none_cycle(
-        self, sample_tile_server: TileServer
+        self, tile_server: TileServer
     ) -> None:
         # Should cycle through [None] when no mirrors
-        result = next(sample_tile_server.mirrors_cycle)
+        result = next(tile_server.mirrors_cycle)
         assert result is None
 
     def test_init_with_mirrors_creates_cycle(
-        self, sample_tile_server_with_mirrors: TileServer
+        self, tile_server_with_mirrors: TileServer
     ) -> None:
         # Should cycle through mirrors
-        result1 = next(sample_tile_server_with_mirrors.mirrors_cycle)
-        result2 = next(sample_tile_server_with_mirrors.mirrors_cycle)
-        result3 = next(sample_tile_server_with_mirrors.mirrors_cycle)
-        result4 = next(sample_tile_server_with_mirrors.mirrors_cycle)
+        result1 = next(tile_server_with_mirrors.mirrors_cycle)
+        result2 = next(tile_server_with_mirrors.mirrors_cycle)
+        result3 = next(tile_server_with_mirrors.mirrors_cycle)
+        result4 = next(tile_server_with_mirrors.mirrors_cycle)
 
         assert result1 == "a"
         assert result2 == "b"
@@ -59,21 +55,19 @@ class TestTileServerInit:
 class TestTileServerFormatUrlTemplate:
     """Tests for TileServer.format_url_template method."""
 
-    def test_basic_formatting(
-        self, sample_tile_server: TileServer, sample_tile: Tile
-    ) -> None:
-        result = sample_tile_server.format_url_template(sample_tile)
+    def test_basic_formatting(self, tile_server: TileServer, tile: Tile) -> None:
+        result = tile_server.format_url_template(tile)
         # sample_tile has x=123, y=456, zoom=10
         assert result == "https://example.com/10/123/456.png"
 
     def test_formatting_with_mirrors_cycles(
-        self, sample_tile_server_with_mirrors: TileServer, sample_tile: Tile
+        self, tile_server_with_mirrors: TileServer, tile: Tile
     ) -> None:
         # Each call should use next mirror in cycle
-        result1 = sample_tile_server_with_mirrors.format_url_template(sample_tile)
-        result2 = sample_tile_server_with_mirrors.format_url_template(sample_tile)
-        result3 = sample_tile_server_with_mirrors.format_url_template(sample_tile)
-        result4 = sample_tile_server_with_mirrors.format_url_template(sample_tile)
+        result1 = tile_server_with_mirrors.format_url_template(tile)
+        result2 = tile_server_with_mirrors.format_url_template(tile)
+        result3 = tile_server_with_mirrors.format_url_template(tile)
+        result4 = tile_server_with_mirrors.format_url_template(tile)
 
         assert "a.example.com" in result1
         assert "b.example.com" in result2
@@ -81,22 +75,18 @@ class TestTileServerFormatUrlTemplate:
         assert "a.example.com" in result4  # Cycles back
 
     def test_formatting_with_api_key(
-        self, sample_tile_server_with_api_key: TileServer, sample_tile: Tile
+        self, tile_server_with_api_key: TileServer, tile: Tile
     ) -> None:
-        result = sample_tile_server_with_api_key.format_url_template(
-            sample_tile, api_key="secret123"
-        )
+        result = tile_server_with_api_key.format_url_template(tile, api_key="secret123")
         assert "api_key=secret123" in result
 
     def test_formatting_with_none_api_key(
-        self, sample_tile_server_with_api_key: TileServer, sample_tile: Tile
+        self, tile_server_with_api_key: TileServer, tile: Tile
     ) -> None:
-        result = sample_tile_server_with_api_key.format_url_template(
-            sample_tile, api_key=None
-        )
+        result = tile_server_with_api_key.format_url_template(tile, api_key=None)
         assert "api_key=None" in result
 
-    def test_formatting_osm_style_template(self, sample_tile: Tile) -> None:
+    def test_formatting_osm_style_template(self, tile: Tile) -> None:
         ts = TileServer(
             attribution="OSM",
             url_template="http://{mirror}.tile.osm.org/{zoom}/{x}/{y}.png",
@@ -104,10 +94,10 @@ class TestTileServerFormatUrlTemplate:
             zoom_max=19,
             mirrors=["a", "b", "c"],
         )
-        result = ts.format_url_template(sample_tile)
+        result = ts.format_url_template(tile)
         assert result == "http://a.tile.osm.org/10/123/456.png"
 
-    def test_formatting_google_style_template(self, sample_tile: Tile) -> None:
+    def test_formatting_google_style_template(self, tile: Tile) -> None:
         ts = TileServer(
             attribution="Google",
             url_template="http://mt{mirror}.google.com/vt/lyrs=m&x={x}&y={y}&z={zoom}",
@@ -115,7 +105,7 @@ class TestTileServerFormatUrlTemplate:
             zoom_max=19,
             mirrors=[0, 1, 2, 3],
         )
-        result = ts.format_url_template(sample_tile)
+        result = ts.format_url_template(tile)
         assert result == "http://mt0.google.com/vt/lyrs=m&x=123&y=456&z=10"
 
 
@@ -123,11 +113,11 @@ class TestTileServerMirrorsCycle:
     """Tests for TileServer mirrors cycling behavior."""
 
     def test_mirrors_cycle_is_infinite(
-        self, sample_tile_server_with_mirrors: TileServer
+        self, tile_server_with_mirrors: TileServer
     ) -> None:
         # Should be able to get many values without error
         for _ in range(100):
-            next(sample_tile_server_with_mirrors.mirrors_cycle)
+            next(tile_server_with_mirrors.mirrors_cycle)
 
     def test_single_mirror_cycles(self) -> None:
         ts = TileServer(

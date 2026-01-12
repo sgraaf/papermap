@@ -29,8 +29,8 @@ dependencies = [
     "click",
     "click_default_group",
     "fpdf2",
+    "httpx",
     "Pillow",
-    "requests",
 ]
 
 [dependency-groups]
@@ -46,12 +46,12 @@ docs = [
 tests = [
     "pytest",
     "pytest-cov",
+    "pytest-httpx",
 ]
 typing = [
     "mypy",
     "pyrefly",
     "ty",
-    "types-requests",
 ]
 dev = [
     { include-group = "docs" },
