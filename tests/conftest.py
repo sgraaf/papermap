@@ -1,11 +1,11 @@
 """Shared fixtures for PaperMap tests."""
 
 import io
-from collections.abc import Callable, Generator
-from unittest.mock import MagicMock, patch
+from collections.abc import Callable
 
 import pytest
 from PIL import Image
+from pytest_httpx import HTTPXMock
 
 from papermap.tile import Tile
 from papermap.tile_server import TileServer
@@ -66,78 +66,55 @@ def mock_tile_image() -> Image.Image:
 
 
 @pytest.fixture
-def mock_response(mock_tile_image: Image.Image) -> MagicMock:
-    """Return a mock HTTP response for tile downloads."""
-    buffer = io.BytesIO()
-    mock_tile_image.save(buffer, format="PNG")
-    buffer.seek(0)
+def create_tile_image_content() -> Callable:
+    """Factory fixture to create tile image content as bytes.
 
-    response = MagicMock()
-    response.is_success = True
-    response.content = buffer.getvalue()
-    return response
+    Returns:
+        A function that creates PNG image bytes with specified color and size.
+    """
 
-
-@pytest.fixture
-def create_mock_tile_response() -> Callable[..., MagicMock]:
-    """Factory fixture to create mock HTTP responses with tile images."""
-
-    def _create(color: str = "green", size: int = 256) -> MagicMock:
-        """Create a mock HTTP response with a tile image.
+    def _create(color: str = "green", size: int = 256) -> bytes:
+        """Create PNG image content as bytes.
 
         Args:
             color: Color of the tile image.
             size: Size of the tile image in pixels.
 
         Returns:
-            MagicMock HTTP response with tile image content.
+            PNG image content as bytes.
         """
         img = Image.new("RGBA", (size, size), color=color)
         buffer = io.BytesIO()
         img.save(buffer, format="PNG")
         buffer.seek(0)
-
-        response = MagicMock()
-        response.is_success = True
-        response.content = buffer.getvalue()
-        return response
-
-    return _create
-
-
-@pytest.fixture
-def create_mock_client() -> Callable[..., MagicMock]:
-    """Factory fixture to create mock httpx clients."""
-
-    def _create(response: MagicMock) -> MagicMock:
-        """Create a mock httpx client that returns the given response.
-
-        Args:
-            response: Mock response to return from client.get.
-
-        Returns:
-            MagicMock client configured to return the response.
-        """
-        mock_client = MagicMock()
-        mock_client.get.return_value = response
-        return mock_client
+        return buffer.getvalue()
 
     return _create
 
 
 @pytest.fixture
 def mock_tile_download(
-    create_mock_tile_response: Callable[..., MagicMock],
-    create_mock_client: Callable[..., MagicMock],
-) -> Generator[MagicMock, None, None]:
-    """Mock the tile download process to avoid network calls.
+    httpx_mock: HTTPXMock,
+    create_tile_image_content: Callable,
+) -> HTTPXMock:
+    """Mock all tile download requests to return a green tile image.
 
-    Yields:
-        MagicMock client configured for tile downloads.
+    This fixture automatically mocks all HTTP GET requests to return
+    a valid PNG tile image, allowing tests to run without network calls.
+
+    Args:
+        httpx_mock: The pytest-httpx mock fixture.
+        create_tile_image_content: Factory to create tile image content.
+
+    Returns:
+        The configured HTTPXMock instance.
     """
-    response = create_mock_tile_response()
+    # Disable assertion for unused responses since we add more than needed
+    httpx_mock._options.assert_all_responses_were_requested = False  # noqa: SLF001
 
-    with patch("papermap.papermap.httpx.Client") as mock_client_class:
-        mock_client = create_mock_client(response)
-        mock_client_class.return_value.__enter__.return_value = mock_client
-        yield mock_client
+    # Add enough responses for typical tests (500 tiles for tests with multiple maps)
+    tile_content = create_tile_image_content()
+    for _ in range(500):
+        httpx_mock.add_response(content=tile_content)
+
+    return httpx_mock

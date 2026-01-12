@@ -5,6 +5,7 @@
 ### Changed
 
 - Migrated from `requests` to `httpx` for HTTP client functionality, utilizing modern features such as improved connection pooling and timeout handling
+- Refactored tests to use `pytest-httpx` for cleaner and more maintainable HTTP mocking
 
 ## 0.3.0 (2022-11-09)
 

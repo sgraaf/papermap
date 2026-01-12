@@ -4,10 +4,10 @@ from collections.abc import Callable
 from decimal import Decimal
 from math import isclose
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 from PIL import UnidentifiedImageError
+from pytest_httpx import HTTPXMock
 
 from papermap.defaults import (
     DEFAULT_DPI,
@@ -505,228 +505,206 @@ class TestPaperMapDownloadTiles:
 
     def test_download_tiles_with_mocked_client(
         self,
-        create_mock_tile_response: Callable[..., MagicMock],
-        create_mock_client: Callable[..., MagicMock],
+        httpx_mock: HTTPXMock,
+        create_tile_image_content: Callable,
     ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
-        # Create mock response
-        mock_response = create_mock_tile_response()
+        # Mock all tile download requests (add one response per tile)
+        tile_content = create_tile_image_content()
+        for _ in pm.tiles:
+            httpx_mock.add_response(content=tile_content)
 
-        with patch("papermap.papermap.httpx.Client") as mock_client_class:
-            mock_client = create_mock_client(mock_response)
-            mock_client_class.return_value.__enter__.return_value = mock_client
+        pm.download_tiles()
 
-            pm.download_tiles()
-
-            # All tiles should have images now
-            for tile in pm.tiles:
-                assert tile.success
+        # All tiles should have images now
+        for tile in pm.tiles:
+            assert tile.success
 
     def test_download_tiles_retry_on_failure(
-        self, create_mock_tile_response: Callable[..., MagicMock]
+        self,
+        httpx_mock: HTTPXMock,
+        create_tile_image_content: Callable,
     ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
-        call_count = 0
+        num_tiles = len(pm.tiles)
 
-        def side_effect(*_args: object, **_kwargs: object) -> MagicMock:
-            nonlocal call_count
-            call_count += 1
-            if call_count <= len(pm.tiles):
-                # First attempt fails
-                mock_response = MagicMock()
-                mock_response.is_success = False
-            else:
-                # Second attempt succeeds
-                mock_response = create_mock_tile_response()
-            return mock_response
+        # First attempt: all tiles fail (404 error)
+        for _ in range(num_tiles):
+            httpx_mock.add_response(status_code=404)
 
-        with patch("papermap.papermap.httpx.Client") as mock_client_class:
-            mock_client = MagicMock()
-            mock_client_class.return_value.__enter__.return_value = mock_client
-            mock_client.get.side_effect = side_effect
+        # Second attempt: all tiles succeed
+        for _ in range(num_tiles):
+            httpx_mock.add_response(content=create_tile_image_content())
 
-            pm.download_tiles(num_retries=3)
+        pm.download_tiles(num_retries=3)
+
+        # All tiles should eventually be successful
+        for tile in pm.tiles:
+            assert tile.success
 
     def test_download_tiles_raises_after_max_retries(
-        self, create_mock_client: Callable[..., MagicMock]
+        self, httpx_mock: HTTPXMock
     ) -> None:
+        # Disable unused response assertion
+        httpx_mock._options.assert_all_responses_were_requested = False  # noqa: SLF001
+
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
-        mock_response = MagicMock()
-        mock_response.is_success = False
+        num_tiles = len(pm.tiles)
+        num_retries = 2
 
-        with patch("papermap.papermap.httpx.Client") as mock_client_class:
-            mock_client = create_mock_client(mock_response)
-            mock_client_class.return_value.__enter__.return_value = mock_client
+        # All attempts fail
+        for _ in range(num_tiles * (num_retries + 1)):
+            httpx_mock.add_response(status_code=500)
 
-            with pytest.raises(RuntimeError, match="Could not download"):
-                pm.download_tiles(num_retries=2)
+        with pytest.raises(RuntimeError, match="Could not download"):
+            pm.download_tiles(num_retries=num_retries)
 
     def test_download_tiles_retry_with_sleep(
-        self, create_mock_tile_response: Callable[..., MagicMock]
+        self,
+        httpx_mock: HTTPXMock,
+        create_tile_image_content: Callable,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test that retry logic sleeps between retries when sleep_between_retries is set."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
-        call_count = 0
+        num_tiles = len(pm.tiles)
 
-        def side_effect(*_args: object, **_kwargs: object) -> MagicMock:
-            nonlocal call_count
-            call_count += 1
-            if call_count <= len(pm.tiles):
-                # First attempt fails for all tiles
-                mock_response = MagicMock()
-                mock_response.is_success = False
-            else:
-                # Second attempt succeeds
-                mock_response = create_mock_tile_response()
-            return mock_response
+        # Track sleep calls
+        sleep_calls = []
 
-        with (
-            patch("papermap.papermap.httpx.Client") as mock_client_class,
-            patch("papermap.papermap.time.sleep") as mock_sleep,
-        ):
-            mock_client = MagicMock()
-            mock_client_class.return_value.__enter__.return_value = mock_client
-            mock_client.get.side_effect = side_effect
+        def mock_sleep(duration: float) -> None:
+            sleep_calls.append(duration)
 
-            pm.download_tiles(num_retries=3, sleep_between_retries=1)
+        monkeypatch.setattr("papermap.papermap.time.sleep", mock_sleep)
 
-            # Verify that sleep was called with the correct duration
-            mock_sleep.assert_called_with(1)
-            # Should be called at least once since we had retries
-            assert mock_sleep.call_count >= 1
+        # First attempt: all tiles fail
+        for _ in range(num_tiles):
+            httpx_mock.add_response(status_code=500)
+
+        # Second attempt: all tiles succeed
+        for _ in range(num_tiles):
+            httpx_mock.add_response(content=create_tile_image_content())
+
+        pm.download_tiles(num_retries=3, sleep_between_retries=1)
+
+        # Verify that sleep was called with the correct duration
+        assert len(sleep_calls) >= 1
+        assert all(duration == 1 for duration in sleep_calls)
 
 
 class TestPaperMapHttpErrors:
     """Tests for HTTP error handling in tile downloads."""
 
-    def test_download_tiles_404_error(
-        self, create_mock_client: Callable[..., MagicMock]
-    ) -> None:
+    def test_download_tiles_404_error(self, httpx_mock: HTTPXMock) -> None:
         """Test handling of HTTP 404 Not Found errors."""
+        # Disable unused response assertion
+        httpx_mock._options.assert_all_responses_were_requested = False  # noqa: SLF001
+
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
-        mock_response = MagicMock()
-        mock_response.is_success = False
-        mock_response.status_code = 404
+        num_tiles = len(pm.tiles)
 
-        with patch("papermap.papermap.httpx.Client") as mock_client_class:
-            mock_client = create_mock_client(mock_response)
-            mock_client_class.return_value.__enter__.return_value = mock_client
+        # All attempts return 404
+        for _ in range(num_tiles * 2):
+            httpx_mock.add_response(status_code=404)
 
-            with pytest.raises(RuntimeError, match="Could not download"):
-                pm.download_tiles(num_retries=1)
+        with pytest.raises(RuntimeError, match="Could not download"):
+            pm.download_tiles(num_retries=1)
 
-    def test_download_tiles_500_error(
-        self, create_mock_client: Callable[..., MagicMock]
-    ) -> None:
+    def test_download_tiles_500_error(self, httpx_mock: HTTPXMock) -> None:
         """Test handling of HTTP 500 Server Error."""
+        # Disable unused response assertion
+        httpx_mock._options.assert_all_responses_were_requested = False  # noqa: SLF001
+
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
-        mock_response = MagicMock()
-        mock_response.is_success = False
-        mock_response.status_code = 500
+        num_tiles = len(pm.tiles)
 
-        with patch("papermap.papermap.httpx.Client") as mock_client_class:
-            mock_client = create_mock_client(mock_response)
-            mock_client_class.return_value.__enter__.return_value = mock_client
+        # All attempts return 500
+        for _ in range(num_tiles * 2):
+            httpx_mock.add_response(status_code=500)
 
-            with pytest.raises(RuntimeError, match="Could not download"):
-                pm.download_tiles(num_retries=1)
+        with pytest.raises(RuntimeError, match="Could not download"):
+            pm.download_tiles(num_retries=1)
 
-    def test_download_tiles_403_forbidden(
-        self, create_mock_client: Callable[..., MagicMock]
-    ) -> None:
+    def test_download_tiles_403_forbidden(self, httpx_mock: HTTPXMock) -> None:
         """Test handling of HTTP 403 Forbidden errors (invalid API key)."""
+        # Disable unused response assertion
+        httpx_mock._options.assert_all_responses_were_requested = False  # noqa: SLF001
+
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
-        mock_response = MagicMock()
-        mock_response.is_success = False
-        mock_response.status_code = 403
+        num_tiles = len(pm.tiles)
 
-        with patch("papermap.papermap.httpx.Client") as mock_client_class:
-            mock_client = create_mock_client(mock_response)
-            mock_client_class.return_value.__enter__.return_value = mock_client
+        # All attempts return 403
+        for _ in range(num_tiles * 2):
+            httpx_mock.add_response(status_code=403)
 
-            with pytest.raises(RuntimeError, match="Could not download"):
-                pm.download_tiles(num_retries=1)
+        with pytest.raises(RuntimeError, match="Could not download"):
+            pm.download_tiles(num_retries=1)
 
-    def test_download_tiles_empty_response(
-        self, create_mock_client: Callable[..., MagicMock]
-    ) -> None:
+    def test_download_tiles_empty_response(self, httpx_mock: HTTPXMock) -> None:
         """Test handling of empty response body."""
+        # Disable unused response assertion in case exception prevents all downloads
+        httpx_mock._options.assert_all_responses_were_requested = False  # noqa: SLF001
+
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
-        mock_response = MagicMock()
-        mock_response.is_success = True
-        mock_response.content = b""  # Empty content
+        # Return empty content (one per tile)
+        for _ in pm.tiles:
+            httpx_mock.add_response(content=b"")
 
-        with patch("papermap.papermap.httpx.Client") as mock_client_class:
-            mock_client = create_mock_client(mock_response)
-            mock_client_class.return_value.__enter__.return_value = mock_client
+        # Should raise UnidentifiedImageError when trying to parse empty content
+        with pytest.raises(UnidentifiedImageError):
+            pm.download_tiles(num_retries=1)
 
-            # Should raise UnidentifiedImageError when trying to parse empty content
-            with pytest.raises(UnidentifiedImageError):
-                pm.download_tiles(num_retries=1)
-
-    def test_download_tiles_invalid_image_data(
-        self, create_mock_client: Callable[..., MagicMock]
-    ) -> None:
+    def test_download_tiles_invalid_image_data(self, httpx_mock: HTTPXMock) -> None:
         """Test handling of invalid/corrupted image data."""
+        # Disable unused response assertion in case exception prevents all downloads
+        httpx_mock._options.assert_all_responses_were_requested = False  # noqa: SLF001
+
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
-        mock_response = MagicMock()
-        mock_response.is_success = True
-        mock_response.content = b"This is not a valid PNG image"
+        # Return invalid image data (one per tile)
+        for _ in pm.tiles:
+            httpx_mock.add_response(content=b"This is not a valid PNG image")
 
-        with patch("papermap.papermap.httpx.Client") as mock_client_class:
-            mock_client = create_mock_client(mock_response)
-            mock_client_class.return_value.__enter__.return_value = mock_client
-
-            # Should raise UnidentifiedImageError when PIL tries to open invalid image
-            with pytest.raises(UnidentifiedImageError):
-                pm.download_tiles(num_retries=1)
+        # Should raise UnidentifiedImageError when PIL tries to open invalid image
+        with pytest.raises(UnidentifiedImageError):
+            pm.download_tiles(num_retries=1)
 
     def test_download_tiles_partial_success(
-        self, create_mock_tile_response: Callable[..., MagicMock]
+        self,
+        httpx_mock: HTTPXMock,
+        create_tile_image_content: Callable,
     ) -> None:
         """Test when some tiles succeed and some fail."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
-        call_count = 0
         num_tiles = len(pm.tiles)
 
-        def side_effect(*_args: object, **_kwargs: object) -> MagicMock:
-            nonlocal call_count
-            call_count += 1
-
-            # Make only half the tiles succeed on first attempt
-            if call_count <= num_tiles // 2:
+        # First attempt: half succeed, half fail
+        for i in range(num_tiles):
+            if i < num_tiles // 2:
                 # First half succeeds
-                mock_response = create_mock_tile_response(color="green")
-            elif call_count <= num_tiles:
-                # Second half fails on first attempt
-                mock_response = MagicMock()
-                mock_response.is_success = False
+                httpx_mock.add_response(content=create_tile_image_content("green"))
             else:
-                # Retry succeeds
-                mock_response = create_mock_tile_response(color="blue")
+                # Second half fails
+                httpx_mock.add_response(status_code=500)
 
-            return mock_response
+        # Second attempt: previously failed tiles now succeed
+        for _ in range(num_tiles - num_tiles // 2):
+            httpx_mock.add_response(content=create_tile_image_content("blue"))
 
-        with patch("papermap.papermap.httpx.Client") as mock_client_class:
-            mock_client = MagicMock()
-            mock_client_class.return_value.__enter__.return_value = mock_client
-            mock_client.get.side_effect = side_effect
+        pm.download_tiles(num_retries=2)
 
-            pm.download_tiles(num_retries=2)
-
-            # All tiles should eventually succeed
-            for tile in pm.tiles:
-                assert tile.success
+        # All tiles should eventually succeed
+        for tile in pm.tiles:
+            assert tile.success
 
 
 class TestPaperMapRenderBaseLayer:
@@ -734,22 +712,20 @@ class TestPaperMapRenderBaseLayer:
 
     def test_render_base_layer_creates_map_image(
         self,
-        create_mock_tile_response: Callable[..., MagicMock],
-        create_mock_client: Callable[..., MagicMock],
+        httpx_mock: HTTPXMock,
+        create_tile_image_content: Callable,
     ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
-        # Mock tile download
-        mock_response = create_mock_tile_response()
+        # Mock tile downloads (add one response per tile)
+        tile_content = create_tile_image_content()
+        for _ in pm.tiles:
+            httpx_mock.add_response(content=tile_content)
 
-        with patch("papermap.papermap.httpx.Client") as mock_client_class:
-            mock_client = create_mock_client(mock_response)
-            mock_client_class.return_value.__enter__.return_value = mock_client
+        pm.render_base_layer()
 
-            pm.render_base_layer()
-
-            assert hasattr(pm, "map_image")
-            assert pm.map_image.size == (pm.image_width_px, pm.image_height_px)
+        assert hasattr(pm, "map_image")
+        assert pm.map_image.size == (pm.image_width_px, pm.image_height_px)
 
 
 class TestPaperMapSave:
@@ -758,44 +734,40 @@ class TestPaperMapSave:
     def test_save_creates_file(
         self,
         tmp_path: Path,
-        create_mock_tile_response: Callable[..., MagicMock],
-        create_mock_client: Callable[..., MagicMock],
+        httpx_mock: HTTPXMock,
+        create_tile_image_content: Callable,
     ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
-        # Mock tile download
-        mock_response = create_mock_tile_response()
+        # Mock tile downloads (add one response per tile)
+        tile_content = create_tile_image_content()
+        for _ in pm.tiles:
+            httpx_mock.add_response(content=tile_content)
 
-        with patch("papermap.papermap.httpx.Client") as mock_client_class:
-            mock_client = create_mock_client(mock_response)
-            mock_client_class.return_value.__enter__.return_value = mock_client
+        pm.render()
 
-            pm.render()
+        output_file = tmp_path / "test_map.pdf"
+        pm.save(output_file)
 
-            output_file = tmp_path / "test_map.pdf"
-            pm.save(output_file)
-
-            assert output_file.exists()
-            assert output_file.stat().st_size > 0
+        assert output_file.exists()
+        assert output_file.stat().st_size > 0
 
     def test_save_with_custom_metadata(
         self,
         tmp_path: Path,
-        create_mock_tile_response: Callable[..., MagicMock],
-        create_mock_client: Callable[..., MagicMock],
+        httpx_mock: HTTPXMock,
+        create_tile_image_content: Callable,
     ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
-        # Mock tile download
-        mock_response = create_mock_tile_response()
+        # Mock tile downloads (add one response per tile)
+        tile_content = create_tile_image_content()
+        for _ in pm.tiles:
+            httpx_mock.add_response(content=tile_content)
 
-        with patch("papermap.papermap.httpx.Client") as mock_client_class:
-            mock_client = create_mock_client(mock_response)
-            mock_client_class.return_value.__enter__.return_value = mock_client
+        pm.render()
 
-            pm.render()
+        output_file = tmp_path / "test_map.pdf"
+        pm.save(output_file, title="Test Map", author="Test Author")
 
-            output_file = tmp_path / "test_map.pdf"
-            pm.save(output_file, title="Test Map", author="Test Author")
-
-            assert output_file.exists()
+        assert output_file.exists()
