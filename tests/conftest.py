@@ -1,8 +1,8 @@
 """Shared fixtures for PaperMap tests."""
 
 import io
-from typing import Any
-from unittest.mock import MagicMock
+from collections.abc import Callable, Generator
+from unittest.mock import MagicMock, patch
 
 import pytest
 from PIL import Image
@@ -78,22 +78,67 @@ def mock_response(mock_tile_image: Image.Image) -> MagicMock:
     return response
 
 
-# Well-known coordinate test cases
-COORDINATE_TEST_CASES: dict[str, dict[str, float]] = {
-    "new_york": {"lat": 40.7128, "lon": -74.0060},
-    "london": {"lat": 51.5074, "lon": -0.1278},
-    "tokyo": {"lat": 35.6762, "lon": 139.6503},
-    "sydney": {"lat": -33.8688, "lon": 151.2093},
-    "sao_paulo": {"lat": -23.5505, "lon": -46.6333},
-    "equator_prime_meridian": {"lat": 0.0, "lon": 0.0},
-    "north_pole_edge": {"lat": 84.0, "lon": 0.0},  # Max for UTM
-    "south_pole_edge": {"lat": -80.0, "lon": 0.0},  # Min for UTM
-    "date_line_east": {"lat": 0.0, "lon": 179.9},
-    "date_line_west": {"lat": 0.0, "lon": -179.9},
-}
+@pytest.fixture
+def create_mock_tile_response() -> Callable[..., MagicMock]:
+    """Factory fixture to create mock HTTP responses with tile images."""
+
+    def _create(color: str = "green", size: int = 256) -> MagicMock:
+        """Create a mock HTTP response with a tile image.
+
+        Args:
+            color: Color of the tile image.
+            size: Size of the tile image in pixels.
+
+        Returns:
+            MagicMock HTTP response with tile image content.
+        """
+        img = Image.new("RGBA", (size, size), color=color)
+        buffer = io.BytesIO()
+        img.save(buffer, format="PNG")
+        buffer.seek(0)
+
+        response = MagicMock()
+        response.ok = True
+        response.content = buffer.getvalue()
+        return response
+
+    return _create
 
 
 @pytest.fixture
-def coordinate_test_cases() -> dict[str, Any]:
-    """Return well-known coordinate test cases."""
-    return COORDINATE_TEST_CASES
+def create_mock_session() -> Callable[..., MagicMock]:
+    """Factory fixture to create mock sessions."""
+
+    def _create(response: MagicMock) -> MagicMock:
+        """Create a mock session that returns the given response.
+
+        Args:
+            response: Mock response to return from session.get.
+
+        Returns:
+            MagicMock session configured to return the response.
+        """
+        mock_session = MagicMock()
+        mock_session.get.return_value = response
+        mock_session.headers = {}
+        return mock_session
+
+    return _create
+
+
+@pytest.fixture
+def mock_tile_download(
+    create_mock_tile_response: Callable[..., MagicMock],
+    create_mock_session: Callable[..., MagicMock],
+) -> Generator[MagicMock, None, None]:
+    """Mock the tile download process to avoid network calls.
+
+    Yields:
+        MagicMock session configured for tile downloads.
+    """
+    response = create_mock_tile_response()
+
+    with patch("papermap.papermap.Session") as mock_session_class:
+        mock_session = create_mock_session(response)
+        mock_session_class.return_value.__enter__.return_value = mock_session
+        yield mock_session
