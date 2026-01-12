@@ -90,6 +90,13 @@ class PaperMap:
         add_grid: bool = False,  # noqa: FBT001, FBT002
         grid_size: int = DEFAULT_GRID_SIZE,
     ) -> None:
+        # validate coordinates
+        if not -90 <= lat <= 90:  # noqa: PLR2004
+            msg = f"Latitude must be in [-90, 90] range, got {lat}"
+            raise ValueError(msg)
+        if not -180 <= lon <= 180:  # noqa: PLR2004
+            msg = f"Longitude must be in [-180, 180] range, got {lon}"
+            raise ValueError(msg)
         self.lat = lat
         self.lon = lon
         self.api_key = api_key
@@ -269,6 +276,28 @@ class PaperMap:
 
         return x_grid_cs_and_labels, y_grid_cs_and_labels
 
+    def _draw_grid_line(  # noqa: PLR0913
+        self,
+        start_x: float,
+        start_y: float,
+        end_x: float,
+        end_y: float,
+        label: str,
+        horizontal: bool = False,  # noqa: FBT001, FBT002
+    ) -> None:
+        """Draw a single grid line with label."""
+        label_width = self.pdf.get_string_width(label)
+        # draw grid line
+        self.pdf.line(start_x, start_y, end_x, end_y)
+        # draw label
+        if not horizontal and start_x + label_width < self.margin_left + self.pdf.epw:
+            self.pdf.set_xy(start_x - label_width / 2, start_y)
+            self.pdf.cell(w=label_width, text=label, align="C", fill=True)
+        elif horizontal and start_y + label_width < self.margin_top + self.pdf.eph:
+            self.pdf.set_xy(start_x, start_y + label_width / 2)
+            with self.pdf.rotation(90):
+                self.pdf.cell(w=label_width, text=label, align="C", fill=True)
+
     def render_grid(self) -> None:
         if self.add_grid:
             self.pdf.set_draw_color(0, 0, 0)
@@ -281,29 +310,21 @@ class PaperMap:
             # draw vertical grid lines
             for x, label in x_grid_cs_and_labels:
                 x_ = float(x + self.margin_left)
-                label_width = self.pdf.get_string_width(label)
-
-                # draw grid line
-                self.pdf.line(x_, self.margin_top, x_, self.margin_top + self.pdf.eph)
-
-                # draw label
-                if x_ + label_width < self.margin_left + self.pdf.epw:
-                    self.pdf.set_xy(x_ - label_width / 2, self.margin_top)
-                    self.pdf.cell(w=label_width, text=label, align="C", fill=True)
+                self._draw_grid_line(
+                    x_, self.margin_top, x_, self.margin_top + self.pdf.eph, label
+                )
 
             # draw horizontal grid lines
             for y, label in y_grid_cs_and_labels:
                 y_ = float(y + self.margin_top)
-                label_width = self.pdf.get_string_width(label)
-
-                # draw grid line
-                self.pdf.line(self.margin_left, y_, self.margin_left + self.pdf.epw, y_)
-
-                # draw label
-                if y_ + label_width < self.margin_top + self.pdf.eph:
-                    self.pdf.set_xy(self.margin_left, y_ + label_width / 2)
-                    with self.pdf.rotation(90):
-                        self.pdf.cell(w=label_width, text=label, align="C", fill=True)
+                self._draw_grid_line(
+                    self.margin_left,
+                    y_,
+                    self.margin_left + self.pdf.epw,
+                    y_,
+                    label,
+                    horizontal=True,
+                )
 
             self.pdf.set_font_size(12)
 

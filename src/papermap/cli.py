@@ -23,6 +23,49 @@ from .utils import utm_to_spherical
 CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 
 
+def _create_and_save_map(  # noqa: PLR0913
+    lat: float,
+    lon: float,
+    file: Path,
+    tile_server: str = DEFAULT_TILE_SERVER,
+    api_key: str | None = None,
+    size: str = DEFAULT_SIZE,
+    use_landscape: bool = False,  # noqa: FBT001, FBT002
+    margin_top: int = DEFAULT_MARGIN,
+    margin_right: int = DEFAULT_MARGIN,
+    margin_bottom: int = DEFAULT_MARGIN,
+    margin_left: int = DEFAULT_MARGIN,
+    scale: int = DEFAULT_SCALE,
+    dpi: int = DEFAULT_DPI,
+    add_grid: bool = False,  # noqa: FBT001, FBT002
+    grid_size: int = DEFAULT_GRID_SIZE,
+) -> None:
+    """Shared map creation logic for all coordinate input methods."""
+    # initialize PaperMap object
+    pm = PaperMap(
+        lat=lat,
+        lon=lon,
+        tile_server=tile_server,
+        api_key=api_key,
+        size=size,
+        use_landscape=use_landscape,
+        margin_top=margin_top,
+        margin_right=margin_right,
+        margin_bottom=margin_bottom,
+        margin_left=margin_left,
+        scale=scale,
+        dpi=dpi,
+        add_grid=add_grid,
+        grid_size=grid_size,
+    )
+
+    # render it
+    pm.render()
+
+    # save it
+    pm.save(file)
+
+
 def margin_option(side: str) -> Callable:
     """Attaches a margin option for the given side to the command."""
     return click.option(
@@ -139,10 +182,10 @@ def latlon(  # noqa: PLR0913
     grid_size: int = DEFAULT_GRID_SIZE,
 ) -> None:
     """Generates a paper map for the given spherical coordinate (i.e. lat, lon) and outputs it to file."""
-    # initialize PaperMap object
-    pm = PaperMap(
-        lat=lat,
-        lon=lon,
+    _create_and_save_map(
+        lat,
+        lon,
+        file,
         tile_server=tile_server,
         api_key=api_key,
         size=size,
@@ -156,12 +199,6 @@ def latlon(  # noqa: PLR0913
         add_grid=add_grid,
         grid_size=grid_size,
     )
-
-    # render it
-    pm.render()
-
-    # save it
-    pm.save(file)
 
 
 @cli.command()
@@ -192,12 +229,10 @@ def utm(  # noqa: PLR0913
     """Generates a paper map for the given UTM coordinate and outputs it to file."""
     # convert UTM coordinate to spherical (i.e. lat, lon)
     lat, lon = utm_to_spherical(easting, northing, zone, hemisphere)
-
-    # pass to `latlon` command
-    latlon(
-        lat=lat,
-        lon=lon,
-        file=file,
+    _create_and_save_map(
+        lat,
+        lon,
+        file,
         tile_server=tile_server,
         api_key=api_key,
         size=size,
