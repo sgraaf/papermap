@@ -2,6 +2,7 @@ import os
 import time
 from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
+from functools import partial
 from importlib import metadata
 from io import BytesIO
 from itertools import count
@@ -294,7 +295,6 @@ class PaperMap:
             for y, label in y_grid_cs_and_labels:
                 y_ = float(y + self.margin_top)
                 label_width = self.pdf.get_string_width(label)
-                pt_to_mm(self.pdf.font_size)
 
                 # draw grid line
                 self.pdf.line(self.margin_left, y_, self.margin_left + self.pdf.epw, y_)
@@ -319,40 +319,42 @@ class PaperMap:
         self, num_retries: int = 3, sleep_between_retries: int | None = None
     ) -> None:
         # download the tile images
-        for num_retry in count():
-            # get the unsuccessful tiles
-            tiles = [tile for tile in self.tiles if not tile.success]
+        with (
+            Session() as session,
+            ThreadPoolExecutor(min(32, (os.cpu_count() or 1) + 4)) as executor,
+        ):
+            session.headers.update(HEADERS)
 
-            # break if all tiles successful
-            if not tiles:
-                break
+            for num_retry in count():
+                # get the unsuccessful tiles
+                tiles = [tile for tile in self.tiles if not tile.success]
 
-            # possibly sleep between retries
-            if num_retry > 0 and sleep_between_retries is not None:
-                time.sleep(sleep_between_retries)
+                # break if all tiles successful
+                if not tiles:
+                    break
 
-            # break if max number of retries exceeded
-            if num_retry >= num_retries:
-                msg = f"Could not download {len(tiles)}/{len(self.tiles)} tiles after {num_retries} retries."
-                raise RuntimeError(msg)
+                # possibly sleep between retries
+                if num_retry > 0 and sleep_between_retries is not None:
+                    time.sleep(sleep_between_retries)
 
-            with Session() as session:
-                session.headers.update(HEADERS)
+                # break if max number of retries exceeded
+                if num_retry >= num_retries:
+                    msg = f"Could not download {len(tiles)}/{len(self.tiles)} tiles after {num_retries} retries."
+                    raise RuntimeError(msg)
 
-                with ThreadPoolExecutor(min(32, os.cpu_count() or 1 + 4)) as executor:
-                    responses = executor.map(
-                        session.get,
-                        [
-                            self.tile_server.format_url_template(
-                                tile=tile, api_key=self.api_key
-                            )
-                            for tile in tiles
-                        ],
-                    )
+                responses = executor.map(
+                    partial(session.get, timeout=30),
+                    [
+                        self.tile_server.format_url_template(
+                            tile=tile, api_key=self.api_key
+                        )
+                        for tile in tiles
+                    ],
+                )
 
-                    for tile, r in zip(tiles, responses, strict=True):
-                        if r.ok:
-                            tile.image = Image.open(BytesIO(r.content)).convert("RGBA")
+                for tile, r in zip(tiles, responses, strict=True):
+                    if r.ok:
+                        tile.image = Image.open(BytesIO(r.content)).convert("RGBA")
 
     def render_base_layer(self) -> None:
         # download all the required tiles
