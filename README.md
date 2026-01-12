@@ -9,7 +9,7 @@
 [![Documentation Status](https://readthedocs.org/projects/papermap/badge/?version=latest)](https://papermap.readthedocs.io/en/latest/?badge=latest)
 [![PyPI - License](https://img.shields.io/pypi/l/papermap)](https://img.shields.io/pypi/l/papermap)
 
-PaperMap is a Python package and CLI for creating ready-to-print paper maps.
+PaperMap is a Python library and CLI tool for creating ready-to-print paper maps.
 
 <!-- end docs-include-index -->
 
@@ -35,7 +35,7 @@ Check out the [PaperMap documentation](https://papermap.readthedocs.io/en/stable
 
 PaperMap can be used both in your own applications as a package, as well as a CLI tool.
 
-### As a Package
+### As a Library
 
 #### Basic Usage
 
