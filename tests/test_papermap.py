@@ -1,6 +1,5 @@
 """Unit tests for papermap.papermap module."""
 
-from collections.abc import Callable
 from decimal import Decimal
 from math import isclose
 from pathlib import Path
@@ -506,14 +505,13 @@ class TestPaperMapDownloadTiles:
     def test_download_tiles_with_mocked_client(
         self,
         httpx_mock: HTTPXMock,
-        create_tile_image_content: Callable,
+        tile_image_content: bytes,
     ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         # Mock all tile download requests (add one response per tile)
-        tile_content = create_tile_image_content()
         for _ in pm.tiles:
-            httpx_mock.add_response(content=tile_content)
+            httpx_mock.add_response(content=tile_image_content)
 
         pm.download_tiles()
 
@@ -524,7 +522,7 @@ class TestPaperMapDownloadTiles:
     def test_download_tiles_retry_on_failure(
         self,
         httpx_mock: HTTPXMock,
-        create_tile_image_content: Callable,
+        tile_image_content: bytes,
     ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
@@ -536,7 +534,7 @@ class TestPaperMapDownloadTiles:
 
         # Second attempt: all tiles succeed
         for _ in range(num_tiles):
-            httpx_mock.add_response(content=create_tile_image_content())
+            httpx_mock.add_response(content=tile_image_content)
 
         pm.download_tiles(num_retries=3)
 
@@ -565,7 +563,7 @@ class TestPaperMapDownloadTiles:
     def test_download_tiles_retry_with_sleep(
         self,
         httpx_mock: HTTPXMock,
-        create_tile_image_content: Callable,
+        tile_image_content: bytes,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """Test that retry logic sleeps between retries when sleep_between_retries is set."""
@@ -587,7 +585,7 @@ class TestPaperMapDownloadTiles:
 
         # Second attempt: all tiles succeed
         for _ in range(num_tiles):
-            httpx_mock.add_response(content=create_tile_image_content())
+            httpx_mock.add_response(content=tile_image_content)
 
         pm.download_tiles(num_retries=3, sleep_between_retries=1)
 
@@ -680,7 +678,7 @@ class TestPaperMapHttpErrors:
     def test_download_tiles_partial_success(
         self,
         httpx_mock: HTTPXMock,
-        create_tile_image_content: Callable,
+        tile_image_content: bytes,
     ) -> None:
         """Test when some tiles succeed and some fail."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
@@ -691,14 +689,14 @@ class TestPaperMapHttpErrors:
         for i in range(num_tiles):
             if i < num_tiles // 2:
                 # First half succeeds
-                httpx_mock.add_response(content=create_tile_image_content("green"))
+                httpx_mock.add_response(content=tile_image_content)
             else:
                 # Second half fails
                 httpx_mock.add_response(status_code=500)
 
         # Second attempt: previously failed tiles now succeed
         for _ in range(num_tiles - num_tiles // 2):
-            httpx_mock.add_response(content=create_tile_image_content("blue"))
+            httpx_mock.add_response(content=tile_image_content)
 
         pm.download_tiles(num_retries=2)
 
@@ -713,14 +711,13 @@ class TestPaperMapRenderBaseLayer:
     def test_render_base_layer_creates_map_image(
         self,
         httpx_mock: HTTPXMock,
-        create_tile_image_content: Callable,
+        tile_image_content: bytes,
     ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         # Mock tile downloads (add one response per tile)
-        tile_content = create_tile_image_content()
         for _ in pm.tiles:
-            httpx_mock.add_response(content=tile_content)
+            httpx_mock.add_response(content=tile_image_content)
 
         pm.render_base_layer()
 
@@ -735,14 +732,13 @@ class TestPaperMapSave:
         self,
         tmp_path: Path,
         httpx_mock: HTTPXMock,
-        create_tile_image_content: Callable,
+        tile_image_content: bytes,
     ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         # Mock tile downloads (add one response per tile)
-        tile_content = create_tile_image_content()
         for _ in pm.tiles:
-            httpx_mock.add_response(content=tile_content)
+            httpx_mock.add_response(content=tile_image_content)
 
         pm.render()
 
@@ -756,14 +752,13 @@ class TestPaperMapSave:
         self,
         tmp_path: Path,
         httpx_mock: HTTPXMock,
-        create_tile_image_content: Callable,
+        tile_image_content: bytes,
     ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         # Mock tile downloads (add one response per tile)
-        tile_content = create_tile_image_content()
         for _ in pm.tiles:
-            httpx_mock.add_response(content=tile_content)
+            httpx_mock.add_response(content=tile_image_content)
 
         pm.render()
 

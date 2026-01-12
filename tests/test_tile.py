@@ -30,51 +30,49 @@ class TestTileInit:
 class TestTileSuccess:
     """Tests for Tile.success property."""
 
-    def test_success_false_when_no_image(self, sample_tile: Tile) -> None:
-        assert not sample_tile.success
+    def test_success_false_when_no_image(self, tile: Tile) -> None:
+        assert not tile.success
 
-    def test_success_true_when_image_present(
-        self, sample_tile_with_image: Tile
-    ) -> None:
-        assert sample_tile_with_image.success
+    def test_success_true_when_image_present(self, tile_with_image: Tile) -> None:
+        assert tile_with_image.success
 
     def test_success_false_when_image_is_none(self) -> None:
         tile = Tile(x=0, y=0, zoom=0, bbox=(0, 0, 256, 256))
         tile.image = None
         assert not tile.success
 
-    def test_success_true_after_setting_image(self, sample_tile: Tile) -> None:
-        assert not sample_tile.success
-        sample_tile.image = Image.new("RGBA", (256, 256), color="red")
-        assert sample_tile.success
+    def test_success_true_after_setting_image(self, tile: Tile) -> None:
+        assert not tile.success
+        tile.image = Image.new("RGBA", (256, 256), color="red")
+        assert tile.success
 
 
 class TestTileFormatUrlTemplate:
     """Tests for Tile.format_url_template method."""
 
-    def test_basic_formatting(self, sample_tile: Tile) -> None:
+    def test_basic_formatting(self, tile: Tile) -> None:
         template = "https://example.com/{zoom}/{x}/{y}.png"
-        result = sample_tile.format_url_template(template)
+        result = tile.format_url_template(template)
         assert result == "https://example.com/10/123/456.png"
 
-    def test_formatting_with_mirror(self, sample_tile: Tile) -> None:
+    def test_formatting_with_mirror(self, tile: Tile) -> None:
         template = "https://{mirror}.example.com/{zoom}/{x}/{y}.png"
-        result = sample_tile.format_url_template(template, mirror="a")
+        result = tile.format_url_template(template, mirror="a")
         assert result == "https://a.example.com/10/123/456.png"
 
-    def test_formatting_with_api_key(self, sample_tile: Tile) -> None:
+    def test_formatting_with_api_key(self, tile: Tile) -> None:
         template = "https://example.com/{zoom}/{x}/{y}.png?key={api_key}"
-        result = sample_tile.format_url_template(template, api_key="secret123")
+        result = tile.format_url_template(template, api_key="secret123")
         assert result == "https://example.com/10/123/456.png?key=secret123"
 
-    def test_formatting_with_all_placeholders(self, sample_tile: Tile) -> None:
+    def test_formatting_with_all_placeholders(self, tile: Tile) -> None:
         template = "https://{mirror}.example.com/{zoom}/{x}/{y}.png?key={api_key}"
-        result = sample_tile.format_url_template(template, mirror="b", api_key="mykey")
+        result = tile.format_url_template(template, mirror="b", api_key="mykey")
         assert result == "https://b.example.com/10/123/456.png?key=mykey"
 
-    def test_formatting_with_none_mirror(self, sample_tile: Tile) -> None:
+    def test_formatting_with_none_mirror(self, tile: Tile) -> None:
         template = "https://{mirror}.example.com/{zoom}/{x}/{y}.png"
-        result = sample_tile.format_url_template(template, mirror=None)
+        result = tile.format_url_template(template, mirror=None)
         assert result == "https://None.example.com/10/123/456.png"
 
     def test_formatting_with_integer_mirror(self) -> None:
@@ -138,7 +136,7 @@ class TestTileImageHandling:
         tile.image = img2
         assert tile.image is img2
 
-    def test_clearing_image(self, sample_tile_with_image: Tile) -> None:
-        assert sample_tile_with_image.success
-        sample_tile_with_image.image = None
-        assert not sample_tile_with_image.success
+    def test_clearing_image(self, tile_with_image: Tile) -> None:
+        assert tile_with_image.success
+        tile_with_image.image = None
+        assert not tile_with_image.success
