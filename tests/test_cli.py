@@ -474,20 +474,20 @@ class TestUtmCommand:
         output_file = tmp_path / "test.pdf"
 
         # Mock the latlon function to avoid Click context issues
-        with patch("papermap.cli.latlon") as mock_latlon:
+        with patch("papermap.cli._create_and_save_map") as mock_create_and_save_map:
             # UTM coordinates (zone 31N)
             result = runner.invoke(
                 cli, ["utm", "430000", "4580000", "31", "N", str(output_file)]
             )
 
             assert result.exit_code == 0
-            mock_latlon.assert_called_once()
-            call_kwargs = mock_latlon.call_args[1]
+            mock_create_and_save_map.assert_called_once()
+            call_args = mock_create_and_save_map.call_args.args
             # Verify coordinates were converted to valid lat/lon ranges
-            assert -90 <= call_kwargs["lat"] <= 90
-            assert -180 <= call_kwargs["lon"] <= 180
+            assert -90 <= call_args[0] <= 90
+            assert -180 <= call_args[1] <= 180
             # Should be in northern hemisphere (zone 31N)
-            assert call_kwargs["lat"] > 0
+            assert call_args[0] > 0
 
     def test_utm_southern_hemisphere(
         self,
@@ -497,16 +497,18 @@ class TestUtmCommand:
         """Test that UTM command works for southern hemisphere."""
         output_file = tmp_path / "test.pdf"
 
-        with patch("papermap.cli.latlon") as mock_latlon:
+        with patch(
+            "papermap.cli._create_and_save_map"
+        ) as mock_create_and_save_mapmock_create_and_save_map:
             # UTM coordinates for Sydney (zone 56S)
             result = runner.invoke(
                 cli, ["utm", "334000", "6252000", "56", "S", str(output_file)]
             )
 
             assert result.exit_code == 0
-            call_kwargs = mock_latlon.call_args[1]
+            call_args = mock_create_and_save_mapmock_create_and_save_map.call_args.args
             # Should be in southern hemisphere (negative latitude)
-            assert call_kwargs["lat"] < 0
+            assert call_args[0] < 0
 
     def test_utm_with_options(
         self,
@@ -516,7 +518,7 @@ class TestUtmCommand:
         """Test that UTM command passes through options to latlon."""
         output_file = tmp_path / "test.pdf"
 
-        with patch("papermap.cli.latlon") as mock_latlon:
+        with patch("papermap.cli._create_and_save_map") as mock_create_and_save_map:
             result = runner.invoke(
                 cli,
                 [
@@ -535,7 +537,7 @@ class TestUtmCommand:
             )
 
             assert result.exit_code == 0
-            call_kwargs = mock_latlon.call_args[1]
+            call_kwargs = mock_create_and_save_map.call_args.kwargs
             assert call_kwargs["scale"] == 10000
             assert call_kwargs["add_grid"]
             assert call_kwargs["size"] == "a3"
