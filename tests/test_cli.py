@@ -15,7 +15,7 @@ import pytest
 from click.testing import CliRunner
 
 from papermap.cli import cli
-from papermap.defaults import DEFAULT_DPI, DEFAULT_SCALE, SIZES
+from papermap.papermap import DEFAULT_DPI, DEFAULT_SCALE, SIZES
 
 # copied from `typeshed`
 StrOrBytesPath = str | bytes | PathLike

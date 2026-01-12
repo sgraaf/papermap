@@ -8,13 +8,13 @@ import pytest
 from PIL import UnidentifiedImageError
 from pytest_httpx import HTTPXMock
 
-from papermap.defaults import (
+from papermap.papermap import (
     DEFAULT_DPI,
     DEFAULT_SCALE,
     SIZE_TO_DIMENSIONS_MAP,
     SIZES,
+    PaperMap,
 )
-from papermap.papermap import PaperMap
 
 
 class TestPaperMapInit:

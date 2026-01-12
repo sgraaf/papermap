@@ -1,8 +1,7 @@
 """Unit tests for papermap.tile_server module."""
 
-from papermap.defaults import TILE_SERVERS_MAP
 from papermap.tile import Tile
-from papermap.tile_server import TileServer
+from papermap.tile_server import TILE_SERVERS_MAP, TileServer
 from papermap.utils import get_string_formatting_arguments
 
 

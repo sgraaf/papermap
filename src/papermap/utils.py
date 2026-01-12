@@ -20,17 +20,58 @@ from math import (
 from math import pi as π  # noqa: PLC2403
 from string import Formatter
 
-from .constants import FALSE_EASTING, FALSE_NORTHING, TILE_SIZE, WGS84_ELLIPSOID, C, R
-from .defaults import DEFAULT_DPI
-from .typing import (
-    DMS,
-    Angle,
-    Cartesian_3D,
-    Degree,
-    Pixel,
-    Spherical_2D,
-    UTM_Coordinate,
-)
+# Type aliases
+Degree = float
+"""Angle in degrees."""
+
+Radian = float
+"""Angle in radians."""
+
+Angle = Degree | Radian
+"""Angle in either degrees or radians."""
+
+Pixel = int
+"""Number of pixels."""
+
+DMS = tuple[int, int, float]
+"""Degrees, Minutes, and Seconds (DMS)."""
+
+Cartesian_2D = tuple[float, float]
+"""Two-dimensional Cartesian (x, y) coordinates."""
+
+Cartesian_3D = tuple[float, float, float]
+"""Three-dimensional Cartesian (x, y, z) coordinates."""
+
+Spherical_2D = tuple[Angle, Angle]
+"""Two-dimensional Spherical (lat, lon) coordinates."""
+
+Spherical_3D = tuple[Angle, Angle, Angle]
+"""Three-dimensional Spherical (lat, lon, height) coordinates."""
+
+UTM_Coordinate = tuple[float, float, int, str]
+"""UTM coordinate (easting, northing, zone, hemisphere)."""
+
+# Geographic constants
+TILE_SIZE: int = 256
+"""Size (width/height) of map tiles in pixels."""
+
+WGS84_ELLIPSOID = (6_378_137, 1 / 298.257223563)
+"""WGS84 ellipsoid parameters: (equatorial radius, flattening)."""
+
+R: float = WGS84_ELLIPSOID[0]
+"""WGS84 equatorial radius in meters."""
+
+C: int = 40_075_017
+"""Earth's equatorial circumference in meters."""
+
+FALSE_EASTING = 500_000
+"""UTM false easting in meters."""
+
+FALSE_NORTHING = 10_000_000
+"""UTM false northing in meters."""
+
+DEFAULT_DPI: int = 300
+"""Default dots per inch."""
 
 
 def clip(val: float, lower: float, upper: float) -> float:

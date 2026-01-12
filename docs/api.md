@@ -27,10 +27,3 @@
 .. automodule:: papermap.tile_server
    :members:
 ```
-
-## `papermap.typing` Module
-
-```{eval-rst}
-.. automodule:: papermap.typing
-   :members:
-```

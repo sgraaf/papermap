@@ -7,17 +7,16 @@ from typing import Any
 import click
 from click_default_group import DefaultGroup
 
-from .defaults import (
+from .papermap import (
     DEFAULT_DPI,
     DEFAULT_GRID_SIZE,
     DEFAULT_MARGIN,
     DEFAULT_SCALE,
     DEFAULT_SIZE,
-    DEFAULT_TILE_SERVER,
     SIZES,
-    TILE_SERVERS,
+    PaperMap,
 )
-from .papermap import PaperMap
+from .tile_server import DEFAULT_TILE_SERVER, TILE_SERVERS
 from .utils import utm_to_spherical
 
 CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
