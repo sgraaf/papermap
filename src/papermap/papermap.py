@@ -142,12 +142,14 @@ class PaperMap:
             msg = f"Invalid tile server. Please choose one of {', '.join(TILE_SERVERS)}"
             raise ValueError(msg)
 
-        # get the tile server mirrors
-        self.mirrors = self.tile_server.mirrors if self.tile_server.mirrors else []
+        # get the tile server subdomains
+        self.subdomains = (
+            self.tile_server.subdomains if self.tile_server.subdomains else []
+        )
 
         # check whether an API key is provided, if it is needed
         if (
-            "api_key" in get_string_formatting_arguments(self.tile_server.url_template)
+            "a" in get_string_formatting_arguments(self.tile_server.url_template)
             and self.api_key is None
         ):
             msg = f"No API key specified for {tile_server} tile server"

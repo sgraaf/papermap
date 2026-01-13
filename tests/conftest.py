@@ -41,8 +41,11 @@ def tile_image_content(tile_image: Image.Image) -> bytes:
 def tile_server() -> TileServer:
     """Return a sample tile server for testing."""
     return TileServer(
+        key="test-server",
+        name="Test Server",
         attribution="Test Attribution",
-        url_template="https://example.com/{zoom}/{x}/{y}.png",
+        html_attribution="Test Attribution",
+        url_template="https://example.com/{z}/{x}/{y}.png",
         zoom_min=0,
         zoom_max=19,
     )
@@ -50,13 +53,16 @@ def tile_server() -> TileServer:
 
 @pytest.fixture
 def tile_server_with_mirrors() -> TileServer:
-    """Return a sample tile server with mirrors for testing."""
+    """Return a sample tile server with subdomains for testing."""
     return TileServer(
+        key="test-server-with-subdomains",
+        name="Test Server With Subdomains",
         attribution="Test Attribution",
-        url_template="https://{mirror}.example.com/{zoom}/{x}/{y}.png",
+        html_attribution="Test Attribution",
+        url_template="https://{s}.example.com/{z}/{x}/{y}.png",
         zoom_min=0,
         zoom_max=19,
-        mirrors=["a", "b", "c"],
+        subdomains=["a", "b", "c"],
     )
 
 
@@ -64,8 +70,11 @@ def tile_server_with_mirrors() -> TileServer:
 def tile_server_with_api_key() -> TileServer:
     """Return a sample tile server requiring an API key for testing."""
     return TileServer(
+        key="test-server-with-api-key",
+        name="Test Server With API Key",
         attribution="Test Attribution",
-        url_template="https://example.com/{zoom}/{x}/{y}.png?api_key={api_key}",
+        html_attribution="Test Attribution",
+        url_template="https://example.com/{z}/{x}/{y}.png?api_key={a}",
         zoom_min=0,
         zoom_max=19,
     )
