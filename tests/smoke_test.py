@@ -83,7 +83,7 @@ class TestSmokeTests:
     ) -> None:
         """Test that different paper sizes work."""
         for size in ["a4", "letter"]:
-            pm = papermap.PaperMap(lat=40.7128, lon=-74.0060, size=size)
+            pm = papermap.PaperMap(lat=40.7128, lon=-74.0060, paper_size=size)
 
             for _ in range(len(pm.tiles)):
                 httpx_mock.add_response(content=tile_image_content)

@@ -8,13 +8,13 @@ import pytest
 from PIL import UnidentifiedImageError
 from pytest_httpx import HTTPXMock
 
-from papermap.defaults import (
+from papermap.papermap import (
     DEFAULT_DPI,
     DEFAULT_SCALE,
-    SIZE_TO_DIMENSIONS_MAP,
-    SIZES,
+    PAPER_SIZE_TO_DIMENSIONS_MAP,
+    PAPER_SIZES,
+    PaperMap,
 )
-from papermap.papermap import PaperMap
 
 
 class TestPaperMapInit:
@@ -129,12 +129,12 @@ class TestPaperMapValidation:
 
     def test_invalid_paper_size_raises_error(self) -> None:
         with pytest.raises(ValueError, match="Invalid paper size"):
-            PaperMap(lat=40.7128, lon=-74.0060, size="nonexistent_size")
+            PaperMap(lat=40.7128, lon=-74.0060, paper_size="nonexistent_size")
 
     def test_valid_paper_sizes(self) -> None:
-        for size in SIZES:
-            pm = PaperMap(lat=40.7128, lon=-74.0060, size=size)
-            expected_width, expected_height = SIZE_TO_DIMENSIONS_MAP[size]
+        for size in PAPER_SIZES:
+            pm = PaperMap(lat=40.7128, lon=-74.0060, paper_size=size)
+            expected_width, expected_height = PAPER_SIZE_TO_DIMENSIONS_MAP[size]
             assert pm.width == expected_width
             assert pm.height == expected_height
 
@@ -253,7 +253,7 @@ class TestPaperMapEdgeCases:
         pm = PaperMap(
             lat=40.7128,
             lon=-74.0060,
-            size="a7",
+            paper_size="a7",
             margin_top=20,
             margin_right=20,
             margin_bottom=20,
@@ -300,10 +300,10 @@ class TestPaperMapEdgeCases:
     def test_extreme_combination_a0_landscape_normal_scale(self) -> None:
         """Test A0 paper in landscape with normal scale."""
         pm = PaperMap(
-            lat=40.7128, lon=-74.0060, size="a0", use_landscape=True, scale=25000
+            lat=40.7128, lon=-74.0060, paper_size="a0", use_landscape=True, scale=25000
         )
         # A0 dimensions: 841x1189mm, swapped for landscape
-        expected_width, expected_height = SIZE_TO_DIMENSIONS_MAP["a0"]
+        expected_width, expected_height = PAPER_SIZE_TO_DIMENSIONS_MAP["a0"]
         assert pm.width == expected_height  # Swapped for landscape
         assert pm.height == expected_width
         assert pm.use_landscape
@@ -311,9 +311,9 @@ class TestPaperMapEdgeCases:
 
     def test_extreme_combination_a7_portrait_coarse_scale(self) -> None:
         """Test A7 paper in portrait with coarse scale."""
-        pm = PaperMap(lat=40.7128, lon=-74.0060, size="a7", scale=100_000)
+        pm = PaperMap(lat=40.7128, lon=-74.0060, paper_size="a7", scale=100_000)
         # A7 dimensions: 74x105mm
-        expected_width, expected_height = SIZE_TO_DIMENSIONS_MAP["a7"]
+        expected_width, expected_height = PAPER_SIZE_TO_DIMENSIONS_MAP["a7"]
         assert pm.width == expected_width
         assert pm.height == expected_height
         assert not pm.use_landscape
@@ -323,20 +323,22 @@ class TestPaperMapEdgeCases:
 class TestPaperMapPaperSizes:
     """Tests for different paper sizes."""
 
-    @pytest.mark.parametrize("size", ["a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7"])
-    def test_a_series_sizes(self, size: str) -> None:
-        pm = PaperMap(lat=40.7128, lon=-74.0060, size=size)
-        expected_width, expected_height = SIZE_TO_DIMENSIONS_MAP[size]
+    @pytest.mark.parametrize(
+        "paper_size", ["a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7"]
+    )
+    def test_a_series_sizes(self, paper_size: str) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060, paper_size=paper_size)
+        expected_width, expected_height = PAPER_SIZE_TO_DIMENSIONS_MAP[paper_size]
         assert pm.width == expected_width
         assert pm.height == expected_height
 
     def test_letter_size(self) -> None:
-        pm = PaperMap(lat=40.7128, lon=-74.0060, size="letter")
+        pm = PaperMap(lat=40.7128, lon=-74.0060, paper_size="letter")
         assert pm.width == 216
         assert pm.height == 279
 
     def test_legal_size(self) -> None:
-        pm = PaperMap(lat=40.7128, lon=-74.0060, size="legal")
+        pm = PaperMap(lat=40.7128, lon=-74.0060, paper_size="legal")
         assert pm.width == 216
         assert pm.height == 356
 
@@ -346,10 +348,10 @@ class TestPaperMapLandscape:
 
     def test_landscape_swaps_dimensions(self) -> None:
         pm_portrait = PaperMap(
-            lat=40.7128, lon=-74.0060, size="a4", use_landscape=False
+            lat=40.7128, lon=-74.0060, paper_size="a4", use_landscape=False
         )
         pm_landscape = PaperMap(
-            lat=40.7128, lon=-74.0060, size="a4", use_landscape=True
+            lat=40.7128, lon=-74.0060, paper_size="a4", use_landscape=True
         )
 
         assert pm_portrait.width == 210
@@ -359,7 +361,9 @@ class TestPaperMapLandscape:
 
     def test_landscape_with_different_sizes(self) -> None:
         for size in ["a3", "a4", "a5", "letter"]:
-            pm = PaperMap(lat=40.7128, lon=-74.0060, size=size, use_landscape=True)
+            pm = PaperMap(
+                lat=40.7128, lon=-74.0060, paper_size=size, use_landscape=True
+            )
             # In landscape, width should be greater than height
             assert pm.width > pm.height
 

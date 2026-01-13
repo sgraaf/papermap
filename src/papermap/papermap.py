@@ -11,21 +11,8 @@ import httpx
 from fpdf import FPDF
 from PIL import Image
 
-from .constants import HEADERS, NAME, TILE_SIZE
-from .defaults import (
-    DEFAULT_BACKGROUND_COLOR,
-    DEFAULT_DPI,
-    DEFAULT_GRID_SIZE,
-    DEFAULT_MARGIN,
-    DEFAULT_SCALE,
-    DEFAULT_SIZE,
-    DEFAULT_TILE_SERVER,
-    SIZE_TO_DIMENSIONS_MAP,
-    SIZES,
-    TILE_SERVERS,
-    TILE_SERVERS_MAP,
-)
-from .tile import Tile
+from .tile import TILE_SIZE, Tile
+from .tile_server import DEFAULT_TILE_SERVER, TILE_SERVERS, TILE_SERVERS_MAP
 from .utils import (
     drange,
     get_string_formatting_arguments,
@@ -36,6 +23,44 @@ from .utils import (
     scale_to_zoom,
     spherical_to_utm,
 )
+
+NAME: str = "PaperMap"
+"""Name of the application."""
+
+PAPER_SIZE_TO_DIMENSIONS_MAP: dict[str, tuple[int, int]] = {
+    "a0": (841, 1189),
+    "a1": (594, 841),
+    "a2": (420, 594),
+    "a3": (297, 420),
+    "a4": (210, 297),
+    "a5": (148, 210),
+    "a6": (105, 148),
+    "a7": (74, 105),
+    "letter": (216, 279),
+    "legal": (216, 356),
+}
+"""Map of paper size names to dimensions (width, height) in mm."""
+
+PAPER_SIZES = tuple(PAPER_SIZE_TO_DIMENSIONS_MAP.keys())
+"""Tuple of available paper size names."""
+
+DEFAULT_PAPER_SIZE: str = "a4"
+"""Default paper size."""
+
+DEFAULT_SCALE: int = 25_000
+"""Default map scale."""
+
+DEFAULT_MARGIN: int = 10
+"""Default margin in mm."""
+
+DEFAULT_DPI: int = 300
+"""Default dots per inch."""
+
+DEFAULT_BACKGROUND_COLOR: str = "#fff"
+"""Default background color."""
+
+DEFAULT_GRID_SIZE: int = 1_000
+"""Default grid size in meters."""
 
 
 class PaperMap:
@@ -74,10 +99,11 @@ class PaperMap:
         self,
         lat: float,
         lon: float,
+        *,
         tile_server: str = DEFAULT_TILE_SERVER,
         api_key: str | None = None,
-        size: str = DEFAULT_SIZE,
-        use_landscape: bool = False,  # noqa: FBT001, FBT002
+        paper_size: str = DEFAULT_PAPER_SIZE,
+        use_landscape: bool = False,
         margin_top: int = DEFAULT_MARGIN,
         margin_right: int = DEFAULT_MARGIN,
         margin_bottom: int = DEFAULT_MARGIN,
@@ -85,7 +111,7 @@ class PaperMap:
         scale: int = DEFAULT_SCALE,
         dpi: int = DEFAULT_DPI,
         background_color: str = DEFAULT_BACKGROUND_COLOR,
-        add_grid: bool = False,  # noqa: FBT001, FBT002
+        add_grid: bool = False,
         grid_size: int = DEFAULT_GRID_SIZE,
     ) -> None:
         # validate coordinates
@@ -128,12 +154,12 @@ class PaperMap:
             raise ValueError(msg)
 
         # get the paper size (in mm)
-        if size in SIZE_TO_DIMENSIONS_MAP:
-            self.width, self.height = SIZE_TO_DIMENSIONS_MAP[size]
+        if paper_size in PAPER_SIZE_TO_DIMENSIONS_MAP:
+            self.width, self.height = PAPER_SIZE_TO_DIMENSIONS_MAP[paper_size]
             if self.use_landscape:
                 self.width, self.height = self.height, self.width
         else:
-            msg = f"Invalid paper size. Please choose one of {', '.join(SIZES)}"
+            msg = f"Invalid paper size. Please choose one of {', '.join(PAPER_SIZES)}"
             raise ValueError(msg)
 
         # compute the zoom and resize factor
@@ -341,7 +367,10 @@ class PaperMap:
         with (
             ThreadPoolExecutor() as executor,
             httpx.Client(
-                headers=HEADERS,
+                headers={
+                    "User-Agent": f"{NAME}v{metadata.version('papermap')}",
+                    "Accept": "image/png,image/*;q=0.9,*/*;q=0.8",
+                },
                 timeout=30.0,
                 limits=httpx.Limits(
                     max_connections=executor._max_workers,  # noqa: SLF001

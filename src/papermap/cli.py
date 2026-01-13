@@ -7,17 +7,16 @@ from typing import Any
 import click
 from click_default_group import DefaultGroup
 
-from .defaults import (
+from .papermap import (
     DEFAULT_DPI,
     DEFAULT_GRID_SIZE,
     DEFAULT_MARGIN,
+    DEFAULT_PAPER_SIZE,
     DEFAULT_SCALE,
-    DEFAULT_SIZE,
-    DEFAULT_TILE_SERVER,
-    SIZES,
-    TILE_SERVERS,
+    PAPER_SIZES,
+    PaperMap,
 )
-from .papermap import PaperMap
+from .tile_server import DEFAULT_TILE_SERVER, TILE_SERVERS
 from .utils import utm_to_spherical
 
 CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
@@ -29,7 +28,7 @@ def _create_and_save_map(  # noqa: PLR0913
     file: Path,
     tile_server: str = DEFAULT_TILE_SERVER,
     api_key: str | None = None,
-    size: str = DEFAULT_SIZE,
+    paper_size: str = DEFAULT_PAPER_SIZE,
     use_landscape: bool = False,  # noqa: FBT001, FBT002
     margin_top: int = DEFAULT_MARGIN,
     margin_right: int = DEFAULT_MARGIN,
@@ -47,7 +46,7 @@ def _create_and_save_map(  # noqa: PLR0913
         lon=lon,
         tile_server=tile_server,
         api_key=api_key,
-        size=size,
+        paper_size=paper_size,
         use_landscape=use_landscape,
         margin_top=margin_top,
         margin_right=margin_right,
@@ -97,9 +96,9 @@ def common_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
         help="API key for the chosen tile server (if applicable).",
     )
     @click.option(
-        "--size",
-        type=click.Choice(SIZES),
-        default=DEFAULT_SIZE,
+        "--paper-size",
+        type=click.Choice(PAPER_SIZES),
+        default=DEFAULT_PAPER_SIZE,
         help="Size of the paper map.",
     )
     @click.option(
@@ -170,7 +169,7 @@ def latlon(  # noqa: PLR0913
     file: Path,
     tile_server: str = DEFAULT_TILE_SERVER,
     api_key: str | None = None,
-    size: str = DEFAULT_SIZE,
+    paper_size: str = DEFAULT_PAPER_SIZE,
     use_landscape: bool = False,  # noqa: FBT001, FBT002
     margin_top: int = DEFAULT_MARGIN,
     margin_right: int = DEFAULT_MARGIN,
@@ -188,7 +187,7 @@ def latlon(  # noqa: PLR0913
         file,
         tile_server=tile_server,
         api_key=api_key,
-        size=size,
+        paper_size=paper_size,
         use_landscape=use_landscape,
         margin_top=margin_top,
         margin_right=margin_right,
@@ -215,7 +214,7 @@ def utm(  # noqa: PLR0913
     file: Path,
     tile_server: str = DEFAULT_TILE_SERVER,
     api_key: str | None = None,
-    size: str = DEFAULT_SIZE,
+    paper_size: str = DEFAULT_PAPER_SIZE,
     use_landscape: bool = False,  # noqa: FBT001, FBT002
     margin_top: int = DEFAULT_MARGIN,
     margin_right: int = DEFAULT_MARGIN,
@@ -235,7 +234,7 @@ def utm(  # noqa: PLR0913
         file,
         tile_server=tile_server,
         api_key=api_key,
-        size=size,
+        paper_size=paper_size,
         use_landscape=use_landscape,
         margin_top=margin_top,
         margin_right=margin_right,

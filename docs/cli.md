@@ -72,7 +72,7 @@ Options:
                                   map.
   --api-key KEY                   API key for the chosen tile server (if
                                   applicable).
-  --size [a0|a1|a2|a3|a4|a5|a6|a7|letter|legal]
+  --paper-size [a0|a1|a2|a3|a4|a5|a6|a7|letter|legal]
                                   Size of the paper map.
   --landscape                     Use landscape orientation.
   --margin-top MILLIMETERS        Top margin.
@@ -110,7 +110,7 @@ Options:
                                   map.
   --api-key KEY                   API key for the chosen tile server (if
                                   applicable).
-  --size [a0|a1|a2|a3|a4|a5|a6|a7|letter|legal]
+  --paper-size [a0|a1|a2|a3|a4|a5|a6|a7|letter|legal]
                                   Size of the paper map.
   --landscape                     Use landscape orientation.
   --margin-top MILLIMETERS        Top margin.

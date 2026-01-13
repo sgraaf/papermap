@@ -216,7 +216,7 @@ Click-based command-line interface.
 **Common Options:**
 
 - `--tile-server` - Choose from 20+ tile servers
-- `--size` - Paper size (a0-a7, letter, legal)
+- `--paper-size` - Paper size (a0-a7, letter, legal)
 - `--landscape` - Landscape orientation
 - `--scale` - Map scale (default: 25000)
 - `--dpi` - Resolution (default: 300)

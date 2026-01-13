@@ -7,13 +7,6 @@
    :members:
 ```
 
-## `papermap.utils` Module
-
-```{eval-rst}
-.. automodule:: papermap.utils
-   :members:
-```
-
 ## `papermap.tile` Module
 
 ```{eval-rst}
@@ -28,9 +21,9 @@
    :members:
 ```
 
-## `papermap.typing` Module
+## `papermap.utils` Module
 
 ```{eval-rst}
-.. automodule:: papermap.typing
+.. automodule:: papermap.utils
    :members:
 ```
