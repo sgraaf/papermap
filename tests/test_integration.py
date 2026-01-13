@@ -71,7 +71,7 @@ class TestFullPipeline:
     ) -> None:
         """Test generating maps with different paper sizes."""
         for size in ["a3", "a4", "a5", "letter"]:
-            pm = PaperMap(lat=40.7128, lon=-74.0060, size=size)
+            pm = PaperMap(lat=40.7128, lon=-74.0060, paper_size=size)
 
             for _ in range(len(pm.tiles)):
                 httpx_mock.add_response(content=tile_image_content)
@@ -383,7 +383,7 @@ class TestPdfOutput:
         self, tmp_path: Path, httpx_mock: HTTPXMock, tile_image_content: bytes
     ) -> None:
         """Test that the PDF has correct page dimensions."""
-        pm = PaperMap(lat=40.7128, lon=-74.0060, size="a4")
+        pm = PaperMap(lat=40.7128, lon=-74.0060, paper_size="a4")
 
         for _ in range(len(pm.tiles)):
             httpx_mock.add_response(content=tile_image_content)
@@ -424,7 +424,7 @@ class TestEdgeCases:
         self, tmp_path: Path, httpx_mock: HTTPXMock, tile_image_content: bytes
     ) -> None:
         """Test generating a very small map (A7)."""
-        pm = PaperMap(lat=40.7128, lon=-74.0060, size="a7")
+        pm = PaperMap(lat=40.7128, lon=-74.0060, paper_size="a7")
 
         for _ in range(len(pm.tiles)):
             httpx_mock.add_response(content=tile_image_content)

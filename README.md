@@ -223,7 +223,7 @@ Create a landscape-oriented, A3-sized map with grid overlay:
 ```shell
 $ papermap latlon \
     --tile-server "Stamen Terrain" \
-    --size a3 \
+    --paper-size a3 \
     --landscape \
     --scale 50000 \
     --grid \
@@ -248,7 +248,7 @@ Create a topographic map for hiking:
 ```shell
 $ papermap latlon \
     --tile-server OpenTopoMap \
-    --size a3 \
+    --paper-size a3 \
     --landscape \
     --scale 25000 \
     --grid \
@@ -263,7 +263,7 @@ Create a high-resolution map for professional printing:
 ```shell
 $ papermap latlon \
     --tile-server OpenStreetMap \
-    --size a0 \
+    --paper-size a0 \
     --landscape \
     --scale 15000 \
     --dpi 600 \
@@ -278,7 +278,7 @@ Create a map using UTM coordinates:
 ```shell
 $ papermap utm \
     --tile-server OpenStreetMap \
-    --size a4 \
+    --paper-size a4 \
     --scale 25000 \
     --grid \
     -- 500000 4649776 30 N UTM_Map.pdf
@@ -291,7 +291,7 @@ Create a map with custom margins for binding:
 ```shell
 $ papermap latlon \
     --tile-server OpenStreetMap \
-    --size letter \
+    --paper-size letter \
     --margin-left 20 \
     --margin-top 10 \
     --margin-right 10 \
@@ -307,7 +307,7 @@ Create a black-and-white map:
 ```shell
 $ papermap latlon \
     --tile-server "OpenStreetMap Monochrome" \
-    --size a4 \
+    --paper-size a4 \
     --landscape \
     --scale 15000 \
     --grid \
@@ -322,7 +322,7 @@ Use tile servers that require API keys:
 $ papermap latlon \
     --tile-server "Thunderforest Outdoors" \
     --api-key "your_api_key_here" \
-    --size a4 \
+    --paper-size a4 \
     --landscape \
     --scale 25000 \
     --grid \

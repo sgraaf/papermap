@@ -20,6 +20,8 @@ from math import (
 from math import pi as π  # noqa: PLC2403
 from string import Formatter
 
+from .tile import TILE_SIZE
+
 # Type aliases
 Degree = float
 """Angle in degrees."""
@@ -52,9 +54,6 @@ UTM_Coordinate = tuple[float, float, int, str]
 """UTM coordinate (easting, northing, zone, hemisphere)."""
 
 # Geographic constants
-TILE_SIZE: int = 256
-"""Size (width/height) of map tiles in pixels."""
-
 WGS84_ELLIPSOID = (6_378_137, 1 / 298.257223563)
 """WGS84 ellipsoid parameters: (equatorial radius, flattening)."""
 

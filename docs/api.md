@@ -7,13 +7,6 @@
    :members:
 ```
 
-## `papermap.utils` Module
-
-```{eval-rst}
-.. automodule:: papermap.utils
-   :members:
-```
-
 ## `papermap.tile` Module
 
 ```{eval-rst}
@@ -25,5 +18,12 @@
 
 ```{eval-rst}
 .. automodule:: papermap.tile_server
+   :members:
+```
+
+## `papermap.utils` Module
+
+```{eval-rst}
+.. automodule:: papermap.utils
    :members:
 ```

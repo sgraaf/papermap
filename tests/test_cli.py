@@ -15,7 +15,7 @@ import pytest
 from click.testing import CliRunner
 
 from papermap.cli import cli
-from papermap.papermap import DEFAULT_DPI, DEFAULT_SCALE, SIZES
+from papermap.papermap import DEFAULT_DPI, DEFAULT_SCALE, PAPER_SIZES
 
 # copied from `typeshed`
 StrOrBytesPath = str | bytes | PathLike
@@ -136,7 +136,7 @@ class TestCliHelp:
         assert "LATITUDE" in result.output
         assert "LONGITUDE" in result.output
         assert "--tile-server" in result.output
-        assert "--size" in result.output
+        assert "--paper-size" in result.output
         assert "--scale" in result.output
 
     def test_utm_help(self, runner: CliRunner) -> None:
@@ -228,12 +228,19 @@ class TestLatLonCommand:
 
         result = runner.invoke(
             cli,
-            ["latlon", str(TEST_LAT), str(TEST_LON), str(output_file), "--size", "a3"],
+            [
+                "latlon",
+                str(TEST_LAT),
+                str(TEST_LON),
+                str(output_file),
+                "--paper-size",
+                "a3",
+            ],
         )
 
         assert result.exit_code == 0
         call_kwargs = mock_class.call_args[1]
-        assert call_kwargs["size"] == "a3"
+        assert call_kwargs["paper_size"] == "a3"
 
     def test_latlon_with_landscape(
         self,
@@ -425,7 +432,7 @@ class TestLatLonCommand:
                 str(TEST_LAT),
                 str(TEST_LON),
                 str(output_file),
-                "--size",
+                "--paper-size",
                 "invalid",
             ],
         )
@@ -531,7 +538,7 @@ class TestUtmCommand:
                     "--scale",
                     "10000",
                     "--grid",
-                    "--size",
+                    "--paper-size",
                     "a3",
                 ],
             )
@@ -540,7 +547,7 @@ class TestUtmCommand:
             call_kwargs = mock_create_and_save_map.call_args.kwargs
             assert call_kwargs["scale"] == 10000
             assert call_kwargs["add_grid"]
-            assert call_kwargs["size"] == "a3"
+            assert call_kwargs["paper_size"] == "a3"
 
 
 class TestDefaultCommand:
@@ -602,13 +609,13 @@ class TestTileServerChoices:
 class TestPaperSizeChoices:
     """Tests for paper size option choices."""
 
-    @pytest.mark.parametrize("size", SIZES)
+    @pytest.mark.parametrize("paper_size", PAPER_SIZES)
     def test_all_sizes_work(
         self,
         runner: CliRunner,
         mock_papermap: tuple[MagicMock, MagicMock],
         tmp_path: Path,
-        size: str,
+        paper_size: str,
     ) -> None:
         mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
@@ -620,14 +627,14 @@ class TestPaperSizeChoices:
                 str(TEST_LAT),
                 str(TEST_LON),
                 str(output_file),
-                "--size",
-                size,
+                "--paper-size",
+                paper_size,
             ],
         )
 
         assert result.exit_code == 0
         call_kwargs = mock_class.call_args[1]
-        assert call_kwargs["size"] == size
+        assert call_kwargs["paper_size"] == paper_size
 
 
 class TestCliDefaults:
@@ -651,7 +658,7 @@ class TestCliDefaults:
 
         # Check defaults
         assert call_kwargs["tile_server"] == "OpenStreetMap"
-        assert call_kwargs["size"] == "a4"
+        assert call_kwargs["paper_size"] == "a4"
         assert not call_kwargs["use_landscape"]
         assert call_kwargs["scale"] == DEFAULT_SCALE
         assert call_kwargs["dpi"] == DEFAULT_DPI

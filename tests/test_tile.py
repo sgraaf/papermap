@@ -47,48 +47,6 @@ class TestTileSuccess:
         assert tile.success
 
 
-class TestTileFormatUrlTemplate:
-    """Tests for Tile.format_url_template method."""
-
-    def test_basic_formatting(self, tile: Tile) -> None:
-        template = "https://example.com/{zoom}/{x}/{y}.png"
-        result = tile.format_url_template(template)
-        assert result == "https://example.com/10/123/456.png"
-
-    def test_formatting_with_mirror(self, tile: Tile) -> None:
-        template = "https://{mirror}.example.com/{zoom}/{x}/{y}.png"
-        result = tile.format_url_template(template, mirror="a")
-        assert result == "https://a.example.com/10/123/456.png"
-
-    def test_formatting_with_api_key(self, tile: Tile) -> None:
-        template = "https://example.com/{zoom}/{x}/{y}.png?key={api_key}"
-        result = tile.format_url_template(template, api_key="secret123")
-        assert result == "https://example.com/10/123/456.png?key=secret123"
-
-    def test_formatting_with_all_placeholders(self, tile: Tile) -> None:
-        template = "https://{mirror}.example.com/{zoom}/{x}/{y}.png?key={api_key}"
-        result = tile.format_url_template(template, mirror="b", api_key="mykey")
-        assert result == "https://b.example.com/10/123/456.png?key=mykey"
-
-    def test_formatting_with_none_mirror(self, tile: Tile) -> None:
-        template = "https://{mirror}.example.com/{zoom}/{x}/{y}.png"
-        result = tile.format_url_template(template, mirror=None)
-        assert result == "https://None.example.com/10/123/456.png"
-
-    def test_formatting_with_integer_mirror(self) -> None:
-        tile = Tile(x=100, y=200, zoom=12, bbox=(0, 0, 256, 256))
-        template = "https://mt{mirror}.example.com/{zoom}/{x}/{y}.png"
-        result = tile.format_url_template(template, mirror="0")
-        assert result == "https://mt0.example.com/12/100/200.png"
-
-    def test_formatting_different_zoom_levels(self) -> None:
-        for zoom in [0, 5, 10, 15, 19]:
-            tile = Tile(x=1, y=1, zoom=zoom, bbox=(0, 0, 256, 256))
-            template = "https://example.com/{zoom}/{x}/{y}.png"
-            result = tile.format_url_template(template)
-            assert f"/{zoom}/" in result
-
-
 class TestTileEquality:
     """Tests for Tile equality comparisons."""
 
