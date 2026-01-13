@@ -10,6 +10,14 @@
   - Tile server configurations moved to `tile_server.py`
   - Paper sizes and default values moved to `papermap.py`
   - Geographic constants and type aliases moved to `utils.py`
+- Enhanced `TileServer` dataclass with new properties:
+  - Added `key` property for tile server key (lowercase with dashes)
+  - Added `name` property for tile server display name
+  - Added `html_attribution` property for HTML-formatted attribution with hyperlinks
+  - Added `bounds` property for geographic bounds (optional)
+  - Renamed `mirrors` to `subdomains` for better clarity
+  - Renamed `mirrors_cycle` to `subdomains_cycle`
+  - Updated URL template placeholders: `{zoom}` → `{z}`, `{mirror}` → `{s}`, `{api_key}` → `{a}`
 
 ### Removed
 
