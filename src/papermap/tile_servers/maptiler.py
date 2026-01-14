@@ -37,39 +37,22 @@ def _maptiler_server(
     )
 
 
-TILE_SERVERS: dict[str, TileServer] = {
-    "MapTiler Streets": _maptiler_server(
-        "maptiler-streets", "MapTiler Streets", "streets-v2"
-    ),
-    "MapTiler Basic": _maptiler_server(
-        "maptiler-basic", "MapTiler Basic", "basic-v2"
-    ),
-    "MapTiler Bright": _maptiler_server(
-        "maptiler-bright", "MapTiler Bright", "bright-v2"
-    ),
-    "MapTiler Pastel": _maptiler_server(
-        "maptiler-pastel", "MapTiler Pastel", "pastel"
-    ),
-    "MapTiler Positron": _maptiler_server(
-        "maptiler-positron", "MapTiler Positron", "positron"
-    ),
-    "MapTiler Hybrid": _maptiler_server(
-        "maptiler-hybrid", "MapTiler Hybrid", "hybrid", ext="jpg"
-    ),
-    "MapTiler Satellite": _maptiler_server(
+TILE_SERVERS: list[TileServer] = [
+    _maptiler_server("maptiler-streets", "MapTiler Streets", "streets-v2"),
+    _maptiler_server("maptiler-basic", "MapTiler Basic", "basic-v2"),
+    _maptiler_server("maptiler-bright", "MapTiler Bright", "bright-v2"),
+    _maptiler_server("maptiler-pastel", "MapTiler Pastel", "pastel"),
+    _maptiler_server("maptiler-positron", "MapTiler Positron", "positron"),
+    _maptiler_server("maptiler-hybrid", "MapTiler Hybrid", "hybrid", ext="jpg"),
+    _maptiler_server(
         "maptiler-satellite", "MapTiler Satellite", "satellite-v2", ext="jpg"
     ),
-    "MapTiler Toner": _maptiler_server(
-        "maptiler-toner", "MapTiler Toner", "toner-v2"
-    ),
-    "MapTiler Topo": _maptiler_server(
-        "maptiler-topo", "MapTiler Topo", "topo-v2"
-    ),
-    "MapTiler Winter": _maptiler_server(
-        "maptiler-winter", "MapTiler Winter", "winter-v2"
-    ),
-    "MapTiler Outdoor": _maptiler_server(
-        "maptiler-outdoor", "MapTiler Outdoor", "outdoor-v2"
-    ),
-}
+    _maptiler_server("maptiler-toner", "MapTiler Toner", "toner-v2"),
+    _maptiler_server("maptiler-topo", "MapTiler Topo", "topo-v2"),
+    _maptiler_server("maptiler-winter", "MapTiler Winter", "winter-v2"),
+    _maptiler_server("maptiler-outdoor", "MapTiler Outdoor", "outdoor-v2"),
+]
 """MapTiler tile servers."""
+
+KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
+"""Mapping from tile server key to TileServer instance."""

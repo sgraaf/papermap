@@ -10,8 +10,8 @@ from __future__ import annotations
 
 from papermap.tile_server import TileServer
 
-TILE_SERVERS: dict[str, TileServer] = {
-    "Wikimedia": TileServer(
+TILE_SERVERS: list[TileServer] = [
+    TileServer(
         key="wikimedia",
         name="Wikimedia",
         attribution="Map data: © OpenStreetMap contributors. Map style: © Wikimedia Foundation",
@@ -24,5 +24,8 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_min=0,
         zoom_max=19,
     ),
-}
+]
 """Wikimedia tile servers."""
+
+KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
+"""Mapping from tile server key to TileServer instance."""

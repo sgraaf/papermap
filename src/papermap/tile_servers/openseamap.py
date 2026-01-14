@@ -10,8 +10,8 @@ from __future__ import annotations
 
 from papermap.tile_server import TileServer
 
-TILE_SERVERS: dict[str, TileServer] = {
-    "OpenSeaMap": TileServer(
+TILE_SERVERS: list[TileServer] = [
+    TileServer(
         key="openseamap",
         name="OpenSeaMap",
         attribution="Map data: © OpenSeaMap contributors",
@@ -23,5 +23,8 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_min=0,
         zoom_max=18,
     ),
-}
+]
 """OpenSeaMap tile servers."""
+
+KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
+"""Mapping from tile server key to TileServer instance."""

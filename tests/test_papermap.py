@@ -66,7 +66,7 @@ class TestPaperMapInit:
         pm = PaperMap(
             lat=40.7128,
             lon=-74.0060,
-            tile_server="Thunderforest Landscape",
+            tile_server="thunderforest-landscape",
             api_key="test_key",
         )
         assert pm.api_key == "test_key"
@@ -105,7 +105,7 @@ class TestPaperMapValidation:
 
     def test_valid_tile_servers(self) -> None:
         # Test a few valid tile servers
-        for ts in ["OpenStreetMap", "Google Maps", "ESRI Standard"]:
+        for ts in ["openstreetmap", "google-maps", "esri-worldstreetmap"]:
             pm = PaperMap(lat=40.7128, lon=-74.0060, tile_server=ts)
             assert pm.tile_server is not None
 
@@ -114,7 +114,7 @@ class TestPaperMapValidation:
         pm = PaperMap(
             lat=40.7128,
             lon=-74.0060,
-            tile_server="Thunderforest Landscape",
+            tile_server="thunderforest-landscape",
             api_key="test_key",
         )
         assert pm.api_key == "test_key"
@@ -124,7 +124,7 @@ class TestPaperMapValidation:
             PaperMap(
                 lat=40.7128,
                 lon=-74.0060,
-                tile_server="Thunderforest Landscape",
+                tile_server="thunderforest-landscape",
             )
 
     def test_invalid_paper_size_raises_error(self) -> None:
@@ -281,7 +281,7 @@ class TestPaperMapEdgeCases:
         pm = PaperMap(
             lat=40.7128,
             lon=-74.0060,
-            tile_server="Thunderforest Landscape",
+            tile_server="thunderforest-landscape",
             api_key="",
         )
         assert pm.api_key == ""
@@ -291,7 +291,7 @@ class TestPaperMapEdgeCases:
         pm = PaperMap(
             lat=40.7128,
             lon=-74.0060,
-            tile_server="Thunderforest Landscape",
+            tile_server="thunderforest-landscape",
             api_key="test-key_123.456/abc",
         )
         assert pm.api_key == "test-key_123.456/abc"

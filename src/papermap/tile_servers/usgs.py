@@ -35,11 +35,12 @@ def _usgs_server(
     )
 
 
-TILE_SERVERS: dict[str, TileServer] = {
-    "USGS USTopo": _usgs_server("usgs-ustopo", "USGS USTopo", "USGSTopo"),
-    "USGS USImagery": _usgs_server("usgs-usimagery", "USGS USImagery", "USGSImageryOnly"),
-    "USGS USImageryTopo": _usgs_server(
-        "usgs-usimagerytopo", "USGS USImageryTopo", "USGSImageryTopo"
-    ),
-}
+TILE_SERVERS: list[TileServer] = [
+    _usgs_server("usgs-ustopo", "USGS USTopo", "USGSTopo"),
+    _usgs_server("usgs-usimagery", "USGS USImagery", "USGSImageryOnly"),
+    _usgs_server("usgs-usimagerytopo", "USGS USImageryTopo", "USGSImageryTopo"),
+]
 """USGS tile servers."""
+
+KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
+"""Mapping from tile server key to TileServer instance."""

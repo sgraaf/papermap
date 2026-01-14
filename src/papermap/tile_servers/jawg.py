@@ -36,12 +36,15 @@ def _jawg_server(
     )
 
 
-TILE_SERVERS: dict[str, TileServer] = {
-    "Jawg Streets": _jawg_server("jawg-streets", "Jawg Streets", "jawg-streets"),
-    "Jawg Terrain": _jawg_server("jawg-terrain", "Jawg Terrain", "jawg-terrain"),
-    "Jawg Sunny": _jawg_server("jawg-sunny", "Jawg Sunny", "jawg-sunny"),
-    "Jawg Dark": _jawg_server("jawg-dark", "Jawg Dark", "jawg-dark"),
-    "Jawg Light": _jawg_server("jawg-light", "Jawg Light", "jawg-light"),
-    "Jawg Matrix": _jawg_server("jawg-matrix", "Jawg Matrix", "jawg-matrix"),
-}
+TILE_SERVERS: list[TileServer] = [
+    _jawg_server("jawg-streets", "Jawg Streets", "jawg-streets"),
+    _jawg_server("jawg-terrain", "Jawg Terrain", "jawg-terrain"),
+    _jawg_server("jawg-sunny", "Jawg Sunny", "jawg-sunny"),
+    _jawg_server("jawg-dark", "Jawg Dark", "jawg-dark"),
+    _jawg_server("jawg-light", "Jawg Light", "jawg-light"),
+    _jawg_server("jawg-matrix", "Jawg Matrix", "jawg-matrix"),
+]
 """Jawg Maps tile servers."""
+
+KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
+"""Mapping from tile server key to TileServer instance."""

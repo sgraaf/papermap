@@ -13,8 +13,8 @@ OSM_HTML_ATTRIBUTION = (
     '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
 )
 
-TILE_SERVERS: dict[str, TileServer] = {
-    "OPNVKarte": TileServer(
+TILE_SERVERS: list[TileServer] = [
+    TileServer(
         key="opnvkarte",
         name="OPNVKarte",
         attribution="Map data: © OpenStreetMap contributors. Map style: © ÖPNVKarte",
@@ -27,7 +27,7 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_min=0,
         zoom_max=18,
     ),
-    "MtbMap": TileServer(
+    TileServer(
         key="mtbmap",
         name="MtbMap",
         attribution="Map data: © OpenStreetMap contributors, USGS. Map style: © mtbmap.cz",
@@ -40,7 +40,7 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_min=0,
         zoom_max=18,
     ),
-    "HikeBike": TileServer(
+    TileServer(
         key="hikebike",
         name="HikeBike",
         attribution=f"Map data: {OSM_ATTRIBUTION}",
@@ -50,7 +50,7 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_min=0,
         zoom_max=19,
     ),
-    "SafeCast": TileServer(
+    TileServer(
         key="safecast",
         name="SafeCast",
         attribution="Map data: © OpenStreetMap contributors. Map style: © SafeCast",
@@ -63,7 +63,7 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_min=0,
         zoom_max=16,
     ),
-    "Geofabrik Topo": TileServer(
+    TileServer(
         key="geofabrik-topo",
         name="Geofabrik Topo",
         attribution=f"Map data: {OSM_ATTRIBUTION}",
@@ -73,7 +73,7 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_min=0,
         zoom_max=19,
     ),
-    "Mapy.cz": TileServer(
+    TileServer(
         key="mapy-cz",
         name="Mapy.cz",
         attribution="Map data: © OpenStreetMap contributors. Map style: © Seznam.cz",
@@ -86,7 +86,7 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_min=0,
         zoom_max=19,
     ),
-    "Komoot": TileServer(
+    TileServer(
         key="komoot",
         name="Komoot",
         attribution=f"Map data: {OSM_ATTRIBUTION}",
@@ -96,7 +96,7 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_min=0,
         zoom_max=19,
     ),
-    "AllTrails": TileServer(
+    TileServer(
         key="alltrails",
         name="AllTrails",
         attribution=f"Map data: {OSM_ATTRIBUTION}",
@@ -106,7 +106,7 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_min=0,
         zoom_max=20,
     ),
-    "Waymarked Trails Hiking": TileServer(
+    TileServer(
         key="waymarkedtrails-hiking",
         name="Waymarked Trails Hiking",
         attribution="Map data: © OpenStreetMap contributors. Overlay: © Waymarked Trails",
@@ -119,7 +119,7 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_min=0,
         zoom_max=18,
     ),
-    "Waymarked Trails Cycling": TileServer(
+    TileServer(
         key="waymarkedtrails-cycling",
         name="Waymarked Trails Cycling",
         attribution="Map data: © OpenStreetMap contributors. Overlay: © Waymarked Trails",
@@ -132,7 +132,7 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_min=0,
         zoom_max=18,
     ),
-    "Waymarked Trails MTB": TileServer(
+    TileServer(
         key="waymarkedtrails-mtb",
         name="Waymarked Trails MTB",
         attribution="Map data: © OpenStreetMap contributors. Overlay: © Waymarked Trails",
@@ -145,7 +145,7 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_min=0,
         zoom_max=18,
     ),
-    "Waymarked Trails Slopes": TileServer(
+    TileServer(
         key="waymarkedtrails-slopes",
         name="Waymarked Trails Slopes",
         attribution="Map data: © OpenStreetMap contributors. Overlay: © Waymarked Trails",
@@ -158,7 +158,7 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_min=0,
         zoom_max=18,
     ),
-    "Waymarked Trails Riding": TileServer(
+    TileServer(
         key="waymarkedtrails-riding",
         name="Waymarked Trails Riding",
         attribution="Map data: © OpenStreetMap contributors. Overlay: © Waymarked Trails",
@@ -171,7 +171,7 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_min=0,
         zoom_max=18,
     ),
-    "Waymarked Trails Skating": TileServer(
+    TileServer(
         key="waymarkedtrails-skating",
         name="Waymarked Trails Skating",
         attribution="Map data: © OpenStreetMap contributors. Overlay: © Waymarked Trails",
@@ -184,7 +184,7 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_min=0,
         zoom_max=18,
     ),
-    "OpenAIP": TileServer(
+    TileServer(
         key="openaip",
         name="OpenAIP",
         attribution="© OpenAIP",
@@ -194,7 +194,7 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_min=4,
         zoom_max=14,
     ),
-    "OpenSnowMap": TileServer(
+    TileServer(
         key="opensnowmap",
         name="OpenSnowMap",
         attribution="Map data: © OpenStreetMap contributors. Overlay: © OpenSnowMap",
@@ -207,7 +207,7 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_min=0,
         zoom_max=18,
     ),
-    "OpenRailwayMap": TileServer(
+    TileServer(
         key="openrailwaymap",
         name="OpenRailwayMap",
         attribution="Map data: © OpenStreetMap contributors. Map style: © OpenRailwayMap (CC-BY-SA)",
@@ -221,7 +221,7 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_min=0,
         zoom_max=19,
     ),
-    "OpenFireMap": TileServer(
+    TileServer(
         key="openfiremap",
         name="OpenFireMap",
         attribution="Map data: © OpenStreetMap contributors. Map style: © OpenFireMap (CC-BY-SA)",
@@ -235,5 +235,8 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_min=0,
         zoom_max=19,
     ),
-}
+]
 """Miscellaneous tile servers."""
+
+KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
+"""Mapping from tile server key to TileServer instance."""

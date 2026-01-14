@@ -36,25 +36,24 @@ def _basemap_at_server(
     )
 
 
-TILE_SERVERS: dict[str, TileServer] = {
-    "BasemapAT": _basemap_at_server("basemapat", "BasemapAT", "geolandbasemap"),
-    "BasemapAT Grau": _basemap_at_server(
-        "basemapat-grau", "BasemapAT Grau", "bmapgrau"
-    ),
-    "BasemapAT Overlay": _basemap_at_server(
-        "basemapat-overlay", "BasemapAT Overlay", "bmapoverlay"
-    ),
-    "BasemapAT Terrain": _basemap_at_server(
+TILE_SERVERS: list[TileServer] = [
+    _basemap_at_server("basemapat", "BasemapAT", "geolandbasemap"),
+    _basemap_at_server("basemapat-grau", "BasemapAT Grau", "bmapgrau"),
+    _basemap_at_server("basemapat-overlay", "BasemapAT Overlay", "bmapoverlay"),
+    _basemap_at_server(
         "basemapat-terrain", "BasemapAT Terrain", "bmapgelaende", ext="jpeg"
     ),
-    "BasemapAT Surface": _basemap_at_server(
+    _basemap_at_server(
         "basemapat-surface", "BasemapAT Surface", "bmapoberflaeche", ext="jpeg"
     ),
-    "BasemapAT Highdpi": _basemap_at_server(
+    _basemap_at_server(
         "basemapat-highdpi", "BasemapAT Highdpi", "bmaphidpi", zoom_max=19
     ),
-    "BasemapAT Orthofoto": _basemap_at_server(
+    _basemap_at_server(
         "basemapat-orthofoto", "BasemapAT Orthofoto", "bmaporthofoto30cm", ext="jpeg"
     ),
-}
+]
 """Basemap.at tile servers."""
+
+KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
+"""Mapping from tile server key to TileServer instance."""

@@ -34,22 +34,15 @@ def _google_server(
     )
 
 
-TILE_SERVERS: dict[str, TileServer] = {
-    "Google Maps": _google_server("google-maps", "Google Maps", "m"),
-    "Google Maps Satellite": _google_server(
-        "google-maps-satellite", "Google Maps Satellite", "s"
-    ),
-    "Google Maps Satellite Hybrid": _google_server(
-        "google-maps-satellite-hybrid", "Google Maps Satellite Hybrid", "y"
-    ),
-    "Google Maps Terrain": _google_server(
-        "google-maps-terrain", "Google Maps Terrain", "t"
-    ),
-    "Google Maps Terrain Hybrid": _google_server(
-        "google-maps-terrain-hybrid", "Google Maps Terrain Hybrid", "p"
-    ),
-    "Google Maps Roads": _google_server(
-        "google-maps-roads", "Google Maps Roads", "h"
-    ),
-}
+TILE_SERVERS: list[TileServer] = [
+    _google_server("google-maps", "Google Maps", "m"),
+    _google_server("google-maps-satellite", "Google Maps Satellite", "s"),
+    _google_server("google-maps-satellite-hybrid", "Google Maps Satellite Hybrid", "y"),
+    _google_server("google-maps-terrain", "Google Maps Terrain", "t"),
+    _google_server("google-maps-terrain-hybrid", "Google Maps Terrain Hybrid", "p"),
+    _google_server("google-maps-roads", "Google Maps Roads", "h"),
+]
 """Google Maps tile servers."""
+
+KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
+"""Mapping from tile server key to TileServer instance."""

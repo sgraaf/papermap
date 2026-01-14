@@ -488,7 +488,7 @@ class TestTileServerConfiguration:
 
     @pytest.mark.parametrize(
         "tile_server",
-        ["OpenStreetMap", "Google Maps", "ESRI Standard"],
+        ["openstreetmap", "google-maps", "esri-worldstreetmap"],
     )
     def test_different_tile_servers(
         self,
@@ -505,7 +505,7 @@ class TestTileServerConfiguration:
 
         pm.render()
 
-        output_file = tmp_path / f"test_{tile_server.replace(' ', '_')}.pdf"
+        output_file = tmp_path / f"test_{tile_server.replace('-', '_')}.pdf"
         pm.save(output_file)
 
         assert output_file.exists()
@@ -514,7 +514,7 @@ class TestTileServerConfiguration:
         self, httpx_mock: HTTPXMock, tile_image_content: bytes
     ) -> None:
         """Test that tile server attribution is included in output."""
-        pm = PaperMap(lat=40.7128, lon=-74.0060, tile_server="OpenStreetMap")
+        pm = PaperMap(lat=40.7128, lon=-74.0060, tile_server="openstreetmap")
 
         for _ in range(len(pm.tiles)):
             httpx_mock.add_response(content=tile_image_content)

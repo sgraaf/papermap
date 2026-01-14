@@ -34,102 +34,76 @@ def _here_server(
     )
 
 
-TILE_SERVERS: dict[str, TileServer] = {
-    "HERE normalDay": _here_server(
-        "here-normalday", "HERE normalDay", "normal.day"
-    ),
-    "HERE normalDayCustom": _here_server(
-        "here-normaldaycustom", "HERE normalDayCustom", "normal.day.custom"
-    ),
-    "HERE normalDayGrey": _here_server(
-        "here-normaldaygrey", "HERE normalDayGrey", "normal.day.grey"
-    ),
-    "HERE normalDayMobile": _here_server(
-        "here-normaldaymobile", "HERE normalDayMobile", "normal.day.mobile"
-    ),
-    "HERE normalDayGreyMobile": _here_server(
+TILE_SERVERS: list[TileServer] = [
+    _here_server("here-normalday", "HERE normalDay", "normal.day"),
+    _here_server("here-normaldaycustom", "HERE normalDayCustom", "normal.day.custom"),
+    _here_server("here-normaldaygrey", "HERE normalDayGrey", "normal.day.grey"),
+    _here_server("here-normaldaymobile", "HERE normalDayMobile", "normal.day.mobile"),
+    _here_server(
         "here-normaldaygreymobile", "HERE normalDayGreyMobile", "normal.day.grey.mobile"
     ),
-    "HERE normalDayTransit": _here_server(
+    _here_server(
         "here-normaldaytransit", "HERE normalDayTransit", "normal.day.transit"
     ),
-    "HERE normalDayTransitMobile": _here_server(
+    _here_server(
         "here-normaldaytransitmobile",
         "HERE normalDayTransitMobile",
         "normal.day.transit.mobile",
     ),
-    "HERE normalNight": _here_server(
-        "here-normalnight", "HERE normalNight", "normal.night"
-    ),
-    "HERE normalNightMobile": _here_server(
+    _here_server("here-normalnight", "HERE normalNight", "normal.night"),
+    _here_server(
         "here-normalnightmobile", "HERE normalNightMobile", "normal.night.mobile"
     ),
-    "HERE normalNightGrey": _here_server(
-        "here-normalnightgrey", "HERE normalNightGrey", "normal.night.grey"
-    ),
-    "HERE normalNightGreyMobile": _here_server(
+    _here_server("here-normalnightgrey", "HERE normalNightGrey", "normal.night.grey"),
+    _here_server(
         "here-normalnightgreymobile",
         "HERE normalNightGreyMobile",
         "normal.night.grey.mobile",
     ),
-    "HERE normalNightTransit": _here_server(
+    _here_server(
         "here-normalnighttransit", "HERE normalNightTransit", "normal.night.transit"
     ),
-    "HERE normalNightTransitMobile": _here_server(
+    _here_server(
         "here-normalnighttransitmobile",
         "HERE normalNightTransitMobile",
         "normal.night.transit.mobile",
     ),
-    "HERE reducedDay": _here_server(
-        "here-reducedday", "HERE reducedDay", "reduced.day"
+    _here_server("here-reducedday", "HERE reducedDay", "reduced.day"),
+    _here_server("here-reducednight", "HERE reducedNight", "reduced.night"),
+    _here_server("here-basicmap", "HERE basicMap", "normal.day", base="base"),
+    _here_server("here-maplabels", "HERE mapLabels", "normal.day", base="base"),
+    _here_server("here-trafficflow", "HERE trafficFlow", "normal.day", base="traffic"),
+    _here_server("here-carnavdaygrey", "HERE carnavDayGrey", "carnav.day.grey"),
+    _here_server("here-hybridday", "HERE hybridDay", "hybrid.day", base="aerial"),
+    _here_server(
+        "here-hybriddaymobile",
+        "HERE hybridDayMobile",
+        "hybrid.day.mobile",
+        base="aerial",
     ),
-    "HERE reducedNight": _here_server(
-        "here-reducednight", "HERE reducedNight", "reduced.night"
-    ),
-    "HERE basicMap": _here_server(
-        "here-basicmap", "HERE basicMap", "normal.day", base="base"
-    ),
-    "HERE mapLabels": _here_server(
-        "here-maplabels", "HERE mapLabels", "normal.day", base="base"
-    ),
-    "HERE trafficFlow": _here_server(
-        "here-trafficflow", "HERE trafficFlow", "normal.day", base="traffic"
-    ),
-    "HERE carnavDayGrey": _here_server(
-        "here-carnavdaygrey", "HERE carnavDayGrey", "carnav.day.grey"
-    ),
-    "HERE hybridDay": _here_server(
-        "here-hybridday", "HERE hybridDay", "hybrid.day", base="aerial"
-    ),
-    "HERE hybridDayMobile": _here_server(
-        "here-hybriddaymobile", "HERE hybridDayMobile", "hybrid.day.mobile", base="aerial"
-    ),
-    "HERE hybridDayTransit": _here_server(
+    _here_server(
         "here-hybriddaytransit",
         "HERE hybridDayTransit",
         "hybrid.day.transit",
         base="aerial",
     ),
-    "HERE hybridDayGrey": _here_server(
+    _here_server(
         "here-hybriddaygrey", "HERE hybridDayGrey", "hybrid.grey.day", base="aerial"
     ),
-    "HERE pedestrianDay": _here_server(
-        "here-pedestrianday", "HERE pedestrianDay", "pedestrian.day"
-    ),
-    "HERE pedestrianNight": _here_server(
-        "here-pedestriannight", "HERE pedestrianNight", "pedestrian.night"
-    ),
-    "HERE satelliteDay": _here_server(
+    _here_server("here-pedestrianday", "HERE pedestrianDay", "pedestrian.day"),
+    _here_server("here-pedestriannight", "HERE pedestrianNight", "pedestrian.night"),
+    _here_server(
         "here-satelliteday", "HERE satelliteDay", "satellite.day", base="aerial"
     ),
-    "HERE terrainDay": _here_server(
-        "here-terrainday", "HERE terrainDay", "terrain.day", base="aerial"
-    ),
-    "HERE terrainDayMobile": _here_server(
+    _here_server("here-terrainday", "HERE terrainDay", "terrain.day", base="aerial"),
+    _here_server(
         "here-terraindaymobile",
         "HERE terrainDayMobile",
         "terrain.day.mobile",
         base="aerial",
     ),
-}
+]
 """HERE tile servers."""
+
+KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
+"""Mapping from tile server key to TileServer instance."""

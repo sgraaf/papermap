@@ -36,22 +36,25 @@ def _swiss_server(
     )
 
 
-TILE_SERVERS: dict[str, TileServer] = {
-    "SwissFederalGeoportal NationalMapColor": _swiss_server(
+TILE_SERVERS: list[TileServer] = [
+    _swiss_server(
         "swissfederalgeoportal-nationalmapcolor",
         "SwissFederalGeoportal NationalMapColor",
         "ch.swisstopo.pixelkarte-farbe",
     ),
-    "SwissFederalGeoportal NationalMapGrey": _swiss_server(
+    _swiss_server(
         "swissfederalgeoportal-nationalmapgrey",
         "SwissFederalGeoportal NationalMapGrey",
         "ch.swisstopo.pixelkarte-grau",
     ),
-    "SwissFederalGeoportal SWISSIMAGE": _swiss_server(
+    _swiss_server(
         "swissfederalgeoportal-swissimage",
         "SwissFederalGeoportal SWISSIMAGE",
         "ch.swisstopo.swissimage",
         zoom_max=20,
     ),
-}
+]
 """Swiss Federal Geoportal tile servers."""
+
+KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
+"""Mapping from tile server key to TileServer instance."""

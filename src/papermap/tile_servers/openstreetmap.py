@@ -15,8 +15,8 @@ OSM_HTML_ATTRIBUTION = (
     '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
 )
 
-TILE_SERVERS: dict[str, TileServer] = {
-    "OpenStreetMap": TileServer(
+TILE_SERVERS: list[TileServer] = [
+    TileServer(
         key="openstreetmap",
         name="OpenStreetMap",
         attribution=f"Map data: {OSM_ATTRIBUTION}",
@@ -26,7 +26,7 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_min=0,
         zoom_max=19,
     ),
-    "OpenStreetMap DE": TileServer(
+    TileServer(
         key="openstreetmap-de",
         name="OpenStreetMap DE",
         attribution=f"Map data: {OSM_ATTRIBUTION}",
@@ -36,7 +36,7 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_min=0,
         zoom_max=18,
     ),
-    "OpenStreetMap CH": TileServer(
+    TileServer(
         key="openstreetmap-ch",
         name="OpenStreetMap CH",
         attribution=f"Map data: {OSM_ATTRIBUTION}",
@@ -47,7 +47,7 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_max=18,
         bounds=(5.140242, 45.398181, 11.47757, 48.230651),
     ),
-    "OpenStreetMap France": TileServer(
+    TileServer(
         key="openstreetmap-france",
         name="OpenStreetMap France",
         attribution=f"Map data: {OSM_ATTRIBUTION}",
@@ -57,7 +57,7 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_min=0,
         zoom_max=20,
     ),
-    "OpenStreetMap HOT": TileServer(
+    TileServer(
         key="openstreetmap-hot",
         name="OpenStreetMap HOT",
         attribution=f"Map data: {OSM_ATTRIBUTION}. Tiles style: © Humanitarian OpenStreetMap Team",
@@ -67,7 +67,7 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_min=0,
         zoom_max=19,
     ),
-    "OpenStreetMap BZH": TileServer(
+    TileServer(
         key="openstreetmap-bzh",
         name="OpenStreetMap BZH",
         attribution=f"Map data: {OSM_ATTRIBUTION}. Tiles: © Breton OpenStreetMap Team",
@@ -78,5 +78,8 @@ TILE_SERVERS: dict[str, TileServer] = {
         zoom_max=19,
         bounds=(-5.4, 46.2, -0.7, 48.9),
     ),
-}
+]
 """OpenStreetMap tile servers."""
+
+KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
+"""Mapping from tile server key to TileServer instance."""

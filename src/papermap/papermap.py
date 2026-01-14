@@ -12,7 +12,7 @@ from fpdf import FPDF
 from PIL import Image
 
 from .tile import TILE_SIZE, Tile
-from .tile_server import DEFAULT_TILE_SERVER, TILE_SERVERS, TILE_SERVERS_MAP
+from .tile_server import DEFAULT_TILE_SERVER, KEY_TO_TILE_SERVER
 from .utils import (
     drange,
     get_string_formatting_arguments,
@@ -136,10 +136,11 @@ class PaperMap:
         self.grid_size = grid_size
 
         # get the tile server
-        if tile_server in TILE_SERVERS_MAP:
-            self.tile_server = TILE_SERVERS_MAP[tile_server]
+        if tile_server in KEY_TO_TILE_SERVER:
+            self.tile_server = KEY_TO_TILE_SERVER[tile_server]
         else:
-            msg = f"Invalid tile server. Please choose one of {', '.join(TILE_SERVERS)}"
+            available_keys = sorted(KEY_TO_TILE_SERVER.keys())
+            msg = f"Invalid tile server key '{tile_server}'. Please choose one of {', '.join(available_keys)}"
             raise ValueError(msg)
 
         # get the tile server subdomains

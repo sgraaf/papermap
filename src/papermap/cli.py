@@ -16,7 +16,7 @@ from .papermap import (
     PAPER_SIZES,
     PaperMap,
 )
-from .tile_server import DEFAULT_TILE_SERVER, TILE_SERVERS
+from .tile_server import DEFAULT_TILE_SERVER, KEY_TO_TILE_SERVER
 from .utils import utm_to_spherical
 
 CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
@@ -85,7 +85,7 @@ def common_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
     @click.argument("file", type=click.Path(dir_okay=False, path_type=Path))
     @click.option(
         "--tile-server",
-        type=click.Choice(TILE_SERVERS),
+        type=click.Choice(sorted(KEY_TO_TILE_SERVER.keys())),
         default=DEFAULT_TILE_SERVER,
         help="Tile server to serve as the base of the paper map.",
     )

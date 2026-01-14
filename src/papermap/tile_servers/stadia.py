@@ -17,7 +17,9 @@ STADIA_HTML_ATTRIBUTION = (
     '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
 )
 
-STAMEN_ATTRIBUTION = "Map tiles by Stamen Design, under CC BY 4.0. Data by OpenStreetMap, under ODbL"
+STAMEN_ATTRIBUTION = (
+    "Map tiles by Stamen Design, under CC BY 4.0. Data by OpenStreetMap, under ODbL"
+)
 STAMEN_HTML_ATTRIBUTION = (
     'Map tiles by <a href="https://stamen.com/">Stamen Design</a>, '
     'under <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a>. '
@@ -26,7 +28,7 @@ STAMEN_HTML_ATTRIBUTION = (
 )
 
 
-def _stadia_server(
+def _stadia_server(  # noqa: PLR0913
     key: str,
     name: str,
     variant: str,
@@ -54,64 +56,58 @@ def _stadia_server(
     )
 
 
-TILE_SERVERS: dict[str, TileServer] = {
+TILE_SERVERS: list[TileServer] = [
     # Stadia native styles
-    "Stadia AlidadeSmooth": _stadia_server(
-        "stadia-alidadesmooth", "Stadia AlidadeSmooth", "alidade_smooth"
-    ),
-    "Stadia AlidadeSmoothDark": _stadia_server(
+    _stadia_server("stadia-alidadesmooth", "Stadia AlidadeSmooth", "alidade_smooth"),
+    _stadia_server(
         "stadia-alidasesmoothdark", "Stadia AlidadeSmoothDark", "alidade_smooth_dark"
     ),
-    "Stadia AlidadeSatellite": _stadia_server(
+    _stadia_server(
         "stadia-alidasesatellite",
         "Stadia AlidadeSatellite",
         "alidade_satellite",
         zoom_max=20,
         ext="jpg",
     ),
-    "Stadia OSMBright": _stadia_server(
-        "stadia-osmbright", "Stadia OSMBright", "osm_bright"
-    ),
-    "Stadia Outdoors": _stadia_server(
-        "stadia-outdoors", "Stadia Outdoors", "outdoors"
-    ),
+    _stadia_server("stadia-osmbright", "Stadia OSMBright", "osm_bright"),
+    _stadia_server("stadia-outdoors", "Stadia Outdoors", "outdoors"),
     # Stamen styles (now hosted by Stadia)
-    "Stadia StamenToner": _stadia_server(
+    _stadia_server(
         "stadia-stamentoner",
         "Stadia StamenToner",
         "stamen_toner",
         zoom_max=20,
         use_stamen_attribution=True,
     ),
-    "Stadia StamenTonerBackground": _stadia_server(
+    _stadia_server(
         "stadia-stamentonerbackground",
         "Stadia StamenTonerBackground",
         "stamen_toner_background",
         zoom_max=20,
         use_stamen_attribution=True,
     ),
-    "Stadia StamenTonerLines": _stadia_server(
+    _stadia_server(
         "stadia-stamentonerlines",
         "Stadia StamenTonerLines",
         "stamen_toner_lines",
         zoom_max=20,
         use_stamen_attribution=True,
     ),
-    "Stadia StamenTonerLabels": _stadia_server(
+    _stadia_server(
         "stadia-stamentonerlabels",
         "Stadia StamenTonerLabels",
         "stamen_toner_labels",
         zoom_max=20,
         use_stamen_attribution=True,
     ),
-    "Stadia StamenTonerLite": _stadia_server(
+    _stadia_server(
         "stadia-stamentonerlite",
         "Stadia StamenTonerLite",
         "stamen_toner_lite",
         zoom_max=20,
         use_stamen_attribution=True,
     ),
-    "Stadia StamenWatercolor": _stadia_server(
+    _stadia_server(
         "stadia-stamenwatercolor",
         "Stadia StamenWatercolor",
         "stamen_watercolor",
@@ -119,33 +115,36 @@ TILE_SERVERS: dict[str, TileServer] = {
         ext="jpg",
         use_stamen_attribution=True,
     ),
-    "Stadia StamenTerrain": _stadia_server(
+    _stadia_server(
         "stadia-stamenterrain",
         "Stadia StamenTerrain",
         "stamen_terrain",
         zoom_max=18,
         use_stamen_attribution=True,
     ),
-    "Stadia StamenTerrainBackground": _stadia_server(
+    _stadia_server(
         "stadia-stamenterrainbackground",
         "Stadia StamenTerrainBackground",
         "stamen_terrain_background",
         zoom_max=18,
         use_stamen_attribution=True,
     ),
-    "Stadia StamenTerrainLabels": _stadia_server(
+    _stadia_server(
         "stadia-stamenterrainlabels",
         "Stadia StamenTerrainLabels",
         "stamen_terrain_labels",
         zoom_max=18,
         use_stamen_attribution=True,
     ),
-    "Stadia StamenTerrainLines": _stadia_server(
+    _stadia_server(
         "stadia-stamenterrainlines",
         "Stadia StamenTerrainLines",
         "stamen_terrain_lines",
         zoom_max=18,
         use_stamen_attribution=True,
     ),
-}
+]
 """Stadia Maps tile servers."""
+
+KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
+"""Mapping from tile server key to TileServer instance."""

@@ -33,36 +33,35 @@ def _thunderforest_server(
     )
 
 
-TILE_SERVERS: dict[str, TileServer] = {
-    "Thunderforest OpenCycleMap": _thunderforest_server(
+TILE_SERVERS: list[TileServer] = [
+    _thunderforest_server(
         "thunderforest-opencyclemap", "Thunderforest OpenCycleMap", "cycle"
     ),
-    "Thunderforest Transport": _thunderforest_server(
+    _thunderforest_server(
         "thunderforest-transport", "Thunderforest Transport", "transport"
     ),
-    "Thunderforest Transport Dark": _thunderforest_server(
+    _thunderforest_server(
         "thunderforest-transport-dark", "Thunderforest Transport Dark", "transport-dark"
     ),
-    "Thunderforest SpinalMap": _thunderforest_server(
+    _thunderforest_server(
         "thunderforest-spinalmap", "Thunderforest SpinalMap", "spinal-map"
     ),
-    "Thunderforest Landscape": _thunderforest_server(
+    _thunderforest_server(
         "thunderforest-landscape", "Thunderforest Landscape", "landscape"
     ),
-    "Thunderforest Outdoors": _thunderforest_server(
+    _thunderforest_server(
         "thunderforest-outdoors", "Thunderforest Outdoors", "outdoors"
     ),
-    "Thunderforest Pioneer": _thunderforest_server(
-        "thunderforest-pioneer", "Thunderforest Pioneer", "pioneer"
-    ),
-    "Thunderforest MobileAtlas": _thunderforest_server(
+    _thunderforest_server("thunderforest-pioneer", "Thunderforest Pioneer", "pioneer"),
+    _thunderforest_server(
         "thunderforest-mobileatlas", "Thunderforest MobileAtlas", "mobile-atlas"
     ),
-    "Thunderforest Neighbourhood": _thunderforest_server(
+    _thunderforest_server(
         "thunderforest-neighbourhood", "Thunderforest Neighbourhood", "neighbourhood"
     ),
-    "Thunderforest Atlas": _thunderforest_server(
-        "thunderforest-atlas", "Thunderforest Atlas", "atlas"
-    ),
-}
+    _thunderforest_server("thunderforest-atlas", "Thunderforest Atlas", "atlas"),
+]
 """Thunderforest tile servers."""
+
+KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
+"""Mapping from tile server key to TileServer instance."""

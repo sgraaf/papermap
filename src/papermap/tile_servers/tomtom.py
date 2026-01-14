@@ -33,9 +33,12 @@ def _tomtom_server(
     )
 
 
-TILE_SERVERS: dict[str, TileServer] = {
-    "TomTom Basic": _tomtom_server("tomtom-basic", "TomTom Basic", "basic/main"),
-    "TomTom Hybrid": _tomtom_server("tomtom-hybrid", "TomTom Hybrid", "hybrid/main"),
-    "TomTom Labels": _tomtom_server("tomtom-labels", "TomTom Labels", "labels/main"),
-}
+TILE_SERVERS: list[TileServer] = [
+    _tomtom_server("tomtom-basic", "TomTom Basic", "basic/main"),
+    _tomtom_server("tomtom-hybrid", "TomTom Hybrid", "hybrid/main"),
+    _tomtom_server("tomtom-labels", "TomTom Labels", "labels/main"),
+]
 """TomTom tile servers."""
+
+KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
+"""Mapping from tile server key to TileServer instance."""

@@ -36,49 +36,43 @@ def _carto_server(
     )
 
 
-TILE_SERVERS: dict[str, TileServer] = {
-    # Positron (light)
-    "CartoDB Positron": _carto_server(
-        "cartodb-positron", "CartoDB Positron", "light_all"
-    ),
-    "CartoDB PositronNoLabels": _carto_server(
+TILE_SERVERS: list[TileServer] = [
+    _carto_server("cartodb-positron", "CartoDB Positron", "light_all"),
+    _carto_server(
         "cartodb-positronnolabels", "CartoDB PositronNoLabels", "light_nolabels"
     ),
-    "CartoDB PositronOnlyLabels": _carto_server(
+    _carto_server(
         "cartodb-positrononlylabels", "CartoDB PositronOnlyLabels", "light_only_labels"
     ),
-    # Dark Matter (dark)
-    "CartoDB DarkMatter": _carto_server(
-        "cartodb-darkmatter", "CartoDB DarkMatter", "dark_all"
-    ),
-    "CartoDB DarkMatterNoLabels": _carto_server(
+    _carto_server("cartodb-darkmatter", "CartoDB DarkMatter", "dark_all"),
+    _carto_server(
         "cartodb-darkmatter-nolabels",
         "CartoDB DarkMatterNoLabels",
         "dark_nolabels",
     ),
-    "CartoDB DarkMatterOnlyLabels": _carto_server(
+    _carto_server(
         "cartodb-darkmatter-onlylabels",
         "CartoDB DarkMatterOnlyLabels",
         "dark_only_labels",
     ),
-    # Voyager
-    "CartoDB Voyager": _carto_server(
-        "cartodb-voyager", "CartoDB Voyager", "rastertiles/voyager"
-    ),
-    "CartoDB VoyagerNoLabels": _carto_server(
+    _carto_server("cartodb-voyager", "CartoDB Voyager", "rastertiles/voyager"),
+    _carto_server(
         "cartodb-voyager-nolabels",
         "CartoDB VoyagerNoLabels",
         "rastertiles/voyager_nolabels",
     ),
-    "CartoDB VoyagerOnlyLabels": _carto_server(
+    _carto_server(
         "cartodb-voyager-onlylabels",
         "CartoDB VoyagerOnlyLabels",
         "rastertiles/voyager_only_labels",
     ),
-    "CartoDB VoyagerLabelsUnder": _carto_server(
+    _carto_server(
         "cartodb-voyager-labelsunder",
         "CartoDB VoyagerLabelsUnder",
         "rastertiles/voyager_labels_under",
     ),
-}
+]
 """CartoDB tile servers."""
+
+KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
+"""Mapping from tile server key to TileServer instance."""

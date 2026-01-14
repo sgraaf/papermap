@@ -209,13 +209,13 @@ class TestLatLonCommand:
                 str(TEST_LON),
                 str(output_file),
                 "--tile-server",
-                "Google Maps",
+                "google-maps",
             ],
         )
 
         assert result.exit_code == 0
         call_kwargs = mock_class.call_args[1]
-        assert call_kwargs["tile_server"] == "Google Maps"
+        assert call_kwargs["tile_server"] == "google-maps"
 
     def test_latlon_with_size(
         self,
@@ -387,7 +387,7 @@ class TestLatLonCommand:
                 str(TEST_LON),
                 str(output_file),
                 "--tile-server",
-                "Thunderforest Landscape",
+                "thunderforest-landscape",
                 "--api-key",
                 "test_key_123",
             ],
@@ -577,7 +577,7 @@ class TestTileServerChoices:
 
     @pytest.mark.parametrize(
         "tile_server",
-        ["OpenStreetMap", "Google Maps", "ESRI Standard", "ESRI Satellite"],
+        ["openstreetmap", "google-maps", "esri-worldstreetmap", "esri-worldimagery"],
     )
     def test_common_tile_servers_work(
         self,
@@ -657,7 +657,7 @@ class TestCliDefaults:
         call_kwargs = mock_class.call_args[1]
 
         # Check defaults
-        assert call_kwargs["tile_server"] == "OpenStreetMap"
+        assert call_kwargs["tile_server"] == "openstreetmap"
         assert call_kwargs["paper_size"] == "a4"
         assert not call_kwargs["use_landscape"]
         assert call_kwargs["scale"] == DEFAULT_SCALE
