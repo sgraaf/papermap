@@ -6,7 +6,7 @@ import pytest
 from PIL import Image
 
 from papermap.tile import Tile
-from papermap.tile_server import TileServer
+from papermap.tile_provider import TileProvider
 
 
 @pytest.fixture
@@ -38,11 +38,11 @@ def tile_image_content(tile_image: Image.Image) -> bytes:
 
 
 @pytest.fixture
-def tile_server() -> TileServer:
-    """Return a sample tile server for testing."""
-    return TileServer(
-        key="test-server",
-        name="Test Server",
+def tile_provider() -> TileProvider:
+    """Return a sample tile provider for testing."""
+    return TileProvider(
+        key="test-provider",
+        name="Test Provider",
         attribution="Test Attribution",
         html_attribution="Test Attribution",
         url_template="https://example.com/{z}/{x}/{y}.png",
@@ -52,11 +52,11 @@ def tile_server() -> TileServer:
 
 
 @pytest.fixture
-def tile_server_with_mirrors() -> TileServer:
-    """Return a sample tile server with subdomains for testing."""
-    return TileServer(
-        key="test-server-with-subdomains",
-        name="Test Server With Subdomains",
+def tile_provider_with_mirrors() -> TileProvider:
+    """Return a sample tile provider with subdomains for testing."""
+    return TileProvider(
+        key="test-provider-with-subdomains",
+        name="Test Provider With Subdomains",
         attribution="Test Attribution",
         html_attribution="Test Attribution",
         url_template="https://{s}.example.com/{z}/{x}/{y}.png",
@@ -67,11 +67,11 @@ def tile_server_with_mirrors() -> TileServer:
 
 
 @pytest.fixture
-def tile_server_with_api_key() -> TileServer:
-    """Return a sample tile server requiring an API key for testing."""
-    return TileServer(
-        key="test-server-with-api-key",
-        name="Test Server With API Key",
+def tile_provider_with_api_key() -> TileProvider:
+    """Return a sample tile provider requiring an API key for testing."""
+    return TileProvider(
+        key="test-provider-with-api-key",
+        name="Test Provider With API Key",
         attribution="Test Attribution",
         html_attribution="Test Attribution",
         url_template="https://example.com/{z}/{x}/{y}.png?api_key={a}",

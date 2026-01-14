@@ -14,19 +14,19 @@
    :members:
 ```
 
-## `papermap.tile_server` Module
+## `papermap.tile_provider` Module
 
 ```{eval-rst}
-.. automodule:: papermap.tile_server
+.. automodule:: papermap.tile_provider
    :members:
 ```
 
-## `papermap.tile_servers` Subpackage
+## `papermap.tile_providers` Subpackage
 
-The `tile_servers` subpackage contains tile server configurations organized by provider.
+The `tile_providers` subpackage contains tile provider configurations organized by provider.
 
 ```{eval-rst}
-.. automodule:: papermap.tile_servers
+.. automodule:: papermap.tile_providers
    :members:
 ```
 

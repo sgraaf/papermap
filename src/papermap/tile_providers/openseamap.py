@@ -1,4 +1,4 @@
-"""OpenSeaMap tile server configuration.
+"""OpenSeaMap tile provider configuration.
 
 OpenSeaMap is a nautical chart based on OpenStreetMap data,
 designed for sailors and maritime navigation.
@@ -8,10 +8,10 @@ See: https://openseamap.org/
 
 from __future__ import annotations
 
-from papermap.tile_server import TileServer
+from papermap.tile_provider import TileProvider
 
-TILE_SERVERS: list[TileServer] = [
-    TileServer(
+TILE_PROVIDERS: list[TileProvider] = [
+    TileProvider(
         key="openseamap",
         name="OpenSeaMap",
         attribution="Map data: © OpenSeaMap contributors",
@@ -24,7 +24,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_max=18,
     ),
 ]
-"""OpenSeaMap tile servers."""
+"""OpenSeaMap tile providers."""
 
-KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
-"""Mapping from tile server key to TileServer instance."""
+KEY_TO_TILE_PROVIDER: dict[str, TileProvider] = {ts.key: ts for ts in TILE_PROVIDERS}
+"""Mapping from tile provider key to TileProvider instance."""

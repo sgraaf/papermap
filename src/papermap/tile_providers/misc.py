@@ -1,20 +1,20 @@
-"""Miscellaneous tile server configurations.
+"""Miscellaneous tile provider configurations.
 
-This module contains tile servers that don't fit into other categories
+This module contains tile providers that don't fit into other categories
 or are standalone providers without multiple variants.
 """
 
 from __future__ import annotations
 
-from papermap.tile_server import TileServer
+from papermap.tile_provider import TileProvider
 
 OSM_ATTRIBUTION = "© OpenStreetMap contributors"
 OSM_HTML_ATTRIBUTION = (
     '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
 )
 
-TILE_SERVERS: list[TileServer] = [
-    TileServer(
+TILE_PROVIDERS: list[TileProvider] = [
+    TileProvider(
         key="opnvkarte",
         name="OPNVKarte",
         attribution="Map data: © OpenStreetMap contributors. Map style: © ÖPNVKarte",
@@ -22,12 +22,12 @@ TILE_SERVERS: list[TileServer] = [
             f"Map data: {OSM_HTML_ATTRIBUTION}. "
             'Map style: © <a href="https://www.opnvkarte.de/">ÖPNVKarte</a>'
         ),
-        url_template="https://tileserver.memomaps.de/tilegen/{z}/{x}/{y}.png",
+        url_template="https://tileprovider.memomaps.de/tilegen/{z}/{x}/{y}.png",
         subdomains=None,
         zoom_min=0,
         zoom_max=18,
     ),
-    TileServer(
+    TileProvider(
         key="mtbmap",
         name="MtbMap",
         attribution="Map data: © OpenStreetMap contributors, USGS. Map style: © mtbmap.cz",
@@ -40,7 +40,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_min=0,
         zoom_max=18,
     ),
-    TileServer(
+    TileProvider(
         key="hikebike",
         name="HikeBike",
         attribution=f"Map data: {OSM_ATTRIBUTION}",
@@ -50,7 +50,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_min=0,
         zoom_max=19,
     ),
-    TileServer(
+    TileProvider(
         key="safecast",
         name="SafeCast",
         attribution="Map data: © OpenStreetMap contributors. Map style: © SafeCast",
@@ -63,7 +63,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_min=0,
         zoom_max=16,
     ),
-    TileServer(
+    TileProvider(
         key="geofabrik-topo",
         name="Geofabrik Topo",
         attribution=f"Map data: {OSM_ATTRIBUTION}",
@@ -73,7 +73,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_min=0,
         zoom_max=19,
     ),
-    TileServer(
+    TileProvider(
         key="mapy-cz",
         name="Mapy.cz",
         attribution="Map data: © OpenStreetMap contributors. Map style: © Seznam.cz",
@@ -81,12 +81,12 @@ TILE_SERVERS: list[TileServer] = [
             f"Map data: {OSM_HTML_ATTRIBUTION}. "
             'Map style: © <a href="https://www.seznam.cz/">Seznam.cz</a>'
         ),
-        url_template="https://m{s}.mapserver.mapy.cz/turist-m/{z}-{x}-{y}.png",
+        url_template="https://m{s}.mapprovider.mapy.cz/turist-m/{z}-{x}-{y}.png",
         subdomains=[1, 2, 3, 4],
         zoom_min=0,
         zoom_max=19,
     ),
-    TileServer(
+    TileProvider(
         key="komoot",
         name="Komoot",
         attribution=f"Map data: {OSM_ATTRIBUTION}",
@@ -96,7 +96,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_min=0,
         zoom_max=19,
     ),
-    TileServer(
+    TileProvider(
         key="alltrails",
         name="AllTrails",
         attribution=f"Map data: {OSM_ATTRIBUTION}",
@@ -106,7 +106,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_min=0,
         zoom_max=20,
     ),
-    TileServer(
+    TileProvider(
         key="waymarkedtrails-hiking",
         name="Waymarked Trails Hiking",
         attribution="Map data: © OpenStreetMap contributors. Overlay: © Waymarked Trails",
@@ -119,7 +119,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_min=0,
         zoom_max=18,
     ),
-    TileServer(
+    TileProvider(
         key="waymarkedtrails-cycling",
         name="Waymarked Trails Cycling",
         attribution="Map data: © OpenStreetMap contributors. Overlay: © Waymarked Trails",
@@ -132,7 +132,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_min=0,
         zoom_max=18,
     ),
-    TileServer(
+    TileProvider(
         key="waymarkedtrails-mtb",
         name="Waymarked Trails MTB",
         attribution="Map data: © OpenStreetMap contributors. Overlay: © Waymarked Trails",
@@ -145,7 +145,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_min=0,
         zoom_max=18,
     ),
-    TileServer(
+    TileProvider(
         key="waymarkedtrails-slopes",
         name="Waymarked Trails Slopes",
         attribution="Map data: © OpenStreetMap contributors. Overlay: © Waymarked Trails",
@@ -158,7 +158,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_min=0,
         zoom_max=18,
     ),
-    TileServer(
+    TileProvider(
         key="waymarkedtrails-riding",
         name="Waymarked Trails Riding",
         attribution="Map data: © OpenStreetMap contributors. Overlay: © Waymarked Trails",
@@ -171,7 +171,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_min=0,
         zoom_max=18,
     ),
-    TileServer(
+    TileProvider(
         key="waymarkedtrails-skating",
         name="Waymarked Trails Skating",
         attribution="Map data: © OpenStreetMap contributors. Overlay: © Waymarked Trails",
@@ -184,7 +184,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_min=0,
         zoom_max=18,
     ),
-    TileServer(
+    TileProvider(
         key="openaip",
         name="OpenAIP",
         attribution="© OpenAIP",
@@ -194,7 +194,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_min=4,
         zoom_max=14,
     ),
-    TileServer(
+    TileProvider(
         key="opensnowmap",
         name="OpenSnowMap",
         attribution="Map data: © OpenStreetMap contributors. Overlay: © OpenSnowMap",
@@ -207,7 +207,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_min=0,
         zoom_max=18,
     ),
-    TileServer(
+    TileProvider(
         key="openrailwaymap",
         name="OpenRailwayMap",
         attribution="Map data: © OpenStreetMap contributors. Map style: © OpenRailwayMap (CC-BY-SA)",
@@ -221,7 +221,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_min=0,
         zoom_max=19,
     ),
-    TileServer(
+    TileProvider(
         key="openfiremap",
         name="OpenFireMap",
         attribution="Map data: © OpenStreetMap contributors. Map style: © OpenFireMap (CC-BY-SA)",
@@ -236,7 +236,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_max=19,
     ),
 ]
-"""Miscellaneous tile servers."""
+"""Miscellaneous tile providers."""
 
-KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
-"""Mapping from tile server key to TileServer instance."""
+KEY_TO_TILE_PROVIDER: dict[str, TileProvider] = {ts.key: ts for ts in TILE_PROVIDERS}
+"""Mapping from tile provider key to TileProvider instance."""

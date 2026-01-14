@@ -1,22 +1,22 @@
-"""OpenStreetMap tile server configurations.
+"""OpenStreetMap tile provider configurations.
 
 OpenStreetMap is the free, editable map of the world. This module contains
-the main OSM tile servers and regional/specialized variants.
+the main OSM tile providers and regional/specialized variants.
 
 See: https://wiki.openstreetmap.org/wiki/Tiles
 """
 
 from __future__ import annotations
 
-from papermap.tile_server import TileServer
+from papermap.tile_provider import TileProvider
 
 OSM_ATTRIBUTION = "© OpenStreetMap contributors"
 OSM_HTML_ATTRIBUTION = (
     '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
 )
 
-TILE_SERVERS: list[TileServer] = [
-    TileServer(
+TILE_PROVIDERS: list[TileProvider] = [
+    TileProvider(
         key="openstreetmap",
         name="OpenStreetMap",
         attribution=f"Map data: {OSM_ATTRIBUTION}",
@@ -26,7 +26,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_min=0,
         zoom_max=19,
     ),
-    TileServer(
+    TileProvider(
         key="openstreetmap-de",
         name="OpenStreetMap DE",
         attribution=f"Map data: {OSM_ATTRIBUTION}",
@@ -36,7 +36,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_min=0,
         zoom_max=18,
     ),
-    TileServer(
+    TileProvider(
         key="openstreetmap-ch",
         name="OpenStreetMap CH",
         attribution=f"Map data: {OSM_ATTRIBUTION}",
@@ -47,7 +47,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_max=18,
         bounds=(5.140242, 45.398181, 11.47757, 48.230651),
     ),
-    TileServer(
+    TileProvider(
         key="openstreetmap-france",
         name="OpenStreetMap France",
         attribution=f"Map data: {OSM_ATTRIBUTION}",
@@ -57,7 +57,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_min=0,
         zoom_max=20,
     ),
-    TileServer(
+    TileProvider(
         key="openstreetmap-hot",
         name="OpenStreetMap HOT",
         attribution=f"Map data: {OSM_ATTRIBUTION}. Tiles style: © Humanitarian OpenStreetMap Team",
@@ -67,7 +67,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_min=0,
         zoom_max=19,
     ),
-    TileServer(
+    TileProvider(
         key="openstreetmap-bzh",
         name="OpenStreetMap BZH",
         attribution=f"Map data: {OSM_ATTRIBUTION}. Tiles: © Breton OpenStreetMap Team",
@@ -79,7 +79,7 @@ TILE_SERVERS: list[TileServer] = [
         bounds=(-5.4, 46.2, -0.7, 48.9),
     ),
 ]
-"""OpenStreetMap tile servers."""
+"""OpenStreetMap tile providers."""
 
-KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
-"""Mapping from tile server key to TileServer instance."""
+KEY_TO_TILE_PROVIDER: dict[str, TileProvider] = {ts.key: ts for ts in TILE_PROVIDERS}
+"""Mapping from tile provider key to TileProvider instance."""

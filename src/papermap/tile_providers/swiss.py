@@ -1,4 +1,4 @@
-"""Swiss Federal Geoportal tile server configurations.
+"""Swiss Federal Geoportal tile provider configurations.
 
 SwissFederalGeoportal (geo.admin.ch) provides official Swiss government
 map data including topographic maps, satellite imagery, and historical maps.
@@ -8,22 +8,22 @@ See: https://www.geo.admin.ch/
 
 from __future__ import annotations
 
-from papermap.tile_server import TileServer
+from papermap.tile_provider import TileProvider
 
 SWISS_ATTRIBUTION = "© swisstopo"
 SWISS_HTML_ATTRIBUTION = '© <a href="https://www.swisstopo.admin.ch/">swisstopo</a>'
 SWISS_BOUNDS = (5.140242, 45.398181, 11.47757, 48.230651)
 
 
-def _swiss_server(
+def _swiss_provider(
     key: str,
     name: str,
     variant: str,
     zoom_max: int = 18,
     ext: str = "jpeg",
-) -> TileServer:
-    """Create a Swiss Federal Geoportal tile server configuration."""
-    return TileServer(
+) -> TileProvider:
+    """Create a Swiss Federal Geoportal tile provider configuration."""
+    return TileProvider(
         key=key,
         name=name,
         attribution=SWISS_ATTRIBUTION,
@@ -36,25 +36,25 @@ def _swiss_server(
     )
 
 
-TILE_SERVERS: list[TileServer] = [
-    _swiss_server(
+TILE_PROVIDERS: list[TileProvider] = [
+    _swiss_provider(
         "swissfederalgeoportal-nationalmapcolor",
         "SwissFederalGeoportal NationalMapColor",
         "ch.swisstopo.pixelkarte-farbe",
     ),
-    _swiss_server(
+    _swiss_provider(
         "swissfederalgeoportal-nationalmapgrey",
         "SwissFederalGeoportal NationalMapGrey",
         "ch.swisstopo.pixelkarte-grau",
     ),
-    _swiss_server(
+    _swiss_provider(
         "swissfederalgeoportal-swissimage",
         "SwissFederalGeoportal SWISSIMAGE",
         "ch.swisstopo.swissimage",
         zoom_max=20,
     ),
 ]
-"""Swiss Federal Geoportal tile servers."""
+"""Swiss Federal Geoportal tile providers."""
 
-KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
-"""Mapping from tile server key to TileServer instance."""
+KEY_TO_TILE_PROVIDER: dict[str, TileProvider] = {ts.key: ts for ts in TILE_PROVIDERS}
+"""Mapping from tile provider key to TileProvider instance."""

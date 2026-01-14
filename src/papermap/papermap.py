@@ -12,7 +12,11 @@ from fpdf import FPDF
 from PIL import Image
 
 from .tile import TILE_SIZE, Tile
-from .tile_servers import DEFAULT_TILE_SERVER_KEY, KEY_TO_TILE_SERVER, TILE_SERVER_KEYS
+from .tile_providers import (
+    DEFAULT_TILE_PROVIDER_KEY,
+    KEY_TO_TILE_PROVIDER,
+    TILE_PROVIDER_KEYS,
+)
 from .utils import (
     drange,
     get_string_formatting_arguments,
@@ -74,8 +78,8 @@ class PaperMap:
     Args:
         lat: Latitude of the center of the map.
         lon: Longitude of the center of the map
-        tile_server_key: Tile server key to serve as the base of the paper map. Defaults to `openstreetmap`.
-        api_key: API key for the chosen tile server (if applicable). Defaults to `None`.
+        tile_provider_key: Tile provider key to serve as the base of the paper map. Defaults to `openstreetmap`.
+        api_key: API key for the chosen tile provider (if applicable). Defaults to `None`.
         size: Size of the paper map. Defaults to `a4`.
         landscape: Use landscape orientation. Defaults to `False`.
         margin_top: Top margin (in mm). Defaults to `10`.
@@ -89,7 +93,7 @@ class PaperMap:
         grid_size: Size of the grid squares (if applicable, in meters). Defaults to `1000`.
 
     Raises:
-        ValueError: If the tile server is invalid.
+        ValueError: If the tile provider is invalid.
         ValueError: If no API key is specified (when applicable).
         ValueError: If the paper size is invalid.
         ValueError: If the scale is "out of bounds".
@@ -100,7 +104,7 @@ class PaperMap:
         lat: float,
         lon: float,
         *,
-        tile_server_key: str = DEFAULT_TILE_SERVER_KEY,
+        tile_provider_key: str = DEFAULT_TILE_PROVIDER_KEY,
         api_key: str | None = None,
         paper_size: str = DEFAULT_PAPER_SIZE,
         use_landscape: bool = False,
@@ -135,20 +139,20 @@ class PaperMap:
         self.add_grid = add_grid
         self.grid_size = grid_size
 
-        # get the tile server
-        if tile_server_key in KEY_TO_TILE_SERVER:
-            self.tile_server = KEY_TO_TILE_SERVER[tile_server_key]
+        # get the tile provider
+        if tile_provider_key in KEY_TO_TILE_PROVIDER:
+            self.tile_provider = KEY_TO_TILE_PROVIDER[tile_provider_key]
         else:
-            available_keys = TILE_SERVER_KEYS
-            msg = f"Invalid tile server key '{tile_server_key}'. Please choose one of {', '.join(available_keys)}"
+            available_keys = TILE_PROVIDER_KEYS
+            msg = f"Invalid tile provider key '{tile_provider_key}'. Please choose one of {', '.join(available_keys)}"
             raise ValueError(msg)
 
         # check whether an API key is provided, if it is needed
         if (
-            "a" in get_string_formatting_arguments(self.tile_server.url_template)
+            "a" in get_string_formatting_arguments(self.tile_provider.url_template)
             and self.api_key is None
         ):
-            msg = f"No API key specified for {tile_server_key} tile server"
+            msg = f"No API key specified for {tile_provider_key} tile provider"
             raise ValueError(msg)
 
         # get the paper size (in mm)
@@ -167,10 +171,10 @@ class PaperMap:
 
         # make sure the zoom is not out of bounds
         if (
-            self.zoom_scaled < self.tile_server.zoom_min
-            or self.zoom_scaled > self.tile_server.zoom_max
+            self.zoom_scaled < self.tile_provider.zoom_min
+            or self.zoom_scaled > self.tile_provider.zoom_max
         ):
-            msg = f"Scale out of bounds for {tile_server_key} tile server."
+            msg = f"Scale out of bounds for {tile_provider_key} tile provider."
             raise ValueError(msg)
 
         # compute the width and height of the image (in mm)
@@ -351,7 +355,7 @@ class PaperMap:
             self.pdf.set_font_size(12)
 
     def render_attribution_and_scale(self) -> None:
-        text = f"{self.tile_server.attribution}. Created with {NAME}. Scale: 1:{self.scale}"
+        text = f"{self.tile_provider.attribution}. Created with {NAME}. Scale: 1:{self.scale}"
         self.pdf.set_xy(
             self.margin_left + self.pdf.epw - self.pdf.get_string_width(text),
             self.margin_top + self.pdf.eph - pt_to_mm(self.pdf.font_size_pt),
@@ -396,7 +400,7 @@ class PaperMap:
                 responses = executor.map(
                     client.get,
                     [
-                        self.tile_server.format_url_template(
+                        self.tile_provider.format_url_template(
                             tile=tile, api_key=self.api_key
                         )
                         for tile in tiles

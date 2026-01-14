@@ -758,7 +758,7 @@ class TestGetStringFormattingArguments:
         result = get_string_formatting_arguments("{a} and {b} and {c}")
         assert result == ["a", "b", "c"]
 
-    def test_tile_server_template(self) -> None:
+    def test_tile_provider_template(self) -> None:
         template = "https://{mirror}.example.com/{zoom}/{x}/{y}.png?key={api_key}"
         result = get_string_formatting_arguments(template)
         assert result == ["mirror", "zoom", "x", "y", "api_key"]

@@ -8,7 +8,7 @@ TILE_SIZE: int = 256
 
 @dataclass
 class Tile:
-    """A tile from a tile server.
+    """A tile from a tile provider.
 
     Args:
         x: The x coordinate of the tile.

@@ -1,4 +1,4 @@
-"""CartoDB (Carto) tile server configurations.
+"""CartoDB (Carto) tile provider configurations.
 
 Carto provides beautiful, high-performance basemaps including
 Positron (light), Dark Matter (dark), and Voyager styles.
@@ -8,7 +8,7 @@ See: https://carto.com/basemaps/
 
 from __future__ import annotations
 
-from papermap.tile_server import TileServer
+from papermap.tile_provider import TileProvider
 
 CARTO_ATTRIBUTION = "© OpenStreetMap contributors, © CARTO"
 CARTO_HTML_ATTRIBUTION = (
@@ -17,14 +17,14 @@ CARTO_HTML_ATTRIBUTION = (
 )
 
 
-def _carto_server(
+def _carto_provider(
     key: str,
     name: str,
     variant: str,
     zoom_max: int = 20,
-) -> TileServer:
-    """Create a CartoDB tile server configuration."""
-    return TileServer(
+) -> TileProvider:
+    """Create a CartoDB tile provider configuration."""
+    return TileProvider(
         key=key,
         name=name,
         attribution=CARTO_ATTRIBUTION,
@@ -36,43 +36,43 @@ def _carto_server(
     )
 
 
-TILE_SERVERS: list[TileServer] = [
-    _carto_server("cartodb-positron", "CartoDB Positron", "light_all"),
-    _carto_server(
+TILE_PROVIDERS: list[TileProvider] = [
+    _carto_provider("cartodb-positron", "CartoDB Positron", "light_all"),
+    _carto_provider(
         "cartodb-positronnolabels", "CartoDB PositronNoLabels", "light_nolabels"
     ),
-    _carto_server(
+    _carto_provider(
         "cartodb-positrononlylabels", "CartoDB PositronOnlyLabels", "light_only_labels"
     ),
-    _carto_server("cartodb-darkmatter", "CartoDB DarkMatter", "dark_all"),
-    _carto_server(
+    _carto_provider("cartodb-darkmatter", "CartoDB DarkMatter", "dark_all"),
+    _carto_provider(
         "cartodb-darkmatter-nolabels",
         "CartoDB DarkMatterNoLabels",
         "dark_nolabels",
     ),
-    _carto_server(
+    _carto_provider(
         "cartodb-darkmatter-onlylabels",
         "CartoDB DarkMatterOnlyLabels",
         "dark_only_labels",
     ),
-    _carto_server("cartodb-voyager", "CartoDB Voyager", "rastertiles/voyager"),
-    _carto_server(
+    _carto_provider("cartodb-voyager", "CartoDB Voyager", "rastertiles/voyager"),
+    _carto_provider(
         "cartodb-voyager-nolabels",
         "CartoDB VoyagerNoLabels",
         "rastertiles/voyager_nolabels",
     ),
-    _carto_server(
+    _carto_provider(
         "cartodb-voyager-onlylabels",
         "CartoDB VoyagerOnlyLabels",
         "rastertiles/voyager_only_labels",
     ),
-    _carto_server(
+    _carto_provider(
         "cartodb-voyager-labelsunder",
         "CartoDB VoyagerLabelsUnder",
         "rastertiles/voyager_labels_under",
     ),
 ]
-"""CartoDB tile servers."""
+"""CartoDB tile providers."""
 
-KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
-"""Mapping from tile server key to TileServer instance."""
+KEY_TO_TILE_PROVIDER: dict[str, TileProvider] = {ts.key: ts for ts in TILE_PROVIDERS}
+"""Mapping from tile provider key to TileProvider instance."""

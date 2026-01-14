@@ -135,7 +135,7 @@ class TestCliHelp:
         assert result.exit_code == 0
         assert "LATITUDE" in result.output
         assert "LONGITUDE" in result.output
-        assert "--tile-server" in result.output
+        assert "--tile-provider" in result.output
         assert "--paper-size" in result.output
         assert "--scale" in result.output
 
@@ -192,7 +192,7 @@ class TestLatLonCommand:
         assert call_kwargs["lat"] == 40.7128
         assert call_kwargs["lon"] == -74.0060
 
-    def test_latlon_with_tile_server(
+    def test_latlon_with_tile_provider(
         self,
         runner: CliRunner,
         mock_papermap: tuple[MagicMock, MagicMock],
@@ -208,14 +208,14 @@ class TestLatLonCommand:
                 str(TEST_LAT),
                 str(TEST_LON),
                 str(output_file),
-                "--tile-server",
+                "--tile-provider",
                 "google-maps",
             ],
         )
 
         assert result.exit_code == 0
         call_kwargs = mock_class.call_args[1]
-        assert call_kwargs["tile_server_key"] == "google-maps"
+        assert call_kwargs["tile_provider_key"] == "google-maps"
 
     def test_latlon_with_size(
         self,
@@ -386,7 +386,7 @@ class TestLatLonCommand:
                 str(TEST_LAT),
                 str(TEST_LON),
                 str(output_file),
-                "--tile-server",
+                "--tile-provider",
                 "thunderforest-landscape",
                 "--api-key",
                 "test_key_123",
@@ -406,7 +406,7 @@ class TestLatLonCommand:
         result = runner.invoke(cli, ["latlon", str(TEST_LAT), str(TEST_LON)])
         assert result.exit_code != 0
 
-    def test_latlon_invalid_tile_server(
+    def test_latlon_invalid_tile_provider(
         self, runner: CliRunner, tmp_path: Path
     ) -> None:
         output_file = tmp_path / "test.pdf"
@@ -417,8 +417,8 @@ class TestLatLonCommand:
                 str(TEST_LAT),
                 str(TEST_LON),
                 str(output_file),
-                "--tile-server",
-                "InvalidServer",
+                "--tile-provider",
+                "InvalidProvider",
             ],
         )
         assert result.exit_code != 0
@@ -572,19 +572,19 @@ class TestDefaultCommand:
         assert call_kwargs["lon"] == TEST_LON
 
 
-class TestTileServerChoices:
-    """Tests for tile server option choices."""
+class TestTileProviderChoices:
+    """Tests for tile provider option choices."""
 
     @pytest.mark.parametrize(
-        "tile_server",
+        "tile_provider",
         ["openstreetmap", "google-maps", "esri-worldstreetmap", "esri-worldimagery"],
     )
-    def test_common_tile_servers_work(
+    def test_common_tile_providers_work(
         self,
         runner: CliRunner,
         mock_papermap: tuple[MagicMock, MagicMock],
         tmp_path: Path,
-        tile_server: str,
+        tile_provider: str,
     ) -> None:
         mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
@@ -596,14 +596,14 @@ class TestTileServerChoices:
                 str(TEST_LAT),
                 str(TEST_LON),
                 str(output_file),
-                "--tile-server",
-                tile_server,
+                "--tile-provider",
+                tile_provider,
             ],
         )
 
         assert result.exit_code == 0
         call_kwargs = mock_class.call_args[1]
-        assert call_kwargs["tile_server_key"] == tile_server
+        assert call_kwargs["tile_provider_key"] == tile_provider
 
 
 class TestPaperSizeChoices:
@@ -657,7 +657,7 @@ class TestCliDefaults:
         call_kwargs = mock_class.call_args[1]
 
         # Check defaults
-        assert call_kwargs["tile_server_key"] == "openstreetmap"
+        assert call_kwargs["tile_provider_key"] == "openstreetmap"
         assert call_kwargs["paper_size"] == "a4"
         assert not call_kwargs["use_landscape"]
         assert call_kwargs["scale"] == DEFAULT_SCALE

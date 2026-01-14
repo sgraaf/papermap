@@ -1,4 +1,4 @@
-"""NL Maps (Dutch/Netherlands) tile server configurations.
+"""NL Maps (Dutch/Netherlands) tile provider configurations.
 
 NL Maps provides official Dutch government map data
 from PDOK (Publieke Dienstverlening Op de Kaart).
@@ -8,7 +8,7 @@ See: https://www.pdok.nl/
 
 from __future__ import annotations
 
-from papermap.tile_server import TileServer
+from papermap.tile_provider import TileProvider
 
 NLMAPS_ATTRIBUTION = "Kaartgegevens © Kadaster"
 NLMAPS_HTML_ATTRIBUTION = (
@@ -17,14 +17,14 @@ NLMAPS_HTML_ATTRIBUTION = (
 NLMAPS_BOUNDS = (3.37, 50.75, 7.21, 53.47)
 
 
-def _nlmaps_server(
+def _nlmaps_provider(
     key: str,
     name: str,
     variant: str,
     zoom_max: int = 19,
-) -> TileServer:
-    """Create a NL Maps tile server configuration."""
-    return TileServer(
+) -> TileProvider:
+    """Create a NL Maps tile provider configuration."""
+    return TileProvider(
         key=key,
         name=name,
         attribution=NLMAPS_ATTRIBUTION,
@@ -37,12 +37,12 @@ def _nlmaps_server(
     )
 
 
-TILE_SERVERS: list[TileServer] = [
-    _nlmaps_server("nlmaps-standaard", "NLMaps Standaard", "standaard"),
-    _nlmaps_server("nlmaps-pastel", "NLMaps Pastel", "pastel"),
-    _nlmaps_server("nlmaps-grijs", "NLMaps Grijs", "grijs"),
-    _nlmaps_server("nlmaps-water", "NLMaps Water", "water"),
-    TileServer(
+TILE_PROVIDERS: list[TileProvider] = [
+    _nlmaps_provider("nlmaps-standaard", "NLMaps Standaard", "standaard"),
+    _nlmaps_provider("nlmaps-pastel", "NLMaps Pastel", "pastel"),
+    _nlmaps_provider("nlmaps-grijs", "NLMaps Grijs", "grijs"),
+    _nlmaps_provider("nlmaps-water", "NLMaps Water", "water"),
+    TileProvider(
         key="nlmaps-luchtfoto",
         name="NLMaps Luchtfoto",
         attribution=NLMAPS_ATTRIBUTION,
@@ -54,7 +54,7 @@ TILE_SERVERS: list[TileServer] = [
         bounds=NLMAPS_BOUNDS,
     ),
 ]
-"""NL Maps tile servers."""
+"""NL Maps tile providers."""
 
-KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
-"""Mapping from tile server key to TileServer instance."""
+KEY_TO_TILE_PROVIDER: dict[str, TileProvider] = {ts.key: ts for ts in TILE_PROVIDERS}
+"""Mapping from tile provider key to TileProvider instance."""

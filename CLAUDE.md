@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-**PaperMap** is a Python package and CLI tool for creating ready-to-print paper maps from various tile servers (OpenStreetMap, Google Maps, ESRI, etc.). The project generates PDF maps at customizable scales, sizes (A0-A7, letter, legal), and orientations with optional UTM grid overlays.
+**PaperMap** is a Python package and CLI tool for creating ready-to-print paper maps from various tile providers (OpenStreetMap, Google Maps, ESRI, etc.). The project generates PDF maps at customizable scales, sizes (A0-A7, letter, legal), and orientations with optional UTM grid overlays.
 
 - **Current Version:** 2026.1.0 (CalVer: YYYY.N.N)
 - **License:** GNU General Public License v3+
@@ -19,12 +19,10 @@ papermap/
 │   ├── __main__.py        # Entry point for CLI
 │   ├── cli.py             # Click-based CLI implementation
 │   ├── papermap.py        # Core PaperMap class (main logic)
-│   ├── tile_server.py     # TileServer dataclass
+│   ├── tile_provider.py   # TileProvider dataclass
+│   ├── tile_providers/    # Tile provider configurations for various map providers
 │   ├── tile.py            # Tile dataclass for map tiles
-│   ├── defaults.py        # Default values and tile server configs
-│   ├── constants.py       # Mathematical and geographical constants
 │   ├── utils.py           # Utility functions (coordinate conversions, etc.)
-│   ├── typing.py          # Type aliases
 │   └── py.typed           # PEP 561 marker for type information
 ├── tests/                 # Test suite
 │   ├── __init__.py
@@ -34,7 +32,7 @@ papermap/
 │   ├── test_integration.py # Integration tests
 │   ├── test_papermap.py   # PaperMap class tests
 │   ├── test_tile.py       # Tile tests
-│   ├── test_tile_server.py # TileServer tests
+│   ├── test_tile_provider.py # TileProvider tests
 │   └── test_utils.py      # Utility function tests
 ├── docs/                  # Sphinx documentation
 │   ├── conf.py            # Sphinx configuration
@@ -167,7 +165,7 @@ The main class that orchestrates map generation.
 
 **Key Methods:**
 
-- `__init__()` - Initialize map with coordinates, size, scale, tile server
+- `__init__()` - Initialize map with coordinates, size, scale, tile provider
 - `render()` - Main rendering pipeline (base layer → grid → attribution)
 - `render_base_layer()` - Downloads tiles and assembles map image
 - `download_tiles()` - Parallel tile downloading with retries
@@ -183,9 +181,9 @@ The main class that orchestrates map generation.
 - Tile boundary calculations
 - PDF document (FPDF instance)
 
-#### 2. TileServer Class (`tile_server.py`)
+#### 2. TileProvider Class (`tile_provider.py`)
 
-Dataclass representing a tile server configuration.
+Dataclass representing a tile provider configuration.
 
 **Fields:**
 
@@ -215,13 +213,13 @@ Click-based command-line interface.
 
 **Common Options:**
 
-- `--tile-server` - Choose from 20+ tile servers
+- `--tile-provider` - Choose from 20+ tile providers
 - `--paper-size` - Paper size (a0-a7, letter, legal)
 - `--landscape` - Landscape orientation
 - `--scale` - Map scale (default: 25000)
 - `--dpi` - Resolution (default: 300)
 - `--grid` - Add UTM grid overlay
-- `--api-key` - API key for commercial tile servers
+- `--api-key` - API key for commercial tile providers
 
 #### 5. Utilities (`utils.py`)
 
@@ -239,7 +237,7 @@ Mathematical implementations follow Karney (2011) paper on Transverse Mercator p
 
 Configuration for:
 
-- **20+ Tile Servers:** OpenStreetMap, Google Maps, ESRI, Thunderforest, Stamen, etc.
+- **20+ Tile Providers:** OpenStreetMap, Google Maps, ESRI, Thunderforest, Stamen, etc.
 - **Paper Sizes:** A-series (A0-A7), letter, legal
 - **Default Values:** Scale (25000), DPI (300), margins (10mm), grid size (1000m)
 
@@ -249,11 +247,11 @@ Configuration for:
 
 Tests are located in the `tests/` directory and use pytest:
 
-- `conftest.py` - Shared fixtures (sample tiles, tile servers, coordinates)
+- `conftest.py` - Shared fixtures (sample tiles, tile providers, coordinates)
 - `smoke_test.py` - Basic smoke tests for package installation
 - `test_utils.py` - Comprehensive unit tests for utility functions
 - `test_tile.py` - Tile dataclass tests
-- `test_tile_server.py` - TileServer tests
+- `test_tile_provider.py` - TileProvider tests
 - `test_papermap.py` - PaperMap class tests
 - `test_cli.py` - CLI tests
 - `test_integration.py` - Integration tests
@@ -281,9 +279,9 @@ The `conftest.py` provides common fixtures:
 
 - `sample_tile` - A basic Tile for testing
 - `sample_tile_with_image` - A Tile with an attached image
-- `sample_tile_server` - A basic TileServer
-- `sample_tile_server_with_mirrors` - TileServer with mirror support
-- `sample_tile_server_with_api_key` - TileServer requiring API key
+- `sample_tile_provider` - A basic TileProvider
+- `sample_tile_provider_with_mirrors` - TileProvider with mirror support
+- `sample_tile_provider_with_api_key` - TileProvider requiring API key
 - `mock_tile_image` - A mock PIL Image
 - `mock_response` - A mock HTTP response for tile downloads
 - `coordinate_test_cases` - Well-known coordinate test cases (NYC, London, Tokyo, etc.)
@@ -331,7 +329,7 @@ def function_name(arg1: Type1, arg2: Type2) -> ReturnType:
 
 ### Naming Conventions
 
-- **Classes:** PascalCase (e.g., `PaperMap`, `TileServer`)
+- **Classes:** PascalCase (e.g., `PaperMap`, `TileProvider`)
 - **Functions/Methods:** snake_case (e.g., `render_grid`, `download_tiles`)
 - **Constants:** UPPER_SNAKE_CASE (e.g., `DEFAULT_SCALE`, `TILE_SIZE`)
 - **Private:** Prefix with `_` (not commonly used in this codebase)
@@ -410,7 +408,7 @@ The project uses the [Keep a Changelog](https://keepachangelog.com/) format in `
 
 ### Added
 
-- New tile server support for XYZ Maps
+- New tile provider support for XYZ Maps
 
 ### Fixed
 
@@ -460,7 +458,7 @@ The project uses **Gitmoji** for commit messages:
 - `:white_check_mark:` - Tests
 - `:construction_worker:` - CI/CD changes
 
-Example: `:sparkles: Add support for custom tile servers`
+Example: `:sparkles: Add support for custom tile providers`
 
 ## Key Conventions for AI Assistants
 
@@ -492,12 +490,12 @@ Example: `:sparkles: Add support for custom tile servers`
 
 ### Common Tasks
 
-#### Adding a New Tile Server
+#### Adding a New Tile Provider
 
-1. Add entry to `TILE_SERVERS_MAP` in `defaults.py`
+1. Add entry to `TILE_PROVIDERS_MAP` in `defaults.py`
 1. Include attribution, URL template, zoom range, mirrors (if applicable)
 1. CLI choices will auto-populate
-1. Add tests for the new tile server
+1. Add tests for the new tile provider
 1. Test with and without API key (if applicable)
 1. Add changelog entry
 
@@ -607,7 +605,7 @@ self.pdf.cell(w=width, text=text, align="C", fill=True)
 
 ### When to Consult Documentation
 
-- **Tile Servers:** Check OSM wiki for URL template format
+- **Tile Providers:** Check OSM wiki for URL template format
 - **UTM Conversions:** Karney (2011) paper for algorithm details
 - **FPDF:** Official FPDF2 docs for PDF drawing operations
 - **Click:** Click documentation for CLI patterns
@@ -616,9 +614,9 @@ self.pdf.cell(w=width, text=text, align="C", fill=True)
 
 1. **Tile Download Issues:**
 
-   - Check tile server URL template formatting
+   - Check tile provider URL template formatting
    - Verify API key if required
-   - Check zoom level is within server's zoom_min/zoom_max
+   - Check zoom level is within provider's zoom_min/zoom_max
 
 1. **Coordinate Conversion Issues:**
 

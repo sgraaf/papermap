@@ -66,7 +66,7 @@ class TestPaperMapInit:
         pm = PaperMap(
             lat=40.7128,
             lon=-74.0060,
-            tile_server_key="thunderforest-landscape",
+            tile_provider_key="thunderforest-landscape",
             api_key="test_key",
         )
         assert pm.api_key == "test_key"
@@ -99,22 +99,22 @@ class TestPaperMapInit:
 class TestPaperMapValidation:
     """Tests for PaperMap input validation."""
 
-    def test_invalid_tile_server_raises_error(self) -> None:
-        with pytest.raises(ValueError, match="Invalid tile server"):
-            PaperMap(lat=40.7128, lon=-74.0060, tile_server_key="NonexistentServer")
+    def test_invalid_tile_provider_raises_error(self) -> None:
+        with pytest.raises(ValueError, match="Invalid tile provider"):
+            PaperMap(lat=40.7128, lon=-74.0060, tile_provider_key="NonexistentProvider")
 
-    def test_valid_tile_servers(self) -> None:
-        # Test a few valid tile servers
+    def test_valid_tile_providers(self) -> None:
+        # Test a few valid tile providers
         for ts in ["openstreetmap", "google-maps", "esri-worldstreetmap"]:
-            pm = PaperMap(lat=40.7128, lon=-74.0060, tile_server_key=ts)
-            assert pm.tile_server is not None
+            pm = PaperMap(lat=40.7128, lon=-74.0060, tile_provider_key=ts)
+            assert pm.tile_provider is not None
 
     def test_api_key_stored_correctly(self) -> None:
         # API key should be stored when provided
         pm = PaperMap(
             lat=40.7128,
             lon=-74.0060,
-            tile_server_key="thunderforest-landscape",
+            tile_provider_key="thunderforest-landscape",
             api_key="test_key",
         )
         assert pm.api_key == "test_key"
@@ -124,7 +124,7 @@ class TestPaperMapValidation:
             PaperMap(
                 lat=40.7128,
                 lon=-74.0060,
-                tile_server_key="thunderforest-landscape",
+                tile_provider_key="thunderforest-landscape",
             )
 
     def test_invalid_paper_size_raises_error(self) -> None:
@@ -274,14 +274,14 @@ class TestPaperMapEdgeCases:
         pm = PaperMap(lat=40.7128, lon=-74.0060, add_grid=True, grid_size=100000)
         assert pm.grid_size == 100000
 
-    # Tile server and API key edge cases
+    # Tile provider and API key edge cases
     def test_api_key_empty_string(self) -> None:
         """Test behavior with empty string API key."""
         # Empty string is stored as-is (not validated as missing)
         pm = PaperMap(
             lat=40.7128,
             lon=-74.0060,
-            tile_server_key="thunderforest-landscape",
+            tile_provider_key="thunderforest-landscape",
             api_key="",
         )
         assert pm.api_key == ""
@@ -291,7 +291,7 @@ class TestPaperMapEdgeCases:
         pm = PaperMap(
             lat=40.7128,
             lon=-74.0060,
-            tile_server_key="thunderforest-landscape",
+            tile_provider_key="thunderforest-landscape",
             api_key="test-key_123.456/abc",
         )
         assert pm.api_key == "test-key_123.456/abc"
@@ -618,7 +618,7 @@ class TestPaperMapHttpErrors:
             pm.download_tiles(num_retries=1)
 
     def test_download_tiles_500_error(self, httpx_mock: HTTPXMock) -> None:
-        """Test handling of HTTP 500 Server Error."""
+        """Test handling of HTTP 500 Provider Error."""
         # Disable unused response assertion
         httpx_mock._options.assert_all_responses_were_requested = False  # noqa: SLF001
 

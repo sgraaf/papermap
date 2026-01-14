@@ -1,4 +1,4 @@
-"""TomTom tile server configurations.
+"""TomTom tile provider configurations.
 
 TomTom provides high-quality map tiles with various styles
 including basic, hybrid, and labels layers. Requires an API key.
@@ -8,20 +8,20 @@ See: https://developer.tomtom.com/
 
 from __future__ import annotations
 
-from papermap.tile_server import TileServer
+from papermap.tile_provider import TileProvider
 
 TOMTOM_ATTRIBUTION = "© TomTom"
 TOMTOM_HTML_ATTRIBUTION = '© <a href="https://tomtom.com/">TomTom</a>'
 
 
-def _tomtom_server(
+def _tomtom_provider(
     key: str,
     name: str,
     variant: str,
     zoom_max: int = 22,
-) -> TileServer:
-    """Create a TomTom tile server configuration."""
-    return TileServer(
+) -> TileProvider:
+    """Create a TomTom tile provider configuration."""
+    return TileProvider(
         key=key,
         name=name,
         attribution=TOMTOM_ATTRIBUTION,
@@ -33,12 +33,12 @@ def _tomtom_server(
     )
 
 
-TILE_SERVERS: list[TileServer] = [
-    _tomtom_server("tomtom-basic", "TomTom Basic", "basic/main"),
-    _tomtom_server("tomtom-hybrid", "TomTom Hybrid", "hybrid/main"),
-    _tomtom_server("tomtom-labels", "TomTom Labels", "labels/main"),
+TILE_PROVIDERS: list[TileProvider] = [
+    _tomtom_provider("tomtom-basic", "TomTom Basic", "basic/main"),
+    _tomtom_provider("tomtom-hybrid", "TomTom Hybrid", "hybrid/main"),
+    _tomtom_provider("tomtom-labels", "TomTom Labels", "labels/main"),
 ]
-"""TomTom tile servers."""
+"""TomTom tile providers."""
 
-KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
-"""Mapping from tile server key to TileServer instance."""
+KEY_TO_TILE_PROVIDER: dict[str, TileProvider] = {ts.key: ts for ts in TILE_PROVIDERS}
+"""Mapping from tile provider key to TileProvider instance."""

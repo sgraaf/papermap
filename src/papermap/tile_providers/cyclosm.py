@@ -1,4 +1,4 @@
-"""CyclOSM tile server configuration.
+"""CyclOSM tile provider configuration.
 
 CyclOSM is a bicycle-oriented map built on top of OpenStreetMap data.
 It aims to provide a beautiful and practical map for cyclists.
@@ -8,10 +8,10 @@ See: https://www.cyclosm.org/
 
 from __future__ import annotations
 
-from papermap.tile_server import TileServer
+from papermap.tile_provider import TileProvider
 
-TILE_SERVERS: list[TileServer] = [
-    TileServer(
+TILE_PROVIDERS: list[TileProvider] = [
+    TileProvider(
         key="cyclosm",
         name="CyclOSM",
         attribution="Map data: © OpenStreetMap contributors. Map style: © CyclOSM (hosted by OpenStreetMap France)",
@@ -26,7 +26,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_max=20,
     ),
 ]
-"""CyclOSM tile servers."""
+"""CyclOSM tile providers."""
 
-KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
-"""Mapping from tile server key to TileServer instance."""
+KEY_TO_TILE_PROVIDER: dict[str, TileProvider] = {ts.key: ts for ts in TILE_PROVIDERS}
+"""Mapping from tile provider key to TileProvider instance."""

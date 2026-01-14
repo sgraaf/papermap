@@ -9,26 +9,26 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class TileServer:
-    """A tile server.
+class TileProvider:
+    """A tile provider.
 
     Args:
-        key: The key of the tile server (fully lowercase with dashes instead of spaces).
-        name: The name of the tile server.
-        attribution: The attribution of the tile server.
+        key: The key of the tile provider (fully lowercase with dashes instead of spaces).
+        name: The name of the tile provider.
+        attribution: The attribution of the tile provider.
         html_attribution: The HTML-version of the attribution (with hyperlinks).
-        url_template: The URL template of the tile server. Allowed placeholders
+        url_template: The URL template of the tile provider. Allowed placeholders
             are `{x}`, `{y}`, `{z}`, `{s}` and `{a}`, where `{x}`
             refers to the x coordinate of the tile, `{y}` refers to the y
             coordinate of the tile, `{z}` to the zoom level, `{s}` to
             the subdomain (optional) and `{a}` to the API key (optional). See
-            `<https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames#Tile_servers>`_
+            `<https://wiki.openstreetmap.org/wiki/Slippy_map_tilenames#Tile_providers>`_
             for more information.
-        zoom_min: The minimum zoom level of the tile server.
-        zoom_max: The maximum zoom level of the tile server.
-        bounds: The geographic bounds of the tile server (min_lon, min_lat, max_lon, max_lat).
+        zoom_min: The minimum zoom level of the tile provider.
+        zoom_max: The maximum zoom level of the tile provider.
+        bounds: The geographic bounds of the tile provider (min_lon, min_lat, max_lon, max_lat).
             Defaults to `None`.
-        subdomains: The subdomains of the tile server. Defaults to `None`.
+        subdomains: The subdomains of the tile provider. Defaults to `None`.
     """
 
     key: str

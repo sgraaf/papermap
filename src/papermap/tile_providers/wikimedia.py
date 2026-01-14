@@ -1,4 +1,4 @@
-"""Wikimedia Maps tile server configuration.
+"""Wikimedia Maps tile provider configuration.
 
 Wikimedia provides map tiles based on OpenStreetMap data
 for use in Wikipedia and other Wikimedia projects.
@@ -8,10 +8,10 @@ See: https://maps.wikimedia.org/
 
 from __future__ import annotations
 
-from papermap.tile_server import TileServer
+from papermap.tile_provider import TileProvider
 
-TILE_SERVERS: list[TileServer] = [
-    TileServer(
+TILE_PROVIDERS: list[TileProvider] = [
+    TileProvider(
         key="wikimedia",
         name="Wikimedia",
         attribution="Map data: © OpenStreetMap contributors. Map style: © Wikimedia Foundation",
@@ -25,7 +25,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_max=19,
     ),
 ]
-"""Wikimedia tile servers."""
+"""Wikimedia tile providers."""
 
-KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
-"""Mapping from tile server key to TileServer instance."""
+KEY_TO_TILE_PROVIDER: dict[str, TileProvider] = {ts.key: ts for ts in TILE_PROVIDERS}
+"""Mapping from tile provider key to TileProvider instance."""

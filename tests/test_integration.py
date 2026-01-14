@@ -483,46 +483,46 @@ class TestEdgeCases:
         assert output_file.exists()
 
 
-class TestTileServerConfiguration:
-    """Tests for different tile server configurations."""
+class TestTileProviderConfiguration:
+    """Tests for different tile provider configurations."""
 
     @pytest.mark.parametrize(
-        "tile_server",
+        "tile_provider",
         ["openstreetmap", "google-maps", "esri-worldstreetmap"],
     )
-    def test_different_tile_servers(
+    def test_different_tile_providers(
         self,
         tmp_path: Path,
-        tile_server: str,
+        tile_provider: str,
         httpx_mock: HTTPXMock,
         tile_image_content: bytes,
     ) -> None:
-        """Test generating maps with different tile servers."""
-        pm = PaperMap(lat=40.7128, lon=-74.0060, tile_server_key=tile_server)
+        """Test generating maps with different tile providers."""
+        pm = PaperMap(lat=40.7128, lon=-74.0060, tile_provider_key=tile_provider)
 
         for _ in range(len(pm.tiles)):
             httpx_mock.add_response(content=tile_image_content)
 
         pm.render()
 
-        output_file = tmp_path / f"test_{tile_server.replace('-', '_')}.pdf"
+        output_file = tmp_path / f"test_{tile_provider.replace('-', '_')}.pdf"
         pm.save(output_file)
 
         assert output_file.exists()
 
-    def test_tile_server_attribution_in_output(
+    def test_tile_provider_attribution_in_output(
         self, httpx_mock: HTTPXMock, tile_image_content: bytes
     ) -> None:
-        """Test that tile server attribution is included in output."""
-        pm = PaperMap(lat=40.7128, lon=-74.0060, tile_server_key="openstreetmap")
+        """Test that tile provider attribution is included in output."""
+        pm = PaperMap(lat=40.7128, lon=-74.0060, tile_provider_key="openstreetmap")
 
         for _ in range(len(pm.tiles)):
             httpx_mock.add_response(content=tile_image_content)
 
         pm.render()
 
-        # Attribution should be part of the tile server
-        assert "OpenStreetMap" in pm.tile_server.attribution
+        # Attribution should be part of the tile provider
+        assert "OpenStreetMap" in pm.tile_provider.attribution
 
 
 class TestGridCoordinates:

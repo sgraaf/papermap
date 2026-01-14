@@ -1,4 +1,4 @@
-"""OpenTopoMap tile server configuration.
+"""OpenTopoMap tile provider configuration.
 
 OpenTopoMap is a topographic map based on OpenStreetMap data with
 contour lines and hillshading.
@@ -8,10 +8,10 @@ See: https://opentopomap.org/
 
 from __future__ import annotations
 
-from papermap.tile_server import TileServer
+from papermap.tile_provider import TileProvider
 
-TILE_SERVERS: list[TileServer] = [
-    TileServer(
+TILE_PROVIDERS: list[TileProvider] = [
+    TileProvider(
         key="opentopomap",
         name="OpenTopoMap",
         attribution=(
@@ -31,7 +31,7 @@ TILE_SERVERS: list[TileServer] = [
         zoom_max=17,
     ),
 ]
-"""OpenTopoMap tile servers."""
+"""OpenTopoMap tile providers."""
 
-KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
-"""Mapping from tile server key to TileServer instance."""
+KEY_TO_TILE_PROVIDER: dict[str, TileProvider] = {ts.key: ts for ts in TILE_PROVIDERS}
+"""Mapping from tile provider key to TileProvider instance."""

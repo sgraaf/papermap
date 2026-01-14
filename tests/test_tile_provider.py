@@ -1,43 +1,45 @@
-"""Unit tests for papermap.tile_server module."""
+"""Unit tests for papermap.tile_provider module."""
 
 from papermap.tile import Tile
-from papermap.tile_server import TileServer
-from papermap.tile_servers import KEY_TO_TILE_SERVER
+from papermap.tile_provider import TileProvider
+from papermap.tile_providers import KEY_TO_TILE_PROVIDER
 from papermap.utils import get_string_formatting_arguments
 
 
-class TestTileServerInit:
-    """Tests for TileServer initialization."""
+class TestTileProviderInit:
+    """Tests for TileProvider initialization."""
 
-    def test_basic_init(self, tile_server: TileServer) -> None:
-        assert tile_server.key == "test-server"
-        assert tile_server.name == "Test Server"
-        assert tile_server.attribution == "Test Attribution"
-        assert tile_server.html_attribution == "Test Attribution"
-        assert tile_server.url_template == "https://example.com/{z}/{x}/{y}.png"
-        assert tile_server.zoom_min == 0
-        assert tile_server.zoom_max == 19
-        assert tile_server.bounds is None
-        assert tile_server.subdomains is None
+    def test_basic_init(self, tile_provider: TileProvider) -> None:
+        assert tile_provider.key == "test-provider"
+        assert tile_provider.name == "Test Provider"
+        assert tile_provider.attribution == "Test Attribution"
+        assert tile_provider.html_attribution == "Test Attribution"
+        assert tile_provider.url_template == "https://example.com/{z}/{x}/{y}.png"
+        assert tile_provider.zoom_min == 0
+        assert tile_provider.zoom_max == 19
+        assert tile_provider.bounds is None
+        assert tile_provider.subdomains is None
 
-    def test_init_with_subdomains(self, tile_server_with_mirrors: TileServer) -> None:
-        assert tile_server_with_mirrors.subdomains == ["a", "b", "c"]
+    def test_init_with_subdomains(
+        self, tile_provider_with_mirrors: TileProvider
+    ) -> None:
+        assert tile_provider_with_mirrors.subdomains == ["a", "b", "c"]
 
     def test_init_without_subdomains_creates_none_cycle(
-        self, tile_server: TileServer
+        self, tile_provider: TileProvider
     ) -> None:
         # Should cycle through [None] when no subdomains
-        result = next(tile_server.subdomains_cycle)
+        result = next(tile_provider.subdomains_cycle)
         assert result is None
 
     def test_init_with_subdomains_creates_cycle(
-        self, tile_server_with_mirrors: TileServer
+        self, tile_provider_with_mirrors: TileProvider
     ) -> None:
         # Should cycle through subdomains
-        result1 = next(tile_server_with_mirrors.subdomains_cycle)
-        result2 = next(tile_server_with_mirrors.subdomains_cycle)
-        result3 = next(tile_server_with_mirrors.subdomains_cycle)
-        result4 = next(tile_server_with_mirrors.subdomains_cycle)
+        result1 = next(tile_provider_with_mirrors.subdomains_cycle)
+        result2 = next(tile_provider_with_mirrors.subdomains_cycle)
+        result3 = next(tile_provider_with_mirrors.subdomains_cycle)
+        result4 = next(tile_provider_with_mirrors.subdomains_cycle)
 
         assert result1 == "a"
         assert result2 == "b"
@@ -45,7 +47,7 @@ class TestTileServerInit:
         assert result4 == "a"  # Cycles back
 
     def test_init_with_integer_subdomains(self) -> None:
-        ts = TileServer(
+        ts = TileProvider(
             key="test-int-subdomains",
             name="Test Integer Subdomains",
             attribution="Test",
@@ -59,22 +61,22 @@ class TestTileServerInit:
         assert subdomains == [0, 1, 2, 3, 0, 1, 2, 3]
 
 
-class TestTileServerFormatUrlTemplate:
-    """Tests for TileServer.format_url_template method."""
+class TestTileProviderFormatUrlTemplate:
+    """Tests for TileProvider.format_url_template method."""
 
-    def test_basic_formatting(self, tile_server: TileServer, tile: Tile) -> None:
-        result = tile_server.format_url_template(tile)
+    def test_basic_formatting(self, tile_provider: TileProvider, tile: Tile) -> None:
+        result = tile_provider.format_url_template(tile)
         # sample_tile has x=123, y=456, zoom=10
         assert result == "https://example.com/10/123/456.png"
 
     def test_formatting_with_subdomains_cycles(
-        self, tile_server_with_mirrors: TileServer, tile: Tile
+        self, tile_provider_with_mirrors: TileProvider, tile: Tile
     ) -> None:
         # Each call should use next subdomain in cycle
-        result1 = tile_server_with_mirrors.format_url_template(tile)
-        result2 = tile_server_with_mirrors.format_url_template(tile)
-        result3 = tile_server_with_mirrors.format_url_template(tile)
-        result4 = tile_server_with_mirrors.format_url_template(tile)
+        result1 = tile_provider_with_mirrors.format_url_template(tile)
+        result2 = tile_provider_with_mirrors.format_url_template(tile)
+        result3 = tile_provider_with_mirrors.format_url_template(tile)
+        result4 = tile_provider_with_mirrors.format_url_template(tile)
 
         assert "a.example.com" in result1
         assert "b.example.com" in result2
@@ -82,19 +84,21 @@ class TestTileServerFormatUrlTemplate:
         assert "a.example.com" in result4  # Cycles back
 
     def test_formatting_with_api_key(
-        self, tile_server_with_api_key: TileServer, tile: Tile
+        self, tile_provider_with_api_key: TileProvider, tile: Tile
     ) -> None:
-        result = tile_server_with_api_key.format_url_template(tile, api_key="secret123")
+        result = tile_provider_with_api_key.format_url_template(
+            tile, api_key="secret123"
+        )
         assert "api_key=secret123" in result
 
     def test_formatting_with_none_api_key(
-        self, tile_server_with_api_key: TileServer, tile: Tile
+        self, tile_provider_with_api_key: TileProvider, tile: Tile
     ) -> None:
-        result = tile_server_with_api_key.format_url_template(tile, api_key=None)
+        result = tile_provider_with_api_key.format_url_template(tile, api_key=None)
         assert "api_key=None" in result
 
     def test_formatting_osm_style_template(self, tile: Tile) -> None:
-        ts = TileServer(
+        ts = TileProvider(
             key="osm-test",
             name="OSM Test",
             attribution="OSM",
@@ -108,7 +112,7 @@ class TestTileServerFormatUrlTemplate:
         assert result == "http://a.tile.osm.org/10/123/456.png"
 
     def test_formatting_google_style_template(self, tile: Tile) -> None:
-        ts = TileServer(
+        ts = TileProvider(
             key="google-test",
             name="Google Test",
             attribution="Google",
@@ -122,18 +126,18 @@ class TestTileServerFormatUrlTemplate:
         assert result == "http://mt0.google.com/vt/lyrs=m&x=123&y=456&z=10"
 
 
-class TestTileServerSubdomainsCycle:
-    """Tests for TileServer subdomains cycling behavior."""
+class TestTileProviderSubdomainsCycle:
+    """Tests for TileProvider subdomains cycling behavior."""
 
     def test_subdomains_cycle_is_infinite(
-        self, tile_server_with_mirrors: TileServer
+        self, tile_provider_with_mirrors: TileProvider
     ) -> None:
         # Should be able to get many values without error
         for _ in range(100):
-            next(tile_server_with_mirrors.subdomains_cycle)
+            next(tile_provider_with_mirrors.subdomains_cycle)
 
     def test_single_subdomain_cycles(self) -> None:
-        ts = TileServer(
+        ts = TileProvider(
             key="single-subdomain",
             name="Single Subdomain",
             attribution="Test",
@@ -149,7 +153,7 @@ class TestTileServerSubdomainsCycle:
         assert result1 == result2 == result3 == "only"
 
     def test_empty_subdomains_treated_as_none(self) -> None:
-        ts = TileServer(
+        ts = TileProvider(
             key="empty-subdomains",
             name="Empty Subdomains",
             attribution="Test",
@@ -166,11 +170,11 @@ class TestTileServerSubdomainsCycle:
         assert result is None
 
 
-class TestTileServerEquality:
-    """Tests for TileServer equality comparisons."""
+class TestTileProviderEquality:
+    """Tests for TileProvider equality comparisons."""
 
-    def test_equal_tile_servers(self) -> None:
-        ts1 = TileServer(
+    def test_equal_tile_providers(self) -> None:
+        ts1 = TileProvider(
             key="test",
             name="Test",
             attribution="Test",
@@ -179,7 +183,7 @@ class TestTileServerEquality:
             zoom_min=0,
             zoom_max=19,
         )
-        ts2 = TileServer(
+        ts2 = TileProvider(
             key="test",
             name="Test",
             attribution="Test",
@@ -199,7 +203,7 @@ class TestTileServerEquality:
         assert ts1.subdomains == ts2.subdomains
 
     def test_different_attribution(self) -> None:
-        ts1 = TileServer(
+        ts1 = TileProvider(
             key="test1",
             name="Test1",
             attribution="Test1",
@@ -208,7 +212,7 @@ class TestTileServerEquality:
             zoom_min=0,
             zoom_max=19,
         )
-        ts2 = TileServer(
+        ts2 = TileProvider(
             key="test2",
             name="Test2",
             attribution="Test2",
@@ -220,7 +224,7 @@ class TestTileServerEquality:
         assert ts1.attribution != ts2.attribution
 
     def test_different_zoom_range(self) -> None:
-        ts1 = TileServer(
+        ts1 = TileProvider(
             key="test",
             name="Test",
             attribution="Test",
@@ -229,7 +233,7 @@ class TestTileServerEquality:
             zoom_min=0,
             zoom_max=19,
         )
-        ts2 = TileServer(
+        ts2 = TileProvider(
             key="test",
             name="Test",
             attribution="Test",
@@ -241,12 +245,12 @@ class TestTileServerEquality:
         assert ts1.zoom_max != ts2.zoom_max
 
 
-class TestTileServerValidation:
-    """Tests for TileServer attribute validation."""
+class TestTileProviderValidation:
+    """Tests for TileProvider attribute validation."""
 
     def test_zoom_min_less_than_max(self) -> None:
         # This should work
-        ts = TileServer(
+        ts = TileProvider(
             key="test",
             name="Test",
             attribution="Test",
@@ -259,7 +263,7 @@ class TestTileServerValidation:
 
     def test_zoom_min_equals_max(self) -> None:
         # Edge case: single zoom level
-        ts = TileServer(
+        ts = TileProvider(
             key="test",
             name="Test",
             attribution="Test",
@@ -271,11 +275,11 @@ class TestTileServerValidation:
         assert ts.zoom_min == ts.zoom_max == 10
 
 
-class TestRealTileServers:
-    """Tests using real tile server configurations from defaults."""
+class TestRealTileProviders:
+    """Tests using real tile provider configurations from defaults."""
 
     def test_openstreetmap_config(self) -> None:
-        osm = KEY_TO_TILE_SERVER["openstreetmap"]
+        osm = KEY_TO_TILE_PROVIDER["openstreetmap"]
         assert osm.key == "openstreetmap"
         assert osm.name == "OpenStreetMap"
         assert osm.zoom_min == 0
@@ -284,7 +288,7 @@ class TestRealTileServers:
         assert "OpenStreetMap" in osm.attribution
 
     def test_google_maps_config(self) -> None:
-        google = KEY_TO_TILE_SERVER["google-maps"]
+        google = KEY_TO_TILE_PROVIDER["google-maps"]
         assert google.key == "google-maps"
         assert google.name == "Google Maps"
         assert google.zoom_min == 0
@@ -294,7 +298,7 @@ class TestRealTileServers:
 
     def test_esri_config(self) -> None:
         # Test the canonical key lookup
-        esri = KEY_TO_TILE_SERVER["esri-worldstreetmap"]
+        esri = KEY_TO_TILE_PROVIDER["esri-worldstreetmap"]
         assert esri.key == "esri-worldstreetmap"
         assert esri.name == "Esri WorldStreetMap"
         assert esri.zoom_min == 0
@@ -303,12 +307,12 @@ class TestRealTileServers:
         assert "Esri" in esri.attribution
 
     def test_thunderforest_requires_api_key(self) -> None:
-        tf = KEY_TO_TILE_SERVER["thunderforest-landscape"]
+        tf = KEY_TO_TILE_PROVIDER["thunderforest-landscape"]
         args = get_string_formatting_arguments(tf.url_template)
         assert "a" in args
 
-    def test_all_tile_servers_have_required_fields(self) -> None:
-        for key, ts in KEY_TO_TILE_SERVER.items():
+    def test_all_tile_providers_have_required_fields(self) -> None:
+        for key, ts in KEY_TO_TILE_PROVIDER.items():
             assert ts.key, f"{key} missing key"
             assert ts.name, f"{key} missing name"
             assert ts.attribution, f"{key} missing attribution"

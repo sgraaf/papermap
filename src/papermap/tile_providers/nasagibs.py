@@ -1,4 +1,4 @@
-"""NASA GIBS (Global Imagery Browse Services) tile server configurations.
+"""NASA GIBS (Global Imagery Browse Services) tile provider configurations.
 
 NASA GIBS provides satellite imagery from various NASA missions,
 including MODIS and VIIRS data.
@@ -8,7 +8,7 @@ See: https://earthdata.nasa.gov/eosdis/science-system-description/eosdis-compone
 
 from __future__ import annotations
 
-from papermap.tile_server import TileServer
+from papermap.tile_provider import TileProvider
 
 NASA_ATTRIBUTION = "Imagery provided by services from the Global Imagery Browse Services (GIBS), operated by the NASA/GSFC/Earth Science Data and Information System (ESDIS) with funding provided by NASA/HQ"
 NASA_HTML_ATTRIBUTION = (
@@ -19,7 +19,7 @@ NASA_HTML_ATTRIBUTION = (
 )
 
 
-def _nasa_server(  # noqa: PLR0913
+def _nasa_provider(  # noqa: PLR0913
     key: str,
     name: str,
     variant: str,
@@ -27,10 +27,10 @@ def _nasa_server(  # noqa: PLR0913
     time: str = "",
     tilematrixset: str = "GoogleMapsCompatible_Level",
     ext: str = "jpg",
-) -> TileServer:
-    """Create a NASA GIBS tile server configuration."""
+) -> TileProvider:
+    """Create a NASA GIBS tile provider configuration."""
     time_param = f"&TIME={time}" if time else ""
-    return TileServer(
+    return TileProvider(
         key=key,
         name=name,
         attribution=NASA_ATTRIBUTION,
@@ -42,24 +42,24 @@ def _nasa_server(  # noqa: PLR0913
     )
 
 
-TILE_SERVERS: list[TileServer] = [
-    _nasa_server(
+TILE_PROVIDERS: list[TileProvider] = [
+    _nasa_provider(
         "nasagibs-modisterratruecolorcr",
         "NASAGIBS ModisTerraTrueColorCR",
         "MODIS_Terra_CorrectedReflectance_TrueColor",
     ),
-    _nasa_server(
+    _nasa_provider(
         "nasagibs-modisterrabands367cr",
         "NASAGIBS ModisTerraBands367CR",
         "MODIS_Terra_CorrectedReflectance_Bands367",
     ),
-    _nasa_server(
+    _nasa_provider(
         "nasagibs-viirsearthatnight2012",
         "NASAGIBS ViirsEarthAtNight2012",
         "VIIRS_CityLights_2012",
         zoom_max=8,
     ),
-    _nasa_server(
+    _nasa_provider(
         "nasagibs-modisterralstday",
         "NASAGIBS ModisTerraLSTDay",
         "MODIS_Terra_Land_Surface_Temp_Day",
@@ -67,21 +67,21 @@ TILE_SERVERS: list[TileServer] = [
         tilematrixset="GoogleMapsCompatible_Level",
         ext="png",
     ),
-    _nasa_server(
+    _nasa_provider(
         "nasagibs-modisterrasnowcover",
         "NASAGIBS ModisTerraSnowCover",
         "MODIS_Terra_NDSI_Snow_Cover",
         zoom_max=8,
         ext="png",
     ),
-    _nasa_server(
+    _nasa_provider(
         "nasagibs-modisterraaod",
         "NASAGIBS ModisTerraAOD",
         "MODIS_Terra_Aerosol",
         zoom_max=6,
         ext="png",
     ),
-    _nasa_server(
+    _nasa_provider(
         "nasagibs-modisterrachlorophyll",
         "NASAGIBS ModisTerraChlorophyll",
         "MODIS_Terra_Chlorophyll_A",
@@ -89,7 +89,7 @@ TILE_SERVERS: list[TileServer] = [
         ext="png",
     ),
 ]
-"""NASA GIBS tile servers."""
+"""NASA GIBS tile providers."""
 
-KEY_TO_TILE_SERVER: dict[str, TileServer] = {ts.key: ts for ts in TILE_SERVERS}
-"""Mapping from tile server key to TileServer instance."""
+KEY_TO_TILE_PROVIDER: dict[str, TileProvider] = {ts.key: ts for ts in TILE_PROVIDERS}
+"""Mapping from tile provider key to TileProvider instance."""
