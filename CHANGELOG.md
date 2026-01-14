@@ -27,7 +27,7 @@
 - Migrated from `requests` to `httpx` for HTTP client functionality, utilizing modern features such as improved connection pooling and timeout handling
 - Refactored tests to use `pytest-httpx` for cleaner and more maintainable HTTP mocking
 - Reorganized package structure by consolidating `defaults.py`, `constants.py`, and `typing.py` into their logical homes:
-  - Tile server configurations moved to new `tile_servers` package
+  - Tile server configurations moved to new `tile_servers` subpackage
   - Paper sizes and default values moved to `papermap.py`
   - Geographic constants and type aliases moved to `utils.py`
 - Enhanced `TileServer` dataclass with new properties:

@@ -1,4 +1,4 @@
-"""PaperMap is a Python package and CLI for creating ready-to-print paper maps."""
+"""PaperMap is a Python library and CLI tool for creating ready-to-print paper maps."""
 
 from .papermap import PaperMap
 

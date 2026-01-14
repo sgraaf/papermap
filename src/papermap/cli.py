@@ -154,7 +154,7 @@ def common_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
 )
 @click.version_option(metadata.version("papermap"), "-v", "--version")
 def cli() -> None:
-    """PaperMap is a Python package and CLI for creating ready-to-print paper maps.
+    """PaperMap is a Python library and CLI tool for creating ready-to-print paper maps.
 
     Documentation: https://papermap.readthedocs.io/en/stable/
     """

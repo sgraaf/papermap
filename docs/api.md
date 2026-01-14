@@ -23,7 +23,7 @@
 
 ## `papermap.tile_servers` Subpackage
 
-The `tile_servers` package contains tile server configurations organized by provider.
+The `tile_servers` subpackage contains tile server configurations organized by provider.
 
 ```{eval-rst}
 .. automodule:: papermap.tile_servers
