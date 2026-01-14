@@ -279,7 +279,7 @@ class TestRealTileServers:
         assert osm.name == "OpenStreetMap"
         assert osm.zoom_min == 0
         assert osm.zoom_max == 19
-        assert osm.subdomains == ["a", "b", "c"]
+        # Note: subdomains changed to None in new architecture (direct URL)
         assert "OpenStreetMap" in osm.attribution
 
     def test_google_maps_config(self) -> None:
@@ -287,17 +287,23 @@ class TestRealTileServers:
         assert google.key == "google-maps"
         assert google.name == "Google Maps"
         assert google.zoom_min == 0
-        assert google.zoom_max == 19
+        assert google.zoom_max == 20  # Updated to match new config
         assert google.subdomains == [0, 1, 2, 3]
         assert "Google" in google.attribution
 
     def test_esri_config(self) -> None:
-        esri = TILE_SERVERS_MAP["ESRI Standard"]
-        assert esri.key == "esri-standard"
-        assert esri.name == "ESRI Standard"
+        # Test the new canonical name
+        esri = TILE_SERVERS_MAP["Esri WorldStreetMap"]
+        assert esri.key == "esri-worldstreetmap"
+        assert esri.name == "Esri WorldStreetMap"
         assert esri.zoom_min == 0
         assert esri.zoom_max == 17
         assert esri.subdomains is None
+        assert "Esri" in esri.attribution
+
+    def test_esri_legacy_alias(self) -> None:
+        # Test that legacy alias still works for backward compatibility
+        esri = TILE_SERVERS_MAP["ESRI Standard"]
         assert "Esri" in esri.attribution
 
     def test_thunderforest_requires_api_key(self) -> None:

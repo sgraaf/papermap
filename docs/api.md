@@ -21,6 +21,15 @@
    :members:
 ```
 
+## `papermap.tile_servers` Package
+
+The `tile_servers` package contains tile server configurations organized by provider.
+
+```{eval-rst}
+.. automodule:: papermap.tile_servers
+   :members:
+```
+
 ## `papermap.utils` Module
 
 ```{eval-rst}

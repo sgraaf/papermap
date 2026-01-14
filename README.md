@@ -57,7 +57,7 @@ Create a landscape-oriented, A3-sized map with grid overlay:
 >>> pm = PaperMap(
 ...     lat=40.416775,
 ...     lon=-3.703790,  # Madrid, Spain
-...     tile_server="Stamen Terrain",
+...     tile_server="Stadia StamenTerrain",
 ...     size="a3",
 ...     landscape=True,
 ...     scale=50_000,
@@ -76,7 +76,7 @@ Create a map using satellite imagery:
 >>> pm = PaperMap(
 ...     lat=51.5074,
 ...     lon=-0.1278,  # London, UK
-...     tile_server="ESRI Satellite",
+...     tile_server="Esri WorldImagery",
 ...     size="a4",
 ...     scale=10_000,
 ... )
@@ -222,7 +222,7 @@ Create a landscape-oriented, A3-sized map with grid overlay:
 
 ```shell
 $ papermap latlon \
-    --tile-server "Stamen Terrain" \
+    --tile-server "Stadia StamenTerrain" \
     --paper-size a3 \
     --landscape \
     --scale 50000 \
@@ -236,7 +236,7 @@ Create a map using satellite imagery:
 
 ```shell
 $ papermap latlon \
-    --tile-server "ESRI Satellite" \
+    --tile-server "Esri WorldImagery" \
     --scale 10000 \
     -- 51.5074 -0.1278 London_Satellite.pdf
 ```
