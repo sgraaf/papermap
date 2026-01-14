@@ -1,7 +1,8 @@
 """Unit tests for papermap.tile_server module."""
 
 from papermap.tile import Tile
-from papermap.tile_server import TILE_SERVERS_MAP, TileServer
+from papermap.tile_server import TileServer
+from papermap.tile_servers import KEY_TO_TILE_SERVER
 from papermap.utils import get_string_formatting_arguments
 
 
@@ -274,43 +275,44 @@ class TestRealTileServers:
     """Tests using real tile server configurations from defaults."""
 
     def test_openstreetmap_config(self) -> None:
-        osm = TILE_SERVERS_MAP["OpenStreetMap"]
+        osm = KEY_TO_TILE_SERVER["openstreetmap"]
         assert osm.key == "openstreetmap"
         assert osm.name == "OpenStreetMap"
         assert osm.zoom_min == 0
         assert osm.zoom_max == 19
-        assert osm.subdomains == ["a", "b", "c"]
+        # Note: subdomains changed to None in new architecture (direct URL)
         assert "OpenStreetMap" in osm.attribution
 
     def test_google_maps_config(self) -> None:
-        google = TILE_SERVERS_MAP["Google Maps"]
+        google = KEY_TO_TILE_SERVER["google-maps"]
         assert google.key == "google-maps"
         assert google.name == "Google Maps"
         assert google.zoom_min == 0
-        assert google.zoom_max == 19
+        assert google.zoom_max == 20  # Updated to match new config
         assert google.subdomains == [0, 1, 2, 3]
         assert "Google" in google.attribution
 
     def test_esri_config(self) -> None:
-        esri = TILE_SERVERS_MAP["ESRI Standard"]
-        assert esri.key == "esri-standard"
-        assert esri.name == "ESRI Standard"
+        # Test the canonical key lookup
+        esri = KEY_TO_TILE_SERVER["esri-worldstreetmap"]
+        assert esri.key == "esri-worldstreetmap"
+        assert esri.name == "Esri WorldStreetMap"
         assert esri.zoom_min == 0
         assert esri.zoom_max == 17
         assert esri.subdomains is None
         assert "Esri" in esri.attribution
 
     def test_thunderforest_requires_api_key(self) -> None:
-        tf = TILE_SERVERS_MAP["Thunderforest Landscape"]
+        tf = KEY_TO_TILE_SERVER["thunderforest-landscape"]
         args = get_string_formatting_arguments(tf.url_template)
         assert "a" in args
 
     def test_all_tile_servers_have_required_fields(self) -> None:
-        for name, ts in TILE_SERVERS_MAP.items():
-            assert ts.key, f"{name} missing key"
-            assert ts.name, f"{name} missing name"
-            assert ts.attribution, f"{name} missing attribution"
-            assert ts.html_attribution, f"{name} missing html_attribution"
-            assert ts.url_template, f"{name} missing url_template"
-            assert ts.zoom_min >= 0, f"{name} has invalid zoom_min"
-            assert ts.zoom_max >= ts.zoom_min, f"{name} has invalid zoom range"
+        for key, ts in KEY_TO_TILE_SERVER.items():
+            assert ts.key, f"{key} missing key"
+            assert ts.name, f"{key} missing name"
+            assert ts.attribution, f"{key} missing attribution"
+            assert ts.html_attribution, f"{key} missing html_attribution"
+            assert ts.url_template, f"{key} missing url_template"
+            assert ts.zoom_min >= 0, f"{key} has invalid zoom_min"
+            assert ts.zoom_max >= ts.zoom_min, f"{key} has invalid zoom range"

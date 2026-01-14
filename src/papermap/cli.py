@@ -16,7 +16,7 @@ from .papermap import (
     PAPER_SIZES,
     PaperMap,
 )
-from .tile_server import DEFAULT_TILE_SERVER, TILE_SERVERS
+from .tile_servers import DEFAULT_TILE_SERVER_KEY, TILE_SERVER_KEYS
 from .utils import utm_to_spherical
 
 CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
@@ -26,7 +26,7 @@ def _create_and_save_map(  # noqa: PLR0913
     lat: float,
     lon: float,
     file: Path,
-    tile_server: str = DEFAULT_TILE_SERVER,
+    tile_server_key: str = DEFAULT_TILE_SERVER_KEY,
     api_key: str | None = None,
     paper_size: str = DEFAULT_PAPER_SIZE,
     use_landscape: bool = False,  # noqa: FBT001, FBT002
@@ -44,7 +44,7 @@ def _create_and_save_map(  # noqa: PLR0913
     pm = PaperMap(
         lat=lat,
         lon=lon,
-        tile_server=tile_server,
+        tile_server_key=tile_server_key,
         api_key=api_key,
         paper_size=paper_size,
         use_landscape=use_landscape,
@@ -85,8 +85,9 @@ def common_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
     @click.argument("file", type=click.Path(dir_okay=False, path_type=Path))
     @click.option(
         "--tile-server",
-        type=click.Choice(TILE_SERVERS),
-        default=DEFAULT_TILE_SERVER,
+        "tile_server_key",
+        type=click.Choice(TILE_SERVER_KEYS),
+        default=DEFAULT_TILE_SERVER_KEY,
         help="Tile server to serve as the base of the paper map.",
     )
     @click.option(
@@ -153,7 +154,7 @@ def common_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
 )
 @click.version_option(metadata.version("papermap"), "-v", "--version")
 def cli() -> None:
-    """PaperMap is a Python package and CLI for creating ready-to-print paper maps.
+    """PaperMap is a Python library and CLI tool for creating ready-to-print paper maps.
 
     Documentation: https://papermap.readthedocs.io/en/stable/
     """
@@ -167,7 +168,7 @@ def latlon(  # noqa: PLR0913
     lat: float,
     lon: float,
     file: Path,
-    tile_server: str = DEFAULT_TILE_SERVER,
+    tile_server_key: str = DEFAULT_TILE_SERVER_KEY,
     api_key: str | None = None,
     paper_size: str = DEFAULT_PAPER_SIZE,
     use_landscape: bool = False,  # noqa: FBT001, FBT002
@@ -185,7 +186,7 @@ def latlon(  # noqa: PLR0913
         lat,
         lon,
         file,
-        tile_server=tile_server,
+        tile_server_key=tile_server_key,
         api_key=api_key,
         paper_size=paper_size,
         use_landscape=use_landscape,
@@ -212,7 +213,7 @@ def utm(  # noqa: PLR0913
     zone: int,
     hemisphere: str,
     file: Path,
-    tile_server: str = DEFAULT_TILE_SERVER,
+    tile_server_key: str = DEFAULT_TILE_SERVER_KEY,
     api_key: str | None = None,
     paper_size: str = DEFAULT_PAPER_SIZE,
     use_landscape: bool = False,  # noqa: FBT001, FBT002
@@ -232,7 +233,7 @@ def utm(  # noqa: PLR0913
         lat,
         lon,
         file,
-        tile_server=tile_server,
+        tile_server_key=tile_server_key,
         api_key=api_key,
         paper_size=paper_size,
         use_landscape=use_landscape,

@@ -2,12 +2,32 @@
 
 ## [Unreleased]
 
+### Added
+
+- Added new `tile_servers` subpackage with provider-based organization for improved maintainability
+- Added 100+ new tile servers from various providers including:
+  - OpenStreetMap regional variants (DE, CH, France, HOT, BZH)
+  - Stadia Maps (including Stamen styles: Toner, Terrain, Watercolor)
+  - CartoDB/Carto (Positron, Dark Matter, Voyager)
+  - Esri (WorldStreetMap, WorldImagery, WorldTopoMap, and more)
+  - HERE Maps (requires API key)
+  - USGS (USTopo, USImagery)
+  - NASA GIBS (satellite imagery)
+  - MapTiler (requires API key)
+  - Jawg Maps (requires API key)
+  - TomTom (requires API key)
+  - CyclOSM (bicycle-oriented maps)
+  - OpenSeaMap (nautical charts)
+  - Waymarked Trails (hiking, cycling, MTB, slopes, riding, skating)
+  - Regional providers: BasemapAT (Austria), NLMaps (Netherlands), SwissFederalGeoportal
+  - And many more specialty maps
+
 ### Changed
 
 - Migrated from `requests` to `httpx` for HTTP client functionality, utilizing modern features such as improved connection pooling and timeout handling
 - Refactored tests to use `pytest-httpx` for cleaner and more maintainable HTTP mocking
 - Reorganized package structure by consolidating `defaults.py`, `constants.py`, and `typing.py` into their logical homes:
-  - Tile server configurations moved to `tile_server.py`
+  - Tile server configurations moved to new `tile_servers` subpackage
   - Paper sizes and default values moved to `papermap.py`
   - Geographic constants and type aliases moved to `utils.py`
 - Enhanced `TileServer` dataclass with new properties:
@@ -18,6 +38,7 @@
   - Renamed `mirrors` to `subdomains` for better clarity
   - Renamed `mirrors_cycle` to `subdomains_cycle`
   - Updated URL template placeholders: `{zoom}` → `{z}`, `{mirror}` → `{s}`, `{api_key}` → `{a}`
+- Renamed some tile servers for consistency
 
 ### Removed
 

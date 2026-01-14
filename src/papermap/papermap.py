@@ -12,7 +12,7 @@ from fpdf import FPDF
 from PIL import Image
 
 from .tile import TILE_SIZE, Tile
-from .tile_server import DEFAULT_TILE_SERVER, TILE_SERVERS, TILE_SERVERS_MAP
+from .tile_servers import DEFAULT_TILE_SERVER_KEY, KEY_TO_TILE_SERVER, TILE_SERVER_KEYS
 from .utils import (
     drange,
     get_string_formatting_arguments,
@@ -74,7 +74,7 @@ class PaperMap:
     Args:
         lat: Latitude of the center of the map.
         lon: Longitude of the center of the map
-        tile_server: Tile server to serve as the base of the paper map. Defaults to `OpenStreetMap`.
+        tile_server_key: Tile server key to serve as the base of the paper map. Defaults to `openstreetmap`.
         api_key: API key for the chosen tile server (if applicable). Defaults to `None`.
         size: Size of the paper map. Defaults to `a4`.
         landscape: Use landscape orientation. Defaults to `False`.
@@ -100,7 +100,7 @@ class PaperMap:
         lat: float,
         lon: float,
         *,
-        tile_server: str = DEFAULT_TILE_SERVER,
+        tile_server_key: str = DEFAULT_TILE_SERVER_KEY,
         api_key: str | None = None,
         paper_size: str = DEFAULT_PAPER_SIZE,
         use_landscape: bool = False,
@@ -136,23 +136,19 @@ class PaperMap:
         self.grid_size = grid_size
 
         # get the tile server
-        if tile_server in TILE_SERVERS_MAP:
-            self.tile_server = TILE_SERVERS_MAP[tile_server]
+        if tile_server_key in KEY_TO_TILE_SERVER:
+            self.tile_server = KEY_TO_TILE_SERVER[tile_server_key]
         else:
-            msg = f"Invalid tile server. Please choose one of {', '.join(TILE_SERVERS)}"
+            available_keys = TILE_SERVER_KEYS
+            msg = f"Invalid tile server key '{tile_server_key}'. Please choose one of {', '.join(available_keys)}"
             raise ValueError(msg)
-
-        # get the tile server subdomains
-        self.subdomains = (
-            self.tile_server.subdomains if self.tile_server.subdomains else []
-        )
 
         # check whether an API key is provided, if it is needed
         if (
             "a" in get_string_formatting_arguments(self.tile_server.url_template)
             and self.api_key is None
         ):
-            msg = f"No API key specified for {tile_server} tile server"
+            msg = f"No API key specified for {tile_server_key} tile server"
             raise ValueError(msg)
 
         # get the paper size (in mm)
@@ -174,7 +170,7 @@ class PaperMap:
             self.zoom_scaled < self.tile_server.zoom_min
             or self.zoom_scaled > self.tile_server.zoom_max
         ):
-            msg = f"Scale out of bounds for {tile_server} tile server."
+            msg = f"Scale out of bounds for {tile_server_key} tile server."
             raise ValueError(msg)
 
         # compute the width and height of the image (in mm)
