@@ -21,7 +21,7 @@
    :members:
 ```
 
-## `papermap.tile_servers` Package
+## `papermap.tile_servers` Subpackage
 
 The `tile_servers` package contains tile server configurations organized by provider.
 

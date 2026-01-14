@@ -62,19 +62,3 @@ class TileServer:
             z=tile.zoom,
             a=api_key,
         )
-
-
-# Re-export from tile_servers package for backward compatibility
-# Import must be after TileServer class to avoid circular import
-from papermap.tile_servers import (  # noqa: E402
-    DEFAULT_TILE_SERVER,
-    KEY_TO_TILE_SERVER,
-    TILE_SERVERS,
-)
-
-__all__ = [
-    "DEFAULT_TILE_SERVER",
-    "KEY_TO_TILE_SERVER",
-    "TILE_SERVERS",
-    "TileServer",
-]

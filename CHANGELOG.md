@@ -4,7 +4,7 @@
 
 ### Added
 
-- Added new `tile_servers` package with provider-based organization for improved maintainability
+- Added new `tile_servers` subpackage with provider-based organization for improved maintainability
 - Added 100+ new tile servers from various providers including:
   - OpenStreetMap regional variants (DE, CH, France, HOT, BZH)
   - Stadia Maps (including Stamen styles: Toner, Terrain, Watercolor)
@@ -38,9 +38,7 @@
   - Renamed `mirrors` to `subdomains` for better clarity
   - Renamed `mirrors_cycle` to `subdomains_cycle`
   - Updated URL template placeholders: `{zoom}` → `{z}`, `{mirror}` → `{s}`, `{api_key}` → `{a}`
-- Renamed some tile servers for consistency (legacy aliases provided for backward compatibility):
-  - `ESRI *` → `Esri *` (e.g., `ESRI Standard` → `Esri WorldStreetMap`)
-  - `Stamen *` → `Stadia Stamen*` (Stamen tiles now hosted by Stadia Maps)
+- Renamed some tile servers for consistency
 
 ### Removed
 

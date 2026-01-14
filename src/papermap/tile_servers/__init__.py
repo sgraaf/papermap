@@ -1,6 +1,6 @@
 """Tile server configurations for various map providers.
 
-This package contains tile server configurations organized by provider.
+This subpackage contains tile server configurations organized by provider.
 All tile servers are aggregated and exported through this module.
 
 Example:
@@ -112,11 +112,15 @@ KEY_TO_TILE_SERVER: dict[str, TileServer] = {
 }
 """Map of tile server keys to `TileServer` instances."""
 
-DEFAULT_TILE_SERVER: str = "openstreetmap"
+TILE_SERVER_KEYS = sorted(KEY_TO_TILE_SERVER.keys())
+"""List of tile server keys."""
+
+DEFAULT_TILE_SERVER_KEY: str = "openstreetmap"
 """Default tile server key."""
 
 __all__ = [
-    "DEFAULT_TILE_SERVER",
+    "DEFAULT_TILE_SERVER_KEY",
     "KEY_TO_TILE_SERVER",
     "TILE_SERVERS",
+    "TILE_SERVER_KEYS",
 ]

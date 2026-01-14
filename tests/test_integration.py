@@ -498,7 +498,7 @@ class TestTileServerConfiguration:
         tile_image_content: bytes,
     ) -> None:
         """Test generating maps with different tile servers."""
-        pm = PaperMap(lat=40.7128, lon=-74.0060, tile_server=tile_server)
+        pm = PaperMap(lat=40.7128, lon=-74.0060, tile_server_key=tile_server)
 
         for _ in range(len(pm.tiles)):
             httpx_mock.add_response(content=tile_image_content)
@@ -514,7 +514,7 @@ class TestTileServerConfiguration:
         self, httpx_mock: HTTPXMock, tile_image_content: bytes
     ) -> None:
         """Test that tile server attribution is included in output."""
-        pm = PaperMap(lat=40.7128, lon=-74.0060, tile_server="openstreetmap")
+        pm = PaperMap(lat=40.7128, lon=-74.0060, tile_server_key="openstreetmap")
 
         for _ in range(len(pm.tiles)):
             httpx_mock.add_response(content=tile_image_content)

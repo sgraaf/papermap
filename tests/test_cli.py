@@ -215,7 +215,7 @@ class TestLatLonCommand:
 
         assert result.exit_code == 0
         call_kwargs = mock_class.call_args[1]
-        assert call_kwargs["tile_server"] == "google-maps"
+        assert call_kwargs["tile_server_key"] == "google-maps"
 
     def test_latlon_with_size(
         self,
@@ -603,7 +603,7 @@ class TestTileServerChoices:
 
         assert result.exit_code == 0
         call_kwargs = mock_class.call_args[1]
-        assert call_kwargs["tile_server"] == tile_server
+        assert call_kwargs["tile_server_key"] == tile_server
 
 
 class TestPaperSizeChoices:
@@ -657,7 +657,7 @@ class TestCliDefaults:
         call_kwargs = mock_class.call_args[1]
 
         # Check defaults
-        assert call_kwargs["tile_server"] == "openstreetmap"
+        assert call_kwargs["tile_server_key"] == "openstreetmap"
         assert call_kwargs["paper_size"] == "a4"
         assert not call_kwargs["use_landscape"]
         assert call_kwargs["scale"] == DEFAULT_SCALE
