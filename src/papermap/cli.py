@@ -38,6 +38,7 @@ def _create_and_save_map(  # noqa: PLR0913
     dpi: int = DEFAULT_DPI,
     add_grid: bool = False,  # noqa: FBT001, FBT002
     grid_size: int = DEFAULT_GRID_SIZE,
+    strict_download: bool = False,  # noqa: FBT001, FBT002
 ) -> None:
     """Shared map creation logic for all coordinate input methods."""
     # initialize PaperMap object
@@ -56,6 +57,7 @@ def _create_and_save_map(  # noqa: PLR0913
         dpi=dpi,
         add_grid=add_grid,
         grid_size=grid_size,
+        strict_download=strict_download,
     )
 
     # render it
@@ -139,6 +141,13 @@ def common_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
         metavar="METERS",
         help="Size of the grid squares (if applicable).",
     )
+    @click.option(
+        "--strict",
+        "strict_download",
+        default=False,
+        is_flag=True,
+        help="Fail if any tiles cannot be downloaded.",
+    )
     @wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         return func(*args, **kwargs)
@@ -180,6 +189,7 @@ def latlon(  # noqa: PLR0913
     dpi: int = DEFAULT_DPI,
     add_grid: bool = False,  # noqa: FBT001, FBT002
     grid_size: int = DEFAULT_GRID_SIZE,
+    strict_download: bool = False,  # noqa: FBT001, FBT002
 ) -> None:
     """Generates a paper map for the given spherical coordinate (i.e. lat, lon) and outputs it to file."""
     _create_and_save_map(
@@ -198,6 +208,7 @@ def latlon(  # noqa: PLR0913
         dpi=dpi,
         add_grid=add_grid,
         grid_size=grid_size,
+        strict_download=strict_download,
     )
 
 
@@ -225,6 +236,7 @@ def utm(  # noqa: PLR0913
     dpi: int = DEFAULT_DPI,
     add_grid: bool = False,  # noqa: FBT001, FBT002
     grid_size: int = DEFAULT_GRID_SIZE,
+    strict_download: bool = False,  # noqa: FBT001, FBT002
 ) -> None:
     """Generates a paper map for the given UTM coordinate and outputs it to file."""
     # convert UTM coordinate to spherical (i.e. lat, lon)
@@ -245,4 +257,5 @@ def utm(  # noqa: PLR0913
         dpi=dpi,
         add_grid=add_grid,
         grid_size=grid_size,
+        strict_download=strict_download,
     )

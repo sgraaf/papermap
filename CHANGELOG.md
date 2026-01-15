@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added `--strict` flag to CLI and `strict_download` parameter to `PaperMap` class to control tile download failure behavior. By default (strict=False), PaperMap now allows graceful degradation when some tiles fail to download, rendering failed tiles as background color and issuing a warning. When strict=True, the previous behavior is maintained where any tile download failure raises an exception.
 - Added new `tile_providers` subpackage with provider-based organization for improved maintainability
 - Added 100+ new tile providers from various providers including:
   - OpenStreetMap regional variants (DE, CH, France, HOT, BZH)

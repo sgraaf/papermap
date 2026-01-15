@@ -62,6 +62,10 @@ class TestPaperMapInit:
         assert pm.add_grid
         assert pm.grid_size == 500
 
+    def test_init_with_strict_download(self) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060, strict_download=True)
+        assert pm.strict_download
+
     def test_init_stores_api_key(self) -> None:
         pm = PaperMap(
             lat=40.7128,
@@ -562,7 +566,7 @@ class TestPaperMapDownloadTiles:
             httpx_mock.add_response(status_code=500)
 
         with pytest.raises(RuntimeError, match="Could not download"):
-            pm.download_tiles(num_retries=num_retries)
+            pm.download_tiles(num_retries=num_retries, strict=True)
 
     def test_download_tiles_retry_with_sleep(
         self,
@@ -597,6 +601,42 @@ class TestPaperMapDownloadTiles:
         assert len(sleep_calls) >= 1
         assert all(duration == 1 for duration in sleep_calls)
 
+    def test_download_tiles_graceful_failure(self, httpx_mock: HTTPXMock) -> None:
+        """Test that partial tile failure with strict=False logs warning but completes."""
+        # Disable unused response assertion
+        httpx_mock._options.assert_all_responses_were_requested = False  # noqa: SLF001
+
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+
+        num_tiles = len(pm.tiles)
+        num_retries = 2
+
+        # All attempts fail
+        for _ in range(num_tiles * (num_retries + 1)):
+            httpx_mock.add_response(status_code=500)
+
+        # Should not raise, but should warn
+        with pytest.warns(UserWarning, match="Could not download"):
+            pm.download_tiles(num_retries=num_retries, strict=False)
+
+    def test_download_tiles_strict_failure(self, httpx_mock: HTTPXMock) -> None:
+        """Test that partial tile failure with strict=True raises RuntimeError."""
+        # Disable unused response assertion
+        httpx_mock._options.assert_all_responses_were_requested = False  # noqa: SLF001
+
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+
+        num_tiles = len(pm.tiles)
+        num_retries = 2
+
+        # All attempts fail
+        for _ in range(num_tiles * (num_retries + 1)):
+            httpx_mock.add_response(status_code=500)
+
+        # Should raise RuntimeError when strict=True
+        with pytest.raises(RuntimeError, match="Could not download"):
+            pm.download_tiles(num_retries=num_retries, strict=True)
+
 
 class TestPaperMapHttpErrors:
     """Tests for HTTP error handling in tile downloads."""
@@ -615,7 +655,7 @@ class TestPaperMapHttpErrors:
             httpx_mock.add_response(status_code=404)
 
         with pytest.raises(RuntimeError, match="Could not download"):
-            pm.download_tiles(num_retries=1)
+            pm.download_tiles(num_retries=1, strict=True)
 
     def test_download_tiles_500_error(self, httpx_mock: HTTPXMock) -> None:
         """Test handling of HTTP 500 Provider Error."""
@@ -631,7 +671,7 @@ class TestPaperMapHttpErrors:
             httpx_mock.add_response(status_code=500)
 
         with pytest.raises(RuntimeError, match="Could not download"):
-            pm.download_tiles(num_retries=1)
+            pm.download_tiles(num_retries=1, strict=True)
 
     def test_download_tiles_403_forbidden(self, httpx_mock: HTTPXMock) -> None:
         """Test handling of HTTP 403 Forbidden errors (invalid API key)."""
@@ -647,7 +687,7 @@ class TestPaperMapHttpErrors:
             httpx_mock.add_response(status_code=403)
 
         with pytest.raises(RuntimeError, match="Could not download"):
-            pm.download_tiles(num_retries=1)
+            pm.download_tiles(num_retries=1, strict=True)
 
     def test_download_tiles_empty_response(self, httpx_mock: HTTPXMock) -> None:
         """Test handling of empty response body."""
@@ -725,6 +765,50 @@ class TestPaperMapRenderBaseLayer:
 
         pm.render_base_layer()
 
+        assert hasattr(pm, "map_image")
+        assert pm.map_image.size == (pm.image_width_px, pm.image_height_px)
+
+    def test_render_base_layer_with_strict_download_failure(
+        self,
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        """Test that render_base_layer respects strict_download flag."""
+        # Disable unused response assertion
+        httpx_mock._options.assert_all_responses_were_requested = False  # noqa: SLF001
+
+        pm = PaperMap(lat=40.7128, lon=-74.0060, strict_download=True)
+
+        num_tiles = len(pm.tiles)
+
+        # All attempts fail
+        for _ in range(num_tiles * 4):
+            httpx_mock.add_response(status_code=500)
+
+        # Should raise RuntimeError when strict_download=True
+        with pytest.raises(RuntimeError, match="Could not download"):
+            pm.render_base_layer()
+
+    def test_render_base_layer_with_graceful_download_failure(
+        self,
+        httpx_mock: HTTPXMock,
+    ) -> None:
+        """Test that render_base_layer allows graceful degradation with strict_download=False."""
+        # Disable unused response assertion
+        httpx_mock._options.assert_all_responses_were_requested = False  # noqa: SLF001
+
+        pm = PaperMap(lat=40.7128, lon=-74.0060, strict_download=False)
+
+        num_tiles = len(pm.tiles)
+
+        # All attempts fail
+        for _ in range(num_tiles * 4):
+            httpx_mock.add_response(status_code=500)
+
+        # Should warn but not raise
+        with pytest.warns(UserWarning, match="Could not download"):
+            pm.render_base_layer()
+
+        # Map image should still be created (with background color for failed tiles)
         assert hasattr(pm, "map_image")
         assert pm.map_image.size == (pm.image_width_px, pm.image_height_px)
 
