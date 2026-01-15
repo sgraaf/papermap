@@ -40,6 +40,14 @@
   - Renamed `mirrors_cycle` to `subdomains_cycle`
   - Updated URL template placeholders: `{zoom}` → `{z}`, `{mirror}` → `{s}`, `{api_key}` → `{a}`
 - Renamed some tile providers for consistency
+- Refactored `PaperMap.__init__` method into smaller, focused private methods to improve readability and testability:
+  - Extracted coordinate validation into `_validate_coordinates`
+  - Extracted tile provider setup into `_validate_and_set_tile_provider`
+  - Extracted paper size configuration into `_validate_and_set_paper_size`
+  - Extracted zoom calculations into `_compute_zoom_and_resize_factor`
+  - Extracted image dimension calculations into `_compute_image_dimensions`
+  - Extracted tile initialization into `_initialize_tiles`
+  - Extracted PDF initialization into `_initialize_pdf`
 
 ### Removed
 
