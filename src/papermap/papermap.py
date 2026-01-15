@@ -1,4 +1,5 @@
 import time
+import warnings
 from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
 from importlib import metadata
@@ -91,6 +92,7 @@ class PaperMap:
         background_color: Background color of the paper map. Defaults to `#fff`.
         add_grid: Add a coordinate grid overlay to the paper map. Defaults to `False`.
         grid_size: Size of the grid squares (if applicable, in meters). Defaults to `1000`.
+        strict_download: Fail if any tiles cannot be downloaded. Defaults to `False`.
 
     Raises:
         ValueError: If the tile provider is invalid.
@@ -117,6 +119,7 @@ class PaperMap:
         background_color: str = DEFAULT_BACKGROUND_COLOR,
         add_grid: bool = False,
         grid_size: int = DEFAULT_GRID_SIZE,
+        strict_download: bool = False,
     ) -> None:
         # validate coordinates
         if not -90 <= lat <= 90:  # noqa: PLR2004
@@ -138,6 +141,7 @@ class PaperMap:
         self.background_color = background_color
         self.add_grid = add_grid
         self.grid_size = grid_size
+        self.strict_download = strict_download
 
         # get the tile provider
         if tile_provider_key in KEY_TO_TILE_PROVIDER:
@@ -363,7 +367,10 @@ class PaperMap:
         self.pdf.cell(w=0, text=text, align="R", fill=True)
 
     def download_tiles(
-        self, num_retries: int = 3, sleep_between_retries: int | None = None
+        self,
+        num_retries: int = 3,
+        sleep_between_retries: int | None = None,
+        strict: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
         # download the tile images
         with (
@@ -395,7 +402,10 @@ class PaperMap:
                 # break if max number of retries exceeded
                 if num_retry >= num_retries:
                     msg = f"Could not download {len(tiles)}/{len(self.tiles)} tiles after {num_retries} retries."
-                    raise RuntimeError(msg)
+                    if strict:
+                        raise RuntimeError(msg)
+                    warnings.warn(msg, stacklevel=2)
+                    break
 
                 responses = executor.map(
                     client.get,
@@ -413,7 +423,7 @@ class PaperMap:
 
     def render_base_layer(self) -> None:
         # download all the required tiles
-        self.download_tiles()
+        self.download_tiles(strict=self.strict_download)
 
         # initialize scaled map image
         self.map_image_scaled = Image.new(

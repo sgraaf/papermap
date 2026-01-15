@@ -257,7 +257,7 @@ class TestTileDownloadBehavior:
             assert tile.success
 
     def test_tile_download_max_retries_exceeded(self, httpx_mock: HTTPXMock) -> None:
-        """Test that an error is raised when max retries are exceeded."""
+        """Test that an error is raised when max retries are exceeded with strict=True."""
         # Disable unused response assertion
         httpx_mock._options.assert_all_responses_were_requested = False  # noqa: SLF001
 
@@ -268,7 +268,7 @@ class TestTileDownloadBehavior:
             httpx_mock.add_response(status_code=500)
 
         with pytest.raises(RuntimeError, match="Could not download"):
-            pm.download_tiles(num_retries=2)
+            pm.download_tiles(num_retries=2, strict=True)
 
 
 class TestRenderMethods:
