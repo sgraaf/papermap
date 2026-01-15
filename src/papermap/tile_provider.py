@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from .tile import Tile
 
 
-@dataclass
+@dataclass(slots=True)
 class TileProvider:
     """A tile provider.
 

@@ -6,7 +6,7 @@ TILE_SIZE: int = 256
 """Size (width/height) of map tiles in pixels."""
 
 
-@dataclass
+@dataclass(slots=True)
 class Tile:
     """A tile from a tile provider.
 
