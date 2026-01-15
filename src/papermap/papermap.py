@@ -1,6 +1,7 @@
 import time
 import warnings
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import KW_ONLY, InitVar, dataclass, field
 from decimal import Decimal
 from importlib import metadata
 from io import BytesIO
@@ -13,6 +14,7 @@ from fpdf import FPDF
 from PIL import Image
 
 from .tile import TILE_SIZE, Tile
+from .tile_provider import TileProvider
 from .tile_providers import (
     DEFAULT_TILE_PROVIDER_KEY,
     KEY_TO_TILE_PROVIDER,
@@ -68,6 +70,7 @@ DEFAULT_GRID_SIZE: int = 1_000
 """Default grid size in meters."""
 
 
+@dataclass(slots=True)
 class PaperMap:
     """A paper map.
 
@@ -101,49 +104,101 @@ class PaperMap:
         ValueError: If the scale is "out of bounds".
     """
 
-    def __init__(  # noqa: PLR0913, PLR0915
-        self,
-        lat: float,
-        lon: float,
-        *,
-        tile_provider_key: str = DEFAULT_TILE_PROVIDER_KEY,
-        api_key: str | None = None,
-        paper_size: str = DEFAULT_PAPER_SIZE,
-        use_landscape: bool = False,
-        margin_top: int = DEFAULT_MARGIN,
-        margin_right: int = DEFAULT_MARGIN,
-        margin_bottom: int = DEFAULT_MARGIN,
-        margin_left: int = DEFAULT_MARGIN,
-        scale: int = DEFAULT_SCALE,
-        dpi: int = DEFAULT_DPI,
-        background_color: str = DEFAULT_BACKGROUND_COLOR,
-        add_grid: bool = False,
-        grid_size: int = DEFAULT_GRID_SIZE,
-        strict_download: bool = False,
-    ) -> None:
-        # validate coordinates
-        if not -90 <= lat <= 90:  # noqa: PLR2004
-            msg = f"Latitude must be in [-90, 90] range, got {lat}"
-            raise ValueError(msg)
-        if not -180 <= lon <= 180:  # noqa: PLR2004
-            msg = f"Longitude must be in [-180, 180] range, got {lon}"
-            raise ValueError(msg)
-        self.lat = lat
-        self.lon = lon
-        self.api_key = api_key
-        self.use_landscape = use_landscape
-        self.margin_top = margin_top
-        self.margin_right = margin_right
-        self.margin_bottom = margin_bottom
-        self.margin_left = margin_left
-        self.scale = scale
-        self.dpi = dpi
-        self.background_color = background_color
-        self.add_grid = add_grid
-        self.grid_size = grid_size
-        self.strict_download = strict_download
+    lat: float
+    lon: float
+    _: KW_ONLY
+    tile_provider_key: InitVar[str] = DEFAULT_TILE_PROVIDER_KEY
+    api_key: str | None = None
+    paper_size: InitVar[str] = DEFAULT_PAPER_SIZE
+    use_landscape: bool = False
+    margin_top: int = DEFAULT_MARGIN
+    margin_right: int = DEFAULT_MARGIN
+    margin_bottom: int = DEFAULT_MARGIN
+    margin_left: int = DEFAULT_MARGIN
+    scale: int = DEFAULT_SCALE
+    dpi: int = DEFAULT_DPI
+    background_color: str = DEFAULT_BACKGROUND_COLOR
+    add_grid: bool = False
+    grid_size: int = DEFAULT_GRID_SIZE
+    strict_download: bool = False
 
-        # get the tile provider
+    tile_provider: TileProvider = field(init=False)
+    width: int = field(init=False)
+    height: int = field(init=False)
+    zoom: float = field(init=False)
+    zoom_scaled: int = field(init=False)
+    resize_factor: float = field(init=False)
+    image_width: int = field(init=False)
+    image_height: int = field(init=False)
+    image_width_px: int = field(init=False)
+    image_height_px: int = field(init=False)
+    φ: float = field(init=False)
+    λ: float = field(init=False)
+    grid_size_scaled: Decimal = field(init=False)
+    image_width_scaled_px: int = field(init=False)
+    image_height_scaled_px: int = field(init=False)
+    x_center: float = field(init=False)
+    y_center: float = field(init=False)
+    x_min: int = field(init=False)
+    y_min: int = field(init=False)
+    x_max: int = field(init=False)
+    y_max: int = field(init=False)
+    tiles: list[Tile] = field(init=False)
+    pdf: FPDF = field(init=False)
+    map_image_scaled: Image.Image = field(init=False)
+    map_image: Image.Image = field(init=False)
+    file: Path = field(init=False)
+
+    def __post_init__(self, tile_provider_key: str, paper_size: str) -> None:
+        # Store basic parameters
+        self._validate_coordinates()
+
+        # Validate and initialize tile provider
+        self._validate_and_set_tile_provider(tile_provider_key)
+
+        # Validate and set paper dimensions
+        self._validate_and_set_paper_size(paper_size)
+
+        # Compute zoom levels and validate bounds
+        self._compute_zoom_and_resize_factor(tile_provider_key)
+
+        # Compute image dimensions and conversions
+        self._compute_image_dimensions()
+
+        # Initialize tiles
+        self._initialize_tiles()
+
+        # Initialize PDF document
+        self._initialize_pdf()
+
+    def _validate_coordinates(self) -> None:
+        """Validate latitude and longitude are within valid ranges.
+
+        Args:
+            lat: Latitude to validate.
+            lon: Longitude to validate.
+
+        Raises:
+            ValueError: If latitude is not in [-90, 90] range.
+            ValueError: If longitude is not in [-180, 180] range.
+        """
+        if not -90 <= self.lat <= 90:  # noqa: PLR2004
+            msg = f"Latitude must be in [-90, 90] range, got {self.lat}"
+            raise ValueError(msg)
+        if not -180 <= self.lon <= 180:  # noqa: PLR2004
+            msg = f"Longitude must be in [-180, 180] range, got {self.lon}"
+            raise ValueError(msg)
+
+    def _validate_and_set_tile_provider(self, tile_provider_key: str) -> None:
+        """Validate tile provider key and check API key requirements.
+
+        Args:
+            tile_provider_key: The tile provider key to validate.
+
+        Raises:
+            ValueError: If tile provider key is invalid.
+            ValueError: If API key is required but not provided.
+        """
         if tile_provider_key in KEY_TO_TILE_PROVIDER:
             self.tile_provider = KEY_TO_TILE_PROVIDER[tile_provider_key]
         else:
@@ -151,7 +206,7 @@ class PaperMap:
             msg = f"Invalid tile provider key '{tile_provider_key}'. Please choose one of {', '.join(available_keys)}"
             raise ValueError(msg)
 
-        # check whether an API key is provided, if it is needed
+        # Check whether an API key is provided, if it is needed
         if (
             "a" in get_string_formatting_arguments(self.tile_provider.url_template)
             and self.api_key is None
@@ -159,7 +214,15 @@ class PaperMap:
             msg = f"No API key specified for {tile_provider_key} tile provider"
             raise ValueError(msg)
 
-        # get the paper size (in mm)
+    def _validate_and_set_paper_size(self, paper_size: str) -> None:
+        """Validate paper size and set width and height.
+
+        Args:
+            paper_size: The paper size name to validate.
+
+        Raises:
+            ValueError: If paper size is invalid.
+        """
         if paper_size in PAPER_SIZE_TO_DIMENSIONS_MAP:
             self.width, self.height = PAPER_SIZE_TO_DIMENSIONS_MAP[paper_size]
             if self.use_landscape:
@@ -168,12 +231,20 @@ class PaperMap:
             msg = f"Invalid paper size. Please choose one of {', '.join(PAPER_SIZES)}"
             raise ValueError(msg)
 
-        # compute the zoom and resize factor
+    def _compute_zoom_and_resize_factor(self, tile_provider_key: str) -> None:
+        """Compute zoom levels and validate they are within tile provider bounds.
+
+        Args:
+            tile_provider_key: The tile provider key for error messages.
+
+        Raises:
+            ValueError: If computed zoom is out of bounds for the tile provider.
+        """
         self.zoom = scale_to_zoom(self.scale, self.lat, self.dpi)
         self.zoom_scaled = floor(self.zoom)
         self.resize_factor = 2**self.zoom_scaled / 2**self.zoom
 
-        # make sure the zoom is not out of bounds
+        # Make sure the zoom is not out of bounds
         if (
             self.zoom_scaled < self.tile_provider.zoom_min
             or self.zoom_scaled > self.tile_provider.zoom_max
@@ -181,28 +252,30 @@ class PaperMap:
             msg = f"Scale out of bounds for {tile_provider_key} tile provider."
             raise ValueError(msg)
 
-        # compute the width and height of the image (in mm)
+    def _compute_image_dimensions(self) -> None:
+        """Compute all image-related dimensions and perform coordinate conversions."""
+        # Compute the width and height of the image (in mm)
         self.image_width = self.width - self.margin_left - self.margin_right
         self.image_height = self.height - self.margin_top - self.margin_bottom
 
-        # perform conversions
+        # Perform conversions
         self.image_width_px = mm_to_px(self.image_width, self.dpi)
         self.image_height_px = mm_to_px(self.image_height, self.dpi)
         self.φ = radians(self.lat)
         self.λ = radians(self.lon)
 
-        # compute the scaled grid size (in mm)
+        # Compute the scaled grid size (in mm)
         self.grid_size_scaled = Decimal(self.grid_size * 1_000 / self.scale)
 
-        # compute the scaled width and height of the image (in px)
+        # Compute the scaled width and height of the image (in px)
         self.image_width_scaled_px = round(self.image_width_px * self.resize_factor)
         self.image_height_scaled_px = round(self.image_height_px * self.resize_factor)
 
-        # determine the center tile
+        # Determine the center tile
         self.x_center = lon_to_x(self.lon, self.zoom_scaled)
         self.y_center = lat_to_y(self.lat, self.zoom_scaled)
 
-        # determine the tiles required to produce the map image
+        # Determine the tiles required to produce the map image
         self.x_min = floor(
             self.x_center - (0.5 * self.image_width_scaled_px / TILE_SIZE)
         )
@@ -216,7 +289,8 @@ class PaperMap:
             self.y_center + (0.5 * self.image_height_scaled_px / TILE_SIZE)
         )
 
-        # initialize the tiles
+    def _initialize_tiles(self) -> None:
+        """Initialize the list of tiles required for the map."""
         self.tiles = []
         for x in range(self.x_min, self.x_max):
             for y in range(self.y_min, self.y_max):
@@ -246,7 +320,8 @@ class PaperMap:
 
                 self.tiles.append(Tile(x_tile, y_tile, self.zoom_scaled, bbox))
 
-        # initialize the pdf document
+    def _initialize_pdf(self) -> None:
+        """Initialize the PDF document with margins and settings."""
         self.pdf = FPDF(
             unit="mm",
             format=(self.width, self.height),
