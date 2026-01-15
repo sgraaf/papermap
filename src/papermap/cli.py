@@ -17,8 +17,8 @@ from .defaults import (
     SIZES,
     TILE_SERVERS,
 )
+from .geodesy import utm_to_spherical
 from .papermap import PaperMap
-from .utils import utm_to_spherical
 
 CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 

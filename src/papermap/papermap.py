@@ -26,6 +26,7 @@ from .defaults import (
     TILE_SERVERS,
     TILE_SERVERS_MAP,
 )
+from .geodesy import spherical_to_utm
 from .tile import Tile
 from .utils import (
     drange,
@@ -35,7 +36,6 @@ from .utils import (
     mm_to_px,
     pt_to_mm,
     scale_to_zoom,
-    spherical_to_utm,
 )
 
 
