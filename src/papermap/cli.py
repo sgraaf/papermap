@@ -26,19 +26,20 @@ def _create_and_save_map(  # noqa: PLR0913
     lat: float,
     lon: float,
     file: Path,
+    *,
     tile_provider_key: str = DEFAULT_TILE_PROVIDER_KEY,
     api_key: str | None = None,
     paper_size: str = DEFAULT_PAPER_SIZE,
-    use_landscape: bool = False,  # noqa: FBT001, FBT002
+    use_landscape: bool = False,
     margin_top: int = DEFAULT_MARGIN,
     margin_right: int = DEFAULT_MARGIN,
     margin_bottom: int = DEFAULT_MARGIN,
     margin_left: int = DEFAULT_MARGIN,
     scale: int = DEFAULT_SCALE,
     dpi: int = DEFAULT_DPI,
-    add_grid: bool = False,  # noqa: FBT001, FBT002
+    add_grid: bool = False,
     grid_size: int = DEFAULT_GRID_SIZE,
-    strict_download: bool = False,  # noqa: FBT001, FBT002
+    strict_download: bool = False,
 ) -> None:
     """Shared map creation logic for all coordinate input methods."""
     # initialize PaperMap object
@@ -177,19 +178,20 @@ def latlon(  # noqa: PLR0913
     lat: float,
     lon: float,
     file: Path,
+    *,
     tile_provider_key: str = DEFAULT_TILE_PROVIDER_KEY,
     api_key: str | None = None,
     paper_size: str = DEFAULT_PAPER_SIZE,
-    use_landscape: bool = False,  # noqa: FBT001, FBT002
+    use_landscape: bool = False,
     margin_top: int = DEFAULT_MARGIN,
     margin_right: int = DEFAULT_MARGIN,
     margin_bottom: int = DEFAULT_MARGIN,
     margin_left: int = DEFAULT_MARGIN,
     scale: int = DEFAULT_SCALE,
     dpi: int = DEFAULT_DPI,
-    add_grid: bool = False,  # noqa: FBT001, FBT002
+    add_grid: bool = False,
     grid_size: int = DEFAULT_GRID_SIZE,
-    strict_download: bool = False,  # noqa: FBT001, FBT002
+    strict_download: bool = False,
 ) -> None:
     """Generates a paper map for the given spherical coordinate (i.e. lat, lon) and outputs it to file."""
     _create_and_save_map(
@@ -224,19 +226,20 @@ def utm(  # noqa: PLR0913
     zone: int,
     hemisphere: str,
     file: Path,
+    *,
     tile_provider_key: str = DEFAULT_TILE_PROVIDER_KEY,
     api_key: str | None = None,
     paper_size: str = DEFAULT_PAPER_SIZE,
-    use_landscape: bool = False,  # noqa: FBT001, FBT002
+    use_landscape: bool = False,
     margin_top: int = DEFAULT_MARGIN,
     margin_right: int = DEFAULT_MARGIN,
     margin_bottom: int = DEFAULT_MARGIN,
     margin_left: int = DEFAULT_MARGIN,
     scale: int = DEFAULT_SCALE,
     dpi: int = DEFAULT_DPI,
-    add_grid: bool = False,  # noqa: FBT001, FBT002
+    add_grid: bool = False,
     grid_size: int = DEFAULT_GRID_SIZE,
-    strict_download: bool = False,  # noqa: FBT001, FBT002
+    strict_download: bool = False,
 ) -> None:
     """Generates a paper map for the given UTM coordinate and outputs it to file."""
     # convert UTM coordinate to spherical (i.e. lat, lon)
