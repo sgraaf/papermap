@@ -22,37 +22,6 @@ from string import Formatter
 
 from .tile import TILE_SIZE
 
-# Type aliases
-Degree = float
-"""Angle in degrees."""
-
-Radian = float
-"""Angle in radians."""
-
-Angle = Degree | Radian
-"""Angle in either degrees or radians."""
-
-Pixel = int
-"""Number of pixels."""
-
-DMS = tuple[int, int, float]
-"""Degrees, Minutes, and Seconds (DMS)."""
-
-Cartesian_2D = tuple[float, float]
-"""Two-dimensional Cartesian (x, y) coordinates."""
-
-Cartesian_3D = tuple[float, float, float]
-"""Three-dimensional Cartesian (x, y, z) coordinates."""
-
-Spherical_2D = tuple[Angle, Angle]
-"""Two-dimensional Spherical (lat, lon) coordinates."""
-
-Spherical_3D = tuple[Angle, Angle, Angle]
-"""Three-dimensional Spherical (lat, lon, height) coordinates."""
-
-UTM_Coordinate = tuple[float, float, int, str]
-"""UTM coordinate (easting, northing, zone, hemisphere)."""
-
 # Geographic constants
 WGS84_ELLIPSOID = (6_378_137, 1 / 298.257223563)
 """WGS84 ellipsoid parameters: (equatorial radius, flattening)."""
@@ -87,7 +56,7 @@ def clip(val: float, lower: float, upper: float) -> float:
     return min(max(val, lower), upper)
 
 
-def wrap(angle: Angle, limit: Angle) -> Angle:
+def wrap(angle: float, limit: float) -> float:
     """Wraps an angle to [-limit, limit] range.
 
     Args:
@@ -102,7 +71,7 @@ def wrap(angle: Angle, limit: Angle) -> Angle:
     return (angle + limit) % (2 * limit) - limit
 
 
-def wrap90(angle: Degree) -> Degree:
+def wrap90(angle: float) -> float:
     """Wraps an angle to [-90, 90] range.
 
     Args:
@@ -114,7 +83,7 @@ def wrap90(angle: Degree) -> Degree:
     return wrap(angle, 90)
 
 
-def wrap180(angle: Degree) -> Degree:
+def wrap180(angle: float) -> float:
     """Wraps an angle to [-180, 180] range.
 
     Args:
@@ -126,7 +95,7 @@ def wrap180(angle: Degree) -> Degree:
     return wrap(angle, 180)
 
 
-def wrap360(angle: Degree) -> Degree:
+def wrap360(angle: float) -> float:
     """Wraps an angle to [0, 360) range.
 
     Args:
@@ -140,7 +109,7 @@ def wrap360(angle: Degree) -> Degree:
     return angle % 360
 
 
-def lon_to_x(lon: Degree, zoom: int) -> float:
+def lon_to_x(lon: float, zoom: int) -> float:
     """Converts longitude to x (tile coordinate), given a zoom level.
 
     Args:
@@ -157,7 +126,7 @@ def lon_to_x(lon: Degree, zoom: int) -> float:
     return ((lon + 180.0) / 360) * 2**zoom
 
 
-def x_to_lon(x: float, zoom: int) -> Degree:
+def x_to_lon(x: float, zoom: int) -> float:
     """Converts x (tile coordinate) to longitude, given a zoom level.
 
     Args:
@@ -170,7 +139,7 @@ def x_to_lon(x: float, zoom: int) -> Degree:
     return x / (2**zoom) * 360 - 180
 
 
-def lat_to_y(lat: Degree, zoom: int) -> float:
+def lat_to_y(lat: float, zoom: int) -> float:
     """Converts latitude to y (tile coordinate), given a zoom level.
 
     Args:
@@ -190,7 +159,7 @@ def lat_to_y(lat: Degree, zoom: int) -> float:
     return ((1 - log(tan(φ) + 1 / cos(φ)) / π) / 2) * 2**zoom
 
 
-def y_to_lat(y: float, zoom: int) -> Degree:
+def y_to_lat(y: float, zoom: int) -> float:
     """Converts y (tile coordinate) to latitude, given a zoom level.
 
     Args:
@@ -203,7 +172,7 @@ def y_to_lat(y: float, zoom: int) -> Degree:
     return atan(sinh(π * (1 - 2 * y / (2**zoom)))) / π * 180
 
 
-def x_to_px(x: int, x_center: int, width: Pixel, tile_size: Pixel = TILE_SIZE) -> Pixel:
+def x_to_px(x: int, x_center: int, width: int, tile_size: int = TILE_SIZE) -> int:
     """Convert x (tile coordinate) to pixels.
 
     Args:
@@ -218,9 +187,7 @@ def x_to_px(x: int, x_center: int, width: Pixel, tile_size: Pixel = TILE_SIZE) -
     return round(width / 2 - (x_center - x) * tile_size)
 
 
-def y_to_px(
-    y: int, y_center: int, height: Pixel, tile_size: Pixel = TILE_SIZE
-) -> Pixel:
+def y_to_px(y: int, y_center: int, height: int, tile_size: int = TILE_SIZE) -> int:
     """Convert y (tile coordinate) to pixel.
 
     Args:
@@ -235,7 +202,7 @@ def y_to_px(
     return round(height / 2 - (y_center - y) * tile_size)
 
 
-def mm_to_px(mm: float, dpi: int = DEFAULT_DPI) -> Pixel:
+def mm_to_px(mm: float, dpi: int = DEFAULT_DPI) -> int:
     """Convert millimeters to pixels, given the dpi.
 
     Args:
@@ -285,7 +252,7 @@ def pt_to_mm(pt: float) -> float:
     return pt * 25.4 / 72
 
 
-def dd_to_dms(dd: Degree) -> DMS:
+def dd_to_dms(dd: float) -> tuple[int, int, float]:
     """Convert Decimal Degrees (DD) to Degrees, Minutes, and Seconds (DMS).
 
     Args:
@@ -302,7 +269,7 @@ def dd_to_dms(dd: Degree) -> DMS:
     return round(d), round(m), round(s, 6)
 
 
-def dms_to_dd(dms: DMS) -> Degree:
+def dms_to_dd(dms: tuple[int, int, float]) -> float:
     """Convert Degrees, Minutes, and Seconds (DMS) to Decimal Degrees (DD).
 
     Args:
@@ -317,7 +284,9 @@ def dms_to_dd(dms: DMS) -> Degree:
     return round((d + m / 60 + s / 3600) * (1 if is_positive else -1), 6)
 
 
-def spherical_to_cartesian(lat: Degree, lon: Degree, r: float = R) -> Cartesian_3D:
+def spherical_to_cartesian(
+    lat: float, lon: float, r: float = R
+) -> tuple[float, float, float]:
     """Convert spherical coordinates (i.e. lat, lon) to cartesian coordinates (i.e. x, y, z).
 
     Adapted from: `<https://github.com/chrisveness/geodesy>`_
@@ -342,7 +311,7 @@ def spherical_to_cartesian(lat: Degree, lon: Degree, r: float = R) -> Cartesian_
     return x, y, z
 
 
-def cartesian_to_spherical(x: float, y: float, z: float) -> Spherical_2D:
+def cartesian_to_spherical(x: float, y: float, z: float) -> tuple[float, float]:
     """Convert cartesian coordinates (i.e. x, y, z) to spherical coordinates (i.e. lat, lon).
 
     Adapted from: `<https://github.com/chrisveness/geodesy>`_
@@ -366,7 +335,7 @@ def cartesian_to_spherical(x: float, y: float, z: float) -> Spherical_2D:
     return lat, lon
 
 
-def scale_to_zoom(scale: int, lat: Degree, dpi: int = DEFAULT_DPI) -> float:
+def scale_to_zoom(scale: int, lat: float, dpi: int = DEFAULT_DPI) -> float:
     """Compute the zoom level, given the latitude, scale and dpi.
 
     Args:
@@ -385,7 +354,7 @@ def scale_to_zoom(scale: int, lat: Degree, dpi: int = DEFAULT_DPI) -> float:
     return log2(C * cos(φ) / scale_px) - 8
 
 
-def zoom_to_scale(zoom: int, lat: Degree, dpi: int = DEFAULT_DPI) -> float:
+def zoom_to_scale(zoom: int, lat: float, dpi: int = DEFAULT_DPI) -> float:
     """Compute the scale, given the latitude, zoom level and dpi.
 
     Args:
@@ -404,7 +373,7 @@ def zoom_to_scale(zoom: int, lat: Degree, dpi: int = DEFAULT_DPI) -> float:
     return scale_px * dpi * 1000 / 25.4
 
 
-def spherical_to_zone(lat: Degree, lon: Degree) -> int:
+def spherical_to_zone(lat: float, lon: float) -> int:
     """Compute the UTM zone number of a given spherical coordinate (i.e. lat, lon).
 
     Args:
@@ -430,7 +399,7 @@ def spherical_to_zone(lat: Degree, lon: Degree) -> int:
     return int((lon + 180) / 6) + 1
 
 
-def compute_central_lon(zone: int) -> Degree:
+def compute_central_lon(zone: int) -> float:
     """Compute the central longitude of a given UTM zone number.
 
     Args:
@@ -442,7 +411,7 @@ def compute_central_lon(zone: int) -> Degree:
     return (zone - 1) * 6 - 180 + 3
 
 
-def spherical_to_utm(lat: Degree, lon: Degree) -> UTM_Coordinate:
+def spherical_to_utm(lat: float, lon: float) -> tuple[float, float, int, str]:
     """Convert a spherical coordinate (i.e. lat, lon) to a UTM coordinate.
 
     Based on formulas from (Karney, 2011).
@@ -545,7 +514,7 @@ def spherical_to_utm(lat: Degree, lon: Degree) -> UTM_Coordinate:
     return x, y, zone, hemisphere
 
 
-def utm_to_spherical(x: float, y: float, z: int, l: str) -> Spherical_2D:  # noqa: E741, ARG001
+def utm_to_spherical(x: float, y: float, z: int, l: str) -> tuple[float, float]:  # noqa: E741, ARG001
     """Convert a UTM coordinate to a spherical coordinate (i.e. lat, lon).
 
     Based on formulas from (Karney, 2011).
