@@ -1,7 +1,16 @@
 """Sphinx configuration."""
 
+from __future__ import annotations
+
+from collections import _tuplegetter  # type: ignore[attr-defined]
 from importlib import metadata
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from sphinx.application import Sphinx
+    from sphinx.ext.autodoc._property_types import (  # pyrefly: ignore[missing-import], # ty: ignore[unresolved-import]
+        _AutodocObjType,
+    )
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -57,3 +66,22 @@ html_static_path = ["_static"]
 html_theme_options: dict[str, Any] = {
     "top_of_page_buttons": [],
 }
+
+
+# -- Hacky fix for autodocumenting `collections.NamedTuple` ------------------
+# https://stackoverflow.com/a/70459782
+def remove_namedtuple_attrib_docstring(  # noqa: PLR0913, D103
+    app: Sphinx,  # noqa: ARG001
+    what: _AutodocObjType,  # noqa: ARG001
+    name: str,  # noqa: ARG001
+    obj: Any,  # noqa: ANN401
+    skip: bool,  # noqa: FBT001
+    options: Any,  # noqa: ARG001, ANN401
+) -> bool:
+    if isinstance(obj, _tuplegetter):
+        return True
+    return skip
+
+
+def setup(app: Sphinx) -> None:  # noqa: D103
+    app.connect("autodoc-skip-member", remove_namedtuple_attrib_docstring)

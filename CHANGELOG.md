@@ -4,6 +4,21 @@
 
 ### Added
 
+- Added new `geodesy` module for comprehensive coordinate conversions between different coordinate systems:
+  - Geographic coordinates (latitude/longitude in WGS84)
+  - UTM (Universal Transverse Mercator) coordinates
+  - MGRS (Military Grid Reference System) coordinates
+  - ECEF (Earth-Centered, Earth-Fixed) Cartesian coordinates
+- Added public API functions for coordinate conversions (exported from `papermap` package):
+  - `latlon_to_utm()` - Convert geographic coordinates to UTM
+  - `utm_to_latlon()` - Convert UTM coordinates to geographic
+  - `latlon_to_mgrs()` - Convert geographic coordinates to MGRS
+  - `mgrs_to_latlon()` - Convert MGRS coordinates to geographic
+  - `latlon_to_ecef()` - Convert geographic coordinates to ECEF Cartesian
+  - `ecef_to_latlon()` - Convert ECEF Cartesian to geographic
+  - `format_latlon()`, `format_utm()`, `format_mgrs()`, `format_ecef()` - Format coordinates as human-readable strings
+- Added coordinate type classes: `LatLonCoordinate`, `UTMCoordinate`, `MGRSCoordinate`, `ECEFCoordinate` (NamedTuples)
+- Added `Ellipsoid` dataclass for reference ellipsoid parameters with `WGS_84_ELLIPSOID` constant
 - Added `--strict` flag to CLI and `strict_download` parameter to `PaperMap` class to control tile download failure behavior. By default (strict=False), PaperMap now allows graceful degradation when some tiles fail to download, rendering failed tiles as background color and issuing a warning. When strict=True, the previous behavior is maintained where any tile download failure raises an exception.
 - Added new `tile_providers` subpackage with provider-based organization for improved maintainability
 - Added 100+ new tile providers from various providers including:
@@ -25,12 +40,17 @@
 
 ### Changed
 
+- Improved coordinate conversion accuracy by implementing Karney's (2011) series expansion of the Transverse Mercator projection for UTM conversions, achieving sub-millimeter accuracy
+- Refactored coordinate conversion functions from `utils.py` into the new `geodesy` module with improved implementations:
+  - Replaced `spherical_to_utm()` and `utm_to_spherical()` with `latlon_to_utm()` and `utm_to_latlon()` using high-accuracy Karney (2011) algorithms
+  - Replaced `spherical_to_cartesian()` and `cartesian_to_spherical()` with `latlon_to_ecef()` and `ecef_to_latlon()` using Bowring (1985) iterative method
+  - Consolidated angle wrapping functions (`wrap()`, `wrap90()`, `wrap180()`, `wrap360()`) into `wrap_angle()`, `wrap_lat()`, and `wrap_lon()`
 - Migrated from `requests` to `httpx` for HTTP client functionality, utilizing modern features such as improved connection pooling and timeout handling
 - Refactored tests to use `pytest-httpx` for cleaner and more maintainable HTTP mocking
 - Reorganized package structure by consolidating `defaults.py`, `constants.py`, and `typing.py` into their logical homes:
   - Tile provider configurations moved to new `tile_providers` subpackage
   - Paper sizes and default values moved to `papermap.py`
-  - Geographic constants and type aliases moved to `utils.py`
+  - Geodetic coordinate conversion functions and constants moved to new `geodesy` module
 - Renamed `TileServer` class to `TileProvider` and enhanced it with new properties:
   - Added `key` property for tile provider key (lowercase with dashes)
   - Added `name` property for tile provider display name
