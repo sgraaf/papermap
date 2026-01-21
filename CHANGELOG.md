@@ -19,6 +19,9 @@
   - `format_latlon()`, `format_utm()`, `format_mgrs()`, `format_ecef()` - Format coordinates as human-readable strings
 - Added coordinate type classes: `LatLonCoordinate`, `UTMCoordinate`, `MGRSCoordinate`, `ECEFCoordinate` (NamedTuples)
 - Added `Ellipsoid` dataclass for reference ellipsoid parameters with `WGS_84_ELLIPSOID` constant
+- Added `PaperMap.from_utm()` classmethod to create a PaperMap instance from UTM coordinates
+- Added `PaperMap.from_mgrs()` classmethod to create a PaperMap instance from MGRS coordinates (supports both MGRSCoordinate objects and MGRS strings)
+- Added `PaperMap.from_ecef()` classmethod to create a PaperMap instance from ECEF coordinates
 - Added `--strict` flag to CLI and `strict_download` parameter to `PaperMap` class to control tile download failure behavior. By default (strict=False), PaperMap now allows graceful degradation when some tiles fail to download, rendering failed tiles as background color and issuing a warning. When strict=True, the previous behavior is maintained where any tile download failure raises an exception.
 - Added new `tile_providers` subpackage with provider-based organization for improved maintainability
 - Added 100+ new tile providers from various providers including:
@@ -37,6 +40,7 @@
   - Waymarked Trails (hiking, cycling, MTB, slopes, riding, skating)
   - Regional providers: BasemapAT (Austria), NLMaps (Netherlands), SwissFederalGeoportal
   - And many more specialty maps
+- Added support for Python 3.12, 3.13 and 3.14.
 
 ### Changed
 
@@ -71,6 +75,7 @@
 
 ### Removed
 
+- Removed support for Python 3.7, 3.8, 3.9 and 3.10.
 - Removed `papermap.defaults`, `papermap.constants`, and `papermap.typing` modules (contents redistributed to other modules)
 
 ## 0.3.0 (2022-11-09)

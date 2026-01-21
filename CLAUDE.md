@@ -6,7 +6,7 @@
 
 - **Current Version:** 2026.1.0 (CalVer: YYYY.N.N)
 - **License:** GNU General Public License v3+
-- **Python Support:** 3.10, 3.11, 3.12, 3.13, 3.14
+- **Python Support:** 3.11, 3.12, 3.13, 3.14
 - **Package Manager:** uv
 - **Documentation:** https://papermap.readthedocs.io/
 
