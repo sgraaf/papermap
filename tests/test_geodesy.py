@@ -11,9 +11,12 @@ from papermap.geodesy import (
     LatLonCoordinate,
     MGRSCoordinate,
     UTMCoordinate,
+    _get_latitude_band,
+    _parse_mgrs_string,
     _parse_utm_string,
     ecef_to_latlon,
     format_ecef,
+    format_latlon,
     format_mgrs,
     format_utm,
     latlon_to_ecef,
@@ -784,3 +787,146 @@ class TestEdgeCases:
         _lat, _lon, h = ecef_to_latlon(ecef)
         assert h is not None
         assert math.isclose(h, 0.001, abs_tol=0.01)
+
+    def test_svalbard_zone_31x(self) -> None:
+        # Svalbard zone 31X (0-9°E at 72-84°N)
+        utm = latlon_to_utm(78, 5)
+        assert utm.zone == 31
+
+    def test_svalbard_zone_33x(self) -> None:
+        # Svalbard zone 33X (9-21°E at 72-84°N)
+        utm = latlon_to_utm(78, 15)
+        assert utm.zone == 33
+
+    def test_svalbard_zone_35x(self) -> None:
+        # Svalbard zone 35X (21-33°E at 72-84°N)
+        utm = latlon_to_utm(78, 27)
+        assert utm.zone == 35
+
+    def test_svalbard_zone_37x(self) -> None:
+        # Svalbard zone 37X (33-42°E at 72-84°N)
+        utm = latlon_to_utm(78, 36)
+        assert utm.zone == 37
+
+    def test_latitude_band_x_at_84n(self) -> None:
+        # Exactly 84°N should be in band X
+        mgrs = latlon_to_mgrs(84, 0)
+        assert mgrs.band == "X"
+
+    def test_utm_to_latlon_with_string_input(self) -> None:
+        # Test utm_to_latlon with string input
+        lat, lon, height = utm_to_latlon("18N 583960E 4507523N")
+        assert math.isclose(lat, 40.7128, abs_tol=0.01)
+        assert math.isclose(lon, -74.0060, abs_tol=0.01)
+        assert height is None
+
+    def test_mgrs_with_empty_coordinates(self) -> None:
+        # MGRS with no coordinate digits (center of 100km square)
+        mgrs = mgrs_to_latlon(MGRSCoordinate(18, "T", "WL", 50_000, 50_000))
+        # Should return a valid coordinate
+        assert mgrs[0] is not None
+        assert mgrs[1] is not None
+
+    def test_mgrs_zone_mod_2_letter_set(self) -> None:
+        # Test MGRS with zone that uses letter set 2 (zone % 3 == 2)
+        # Zone 2 uses MGRS_COLUMN_LETTERS_SET2
+        mgrs = latlon_to_mgrs(40.7128, -177)  # Zone 2
+        utm = mgrs_to_latlon(mgrs)
+        assert math.isclose(utm[0], 40.7128, abs_tol=0.001)
+        assert math.isclose(utm[1], -177, abs_tol=0.001)
+
+    def test_mgrs_southern_hemisphere_conversion(self) -> None:
+        # Test MGRS in southern hemisphere
+        lat, lon = -33.8688, 151.2093  # Sydney, Australia
+        mgrs = latlon_to_mgrs(lat, lon)
+        lat2, lon2, _ = mgrs_to_latlon(mgrs)
+        assert math.isclose(lat, lat2, abs_tol=0.001)
+        assert math.isclose(lon, lon2, abs_tol=0.001)
+
+    def test_mgrs_southern_hemisphere_high_latitude(self) -> None:
+        # Test MGRS in far southern hemisphere (tests false northing adjustment)
+        lat, lon = -75, 0  # Far south
+        mgrs = latlon_to_mgrs(lat, lon)
+        lat2, lon2, _ = mgrs_to_latlon(mgrs)
+        assert math.isclose(lat, lat2, abs_tol=0.001)
+        assert math.isclose(lon, lon2, abs_tol=0.001)
+
+
+class TestValidationErrors:
+    def test_format_latlon_invalid_precision_negative(self) -> None:
+        # Test format_latlon with negative precision
+        latlon = LatLonCoordinate(40.7128, -74.0060)
+        with pytest.raises(ValueError, match="Precision must be between 0 and 8"):
+            format_latlon(latlon, precision=-1)
+
+    def test_format_latlon_invalid_precision_too_high(self) -> None:
+        # Test format_latlon with precision > 8
+        latlon = LatLonCoordinate(40.7128, -74.0060)
+        with pytest.raises(ValueError, match="Precision must be between 0 and 8"):
+            format_latlon(latlon, precision=9)
+
+    def test_latitude_band_outside_utm_coverage_south(self) -> None:
+        # Test latitude outside UTM coverage area (south)
+        with pytest.raises(ValueError, match="outside UTM/MGRS coverage area"):
+            _get_latitude_band(-85)
+
+    def test_latitude_band_outside_utm_coverage_north(self) -> None:
+        # Test latitude outside UTM coverage area (north)
+        with pytest.raises(ValueError, match="outside UTM/MGRS coverage area"):
+            _get_latitude_band(85)
+
+    def test_parse_utm_string_missing_coordinates(self) -> None:
+        # Test UTM string parsing with insufficient parts (only zone+hemisphere)
+        with pytest.raises(ValueError, match="Invalid UTM string format"):
+            _parse_utm_string("18N")
+
+    def test_parse_utm_string_missing_northing(self) -> None:
+        # Test UTM string parsing with missing northing (only zone, hemisphere, easting)
+        with pytest.raises(ValueError, match="Invalid UTM string format"):
+            _parse_utm_string("18N 583960E")
+
+    def test_parse_utm_string_only_hemisphere_marker(self) -> None:
+        # Test UTM string with just hemisphere marker after zone
+        with pytest.raises(
+            ValueError, match=r"Invalid UTM string format.*missing coordinates"
+        ):
+            _parse_utm_string("18 N E")
+
+    def test_parse_utm_string_standalone_e_token_no_northing(self) -> None:
+        # Test UTM string with standalone E but no northing value
+        with pytest.raises(
+            ValueError, match=r"Invalid UTM string format.*missing coordinates"
+        ):
+            _parse_utm_string("18N 583960 E")
+
+    def test_parse_mgrs_string_invalid_square(self) -> None:
+        # Test MGRS parsing with invalid 100km square identifier
+        with pytest.raises(ValueError, match="Invalid 100km square identifier"):
+            _parse_mgrs_string("18T1234")  # Only 1 letter instead of 2
+
+    def test_parse_mgrs_string_precision_too_high(self) -> None:
+        # Test MGRS parsing with precision > 5 digits
+        with pytest.raises(ValueError, match="Precision too high"):
+            _parse_mgrs_string("18TWL123456123456")  # 6 digits for easting/northing
+
+    def test_parse_mgrs_string_invalid_coordinate_digits(self) -> None:
+        # Test MGRS parsing with non-numeric coordinate digits
+        with pytest.raises(ValueError, match="Invalid coordinates in MGRS string"):
+            _parse_mgrs_string("18TWLabcdef")  # Non-numeric coordinates
+
+    def test_parse_mgrs_string_empty_coordinates(self) -> None:
+        # Test MGRS parsing with no coordinate digits (center of 100km square)
+        mgrs = _parse_mgrs_string("18TWL")
+        assert mgrs.easting == 50_000
+        assert mgrs.northing == 50_000
+
+    def test_format_latlon_with_valid_precision(self) -> None:
+        # Test format_latlon with various valid precision values
+        latlon = LatLonCoordinate(40.7128, -74.0060)
+        # Test precision 0
+        s0 = format_latlon(latlon, precision=0)
+        assert s0 == "41, -74"
+        # Test precision 8
+        s8 = format_latlon(latlon, precision=8)
+        assert "40.71280000" in s8
+        assert "-74.00600000" in s8
