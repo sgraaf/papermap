@@ -22,6 +22,7 @@ papermap/
 │   ├── tile_provider.py   # TileProvider dataclass
 │   ├── tile_providers/    # Tile provider configurations for various map providers
 │   ├── tile.py            # Tile dataclass for map tiles
+│   ├── geodesy.py         # Geodetic coordinate conversions (UTM, MGRS, ECEF)
 │   ├── utils.py           # Utility functions (coordinate conversions, etc.)
 │   └── py.typed           # PEP 561 marker for type information
 ├── tests/                 # Test suite
@@ -55,6 +56,49 @@ papermap/
 └── .gitignore             # Git ignore patterns
 ```
 
+## Recent Major Changes (Unreleased)
+
+**Important architectural changes to be aware of:**
+
+1. **Geodesy Module Addition:**
+
+   - New `geodesy.py` module providing comprehensive coordinate conversions
+   - Implements Karney (2011) high-precision UTM ↔ lat/lon conversions (sub-millimeter accuracy)
+   - Adds MGRS (Military Grid Reference System) support
+   - Adds ECEF (Earth-Centered, Earth-Fixed) coordinate support
+   - Provides `LatLonCoordinate`, `UTMCoordinate`, `MGRSCoordinate`, `ECEFCoordinate` types
+   - Replaces some utility functions in `utils.py` with more accurate implementations
+   - Per-file ruff ignores configured for mathematical code (Greek letters, math symbols)
+
+1. **HTTP Client Migration:** Migrated from `requests` to `httpx` for modern async-capable HTTP client
+
+   - Test mocking now uses `pytest-httpx` instead of manual response mocking
+   - Connection pooling and timeout handling improved
+
+1. **Package Restructuring:**
+
+   - Tile providers moved from `defaults.py` to new `tile_providers/` subpackage
+   - Provider configurations organized by vendor in separate modules
+   - 100+ tile providers now available (up from 20+)
+
+1. **TileProvider Enhancements:**
+
+   - Renamed from `TileServer` to `TileProvider`
+   - Added `key`, `name`, `html_attribution`, and `bounds` properties
+   - Renamed `mirrors` → `subdomains`, `mirrors_cycle` → `subdomains_cycle`
+   - Updated URL placeholders: `{zoom}` → `{z}`, `{mirror}` → `{s}`, `{api_key}` → `{a}`
+
+1. **Graceful Tile Download Failures:**
+
+   - New `strict_download` parameter (defaults to `False`)
+   - Failed tiles render as background color with warning when `strict_download=False`
+   - Set `strict_download=True` for previous behavior (raise exception on failure)
+
+1. **Code Organization:**
+
+   - `PaperMap.__init__` refactored into focused private methods for better testability
+   - Constants consolidated into logical homes (papermap.py, utils.py)
+
 ## Requirements for Every Change
 
 **IMPORTANT:** For every change made to the codebase, the following conditions MUST be met:
@@ -80,6 +124,7 @@ papermap/
 - **Build Backend:** uv_build (>=0.9.11, \<0.10.0)
 - **Package Manager:** uv
 - **Installation:** Install uv from https://docs.astral.sh/uv/
+- **HTTP Client:** httpx (replaced requests in recent versions)
 
 ### Setting Up Development Environment
 
@@ -166,13 +211,22 @@ The main class that orchestrates map generation.
 **Key Methods:**
 
 - `__init__()` - Initialize map with coordinates, size, scale, tile provider
+  - Delegates to private initialization methods for better organization:
+  - `_validate_coordinates()` - Validates lat/lon ranges
+  - `_validate_and_set_tile_provider()` - Sets up tile provider
+  - `_validate_and_set_paper_size()` - Configures paper dimensions
+  - `_compute_zoom_and_resize_factor()` - Calculates zoom level
+  - `_compute_image_dimensions()` - Determines image size
+  - `_initialize_tiles()` - Creates tile grid
+  - `_initialize_pdf()` - Sets up PDF document
 - `render()` - Main rendering pipeline (base layer → grid → attribution)
 - `render_base_layer()` - Downloads tiles and assembles map image
-- `download_tiles()` - Parallel tile downloading with retries
+- `download_tiles()` - Parallel tile downloading with retries and optional graceful failure
 - `render_grid()` - Adds UTM coordinate grid overlay
 - `render_attribution_and_scale()` - Adds attribution and scale text
 - `compute_grid_coordinates()` - Calculates UTM grid lines
 - `save()` - Exports to PDF file
+- `from_utm()` - Class method to create PaperMap from UTM coordinates
 
 **Key Attributes:**
 
@@ -187,16 +241,25 @@ Dataclass representing a tile provider configuration.
 
 **Fields:**
 
+- `key: str` - Tile provider key (lowercase with dashes)
+- `name: str` - Tile provider display name
 - `attribution: str` - Attribution text
-- `url_template: str` - URL with placeholders: \{x}, \{y}, \{zoom}, \{mirror}, \{api_key}
+- `html_attribution: str` - HTML-formatted attribution with hyperlinks
+- `url_template: str` - URL with placeholders: \{x}, \{y}, \{z}, \{s}, \{a}
+  - `{x}` - Tile x coordinate
+  - `{y}` - Tile y coordinate
+  - `{z}` - Zoom level
+  - `{s}` - Subdomain (optional, for load balancing)
+  - `{a}` - API key (optional)
 - `zoom_min: int` - Minimum zoom level
 - `zoom_max: int` - Maximum zoom level
-- `mirrors: Optional[List]` - Load balancing mirrors
-- `mirrors_cycle: cycle` - Iterator for round-robin mirror selection
+- `bounds: Optional[tuple]` - Geographic bounds (min_lon, min_lat, max_lon, max_lat)
+- `subdomains: Optional[List]` - Load balancing subdomains
+- `subdomains_cycle: cycle` - Iterator for round-robin subdomain selection
 
 **Method:**
 
-- `format_url_template()` - Formats URL with tile coordinates and API key
+- `format_url_template(tile, api_key)` - Formats URL with tile coordinates and API key
 
 #### 3. Tile Class (`tile.py`)
 
@@ -233,13 +296,68 @@ Comprehensive utility functions for:
 
 Mathematical implementations follow Karney (2011) paper on Transverse Mercator projection.
 
-#### 6. Defaults (`defaults.py`)
+#### 6. Tile Providers (`tile_providers/`)
 
-Configuration for:
+Subpackage containing 100+ tile provider configurations organized by provider:
 
-- **20+ Tile Providers:** OpenStreetMap, Google Maps, ESRI, Thunderforest, Stamen, etc.
-- **Paper Sizes:** A-series (A0-A7), letter, legal
-- **Default Values:** Scale (25000), DPI (300), margins (10mm), grid size (1000m)
+- **`__init__.py`** - Exports `KEY_TO_TILE_PROVIDER`, `TILE_PROVIDER_KEYS`, `DEFAULT_TILE_PROVIDER_KEY`
+- **Provider modules:** `openstreetmap.py`, `google.py`, `esri.py`, `stadia.py`, `thunderforest.py`, `cartodb.py`, `here.py`, `maptiler.py`, `jawg.py`, `tomtom.py`, `cyclosm.py`, `openseamap.py`, `usgs.py`, `nasagibs.py`, `wikimedia.py`, `swiss.py`, `nlmaps.py`, `basemap_at.py`, `misc.py`
+- Each module contains TileProvider configurations for that provider's tile services
+
+#### 7. Geodesy Module (`geodesy.py`)
+
+Comprehensive geodetic coordinate conversion module based on Karney (2011) and Bowring (1985).
+
+**Coordinate Types (NamedTuples):**
+
+- `LatLonCoordinate` - Geographic coordinates (lat, lon, optional height)
+- `UTMCoordinate` - Universal Transverse Mercator (easting, northing, zone, hemisphere)
+- `MGRSCoordinate` - Military Grid Reference System (zone, band, square, easting, northing)
+- `ECEFCoordinate` - Earth-Centered, Earth-Fixed Cartesian (x, y, z)
+
+**Conversion Functions:**
+
+- `latlon_to_utm()` / `utm_to_latlon()` - High-precision WGS84 ↔ UTM using Karney's Krüger series
+- `latlon_to_mgrs()` / `mgrs_to_latlon()` - Geographic ↔ MGRS with alphanumeric grid references
+- `latlon_to_ecef()` / `ecef_to_latlon()` - Geographic ↔ ECEF using Bowring's iterative method
+
+**Formatting Functions:**
+
+- `format_latlon()`, `format_utm()`, `format_mgrs()`, `format_ecef()` - Human-readable string formatting
+
+**Helper Functions:**
+
+- `wrap_lat()`, `wrap_lon()` - Normalize angles to valid ranges
+
+**Important Implementation Details:**
+
+- Uses Karney (2011) 6th-order Krüger series for sub-millimeter accuracy in UTM conversions
+- Handles Norway and Svalbard UTM zone exceptions (zones 31V, 32V, 31X, 33X, 35X, 37X)
+- MGRS latitude bands span 8° (C-W) with band X spanning 12° (72°N to 84°N)
+- ECEF uses Bowring's method for efficient lat/lon recovery (converges in 2-3 iterations)
+- All functions default to WGS84 ellipsoid but support custom ellipsoids via parameter
+
+**Ellipsoid Class:**
+
+- `Ellipsoid` dataclass with `semi_major_axis` and `flattening` parameters
+- `WGS_84_ELLIPSOID` constant provided for GPS/mapping applications
+
+**Constants:**
+
+- `UTM_SCALE_FACTOR` (0.9996), `UTM_FALSE_EASTING` (500,000m), `UTM_FALSE_NORTHING` (10,000,000m)
+- MGRS grid letter sets for 100km square identifiers
+
+#### 8. Constants and Defaults (`papermap.py`)
+
+Configuration constants:
+
+- **Paper Sizes:** A-series (A0-A7), letter, legal in `PAPER_SIZE_TO_DIMENSIONS_MAP`
+- **Default Values:**
+  - Scale: 25000 (`DEFAULT_SCALE`)
+  - DPI: 300 (`DEFAULT_DPI`)
+  - Margins: 10mm (`DEFAULT_MARGIN`)
+  - Grid size: 1000m (`DEFAULT_GRID_SIZE`)
+  - Background color: #fff (`DEFAULT_BACKGROUND_COLOR`)
 
 ## Testing
 
@@ -254,6 +372,7 @@ Tests are located in the `tests/` directory and use pytest:
 - `test_tile_provider.py` - TileProvider tests
 - `test_papermap.py` - PaperMap class tests
 - `test_cli.py` - CLI tests
+- `test_geodesy.py` - Geodesy module tests (coordinate conversions)
 - `test_integration.py` - Integration tests
 
 ### Running Tests
@@ -280,10 +399,10 @@ The `conftest.py` provides common fixtures:
 - `sample_tile` - A basic Tile for testing
 - `sample_tile_with_image` - A Tile with an attached image
 - `sample_tile_provider` - A basic TileProvider
-- `sample_tile_provider_with_mirrors` - TileProvider with mirror support
+- `sample_tile_provider_with_subdomains` - TileProvider with subdomain support
 - `sample_tile_provider_with_api_key` - TileProvider requiring API key
 - `mock_tile_image` - A mock PIL Image
-- `mock_response` - A mock HTTP response for tile downloads
+- HTTP mocking via `pytest-httpx` (use `httpx_mock` fixture)
 - `coordinate_test_cases` - Well-known coordinate test cases (NYC, London, Tokyo, etc.)
 
 ### Writing Tests
@@ -296,6 +415,12 @@ Follow these conventions:
 1. Use `@pytest.mark.parametrize` for testing multiple inputs
 1. Use `math.isclose()` for floating-point comparisons
 1. Test edge cases and boundary conditions
+1. For HTTP mocking, use `pytest-httpx`:
+   ```python
+   def test_tile_download(httpx_mock):
+       httpx_mock.add_response(content=b"fake_image_data")
+       # test code that makes HTTP requests
+   ```
 
 ## Code Style Conventions
 
@@ -492,9 +617,18 @@ Example: `:sparkles: Add support for custom tile providers`
 
 #### Adding a New Tile Provider
 
-1. Add entry to `TILE_PROVIDERS_MAP` in `defaults.py`
-1. Include attribution, URL template, zoom range, mirrors (if applicable)
-1. CLI choices will auto-populate
+1. Identify the appropriate provider module in `src/papermap/tile_providers/` (or create a new one if needed)
+1. Create a new `TileProvider` instance with:
+   - `key`: lowercase with dashes (e.g., "openstreetmap-de")
+   - `name`: display name (e.g., "OpenStreetMap DE")
+   - `attribution`: plain text attribution
+   - `html_attribution`: HTML attribution with hyperlinks
+   - `url_template`: URL with placeholders `{x}`, `{y}`, `{z}`, `{s}` (subdomain), `{a}` (API key)
+   - `zoom_min` and `zoom_max`: supported zoom levels
+   - `bounds`: optional geographic bounds tuple
+   - `subdomains`: optional list for load balancing
+1. Add the provider to the module's `__all__` list
+1. The provider will auto-populate in `KEY_TO_TILE_PROVIDER` via the `__init__.py`
 1. Add tests for the new tile provider
 1. Test with and without API key (if applicable)
 1. Add changelog entry
@@ -531,13 +665,25 @@ Example: `:sparkles: Add support for custom tile providers`
 1. Test locally with `uv run pytest`
 1. Update documentation if user-facing
 
+#### Working with Geodesy Module
+
+When working with coordinate conversions:
+
+1. **Preserve mathematical accuracy:** The geodesy module implements Karney (2011) and Bowring (1985) algorithms with sub-millimeter precision
+1. **Test with known coordinates:** Use test cases from `tests/test_geodesy.py` or `conftest.py` fixtures
+1. **Handle edge cases:** Test Norway/Svalbard UTM zone exceptions, poles, dateline, equator
+1. **Greek letters allowed:** Ruff per-file ignores permit Greek letters (φ, λ, τ) for mathematical clarity
+1. **Document formulas:** Include equation references to source papers (Karney, Bowring) in docstrings
+1. **Validate conversions:** Round-trip conversions should return original values within tolerance (typically 1e-12)
+
 ### Code Patterns to Follow
 
-#### Concurrent Tile Downloads
+#### Concurrent Tile Downloads (using httpx)
 
 ```python
 with ThreadPoolExecutor(min(32, os.cpu_count() or 1 + 4)) as executor:
-    responses = executor.map(session.get, urls)
+    with httpx.Client() as client:
+        responses = executor.map(client.get, urls)
 ```
 
 #### Retry Logic
@@ -590,7 +736,7 @@ self.pdf.cell(w=width, text=text, align="C", fill=True)
 
 ### Known Limitations
 
-1. **No Error Recovery:** Tile download failures raise exceptions
+1. **Tile Download Failures:** By default, failed tiles are rendered as background color with a warning. Use `strict_download=True` to fail on any tile download error.
 1. **Memory Usage:** Large maps load all tiles into memory
 1. **Single-page PDFs:** No multi-page map support
 1. **Fixed Font:** Uses Helvetica (built-in PDF font)
@@ -601,14 +747,18 @@ self.pdf.cell(w=width, text=text, align="C", fill=True)
 - **click_default_group:** Allows default command (`latlon`)
 - **fpdf2:** PDF generation (successor to PyFPDF)
 - **Pillow:** Image manipulation (downloading, resizing, compositing)
-- **requests:** HTTP client for tile downloads
+- **httpx:** Modern HTTP client for tile downloads (replaced `requests`)
 
 ### When to Consult Documentation
 
 - **Tile Providers:** Check OSM wiki for URL template format
-- **UTM Conversions:** Karney (2011) paper for algorithm details
+- **Geodesy/UTM Conversions:**
+  - Karney (2011) "Transverse Mercator with an accuracy of a few nanometers" for UTM algorithm details
+  - Bowring (1985) for ECEF ↔ lat/lon conversions
+  - See extensive inline documentation in `geodesy.py` for implementation details
 - **FPDF:** Official FPDF2 docs for PDF drawing operations
 - **Click:** Click documentation for CLI patterns
+- **httpx:** httpx documentation for HTTP client features and migration from requests
 
 ### Debugging Tips
 
@@ -621,8 +771,11 @@ self.pdf.cell(w=width, text=text, align="C", fill=True)
 1. **Coordinate Conversion Issues:**
 
    - Verify lat/lon are in valid ranges (-90 to 90, -180 to 180)
-   - Check UTM zone calculation for edge cases
+   - Check UTM zone calculation for edge cases (Norway/Svalbard exceptions)
    - Verify hemisphere detection
+   - For geodesy module: test round-trip conversions (lat/lon → UTM → lat/lon should match)
+   - MGRS coordinates must have equal-length easting/northing digits (1-5 digits each)
+   - UTM only valid from 80°S to 84°N (use UPS for polar regions)
 
 1. **PDF Layout Issues:**
 
