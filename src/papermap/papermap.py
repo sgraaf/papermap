@@ -40,7 +40,7 @@ from .utils import (
     scale_to_zoom,
 )
 
-NAME: str = "PaperMap"
+NAME: str = "papermap"
 """Name of the application."""
 
 PAPER_SIZE_TO_DIMENSIONS_MAP: dict[str, tuple[int, int]] = {
@@ -645,6 +645,3 @@ class PaperMap:
         self.pdf.set_author(author)
         self.pdf.set_creator(f"{NAME} v{metadata.version('papermap')}")
         self.pdf.output(self.file)  # pyrefly: ignore
-
-    def __repr__(self) -> str:
-        return f"PaperMap({self.lat}, {self.lon})"

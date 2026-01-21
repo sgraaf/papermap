@@ -33,7 +33,7 @@ Running `gpx --help` or `python -m gpx --help` shows a list of all of the availa
 ```sh
 Usage: papermap [OPTIONS] COMMAND [ARGS]...
 
-  PaperMap is a Python library and CLI tool for creating ready-to-print paper
+  papermap is a Python library and CLI tool for creating ready-to-print paper
   maps.
 
   Documentation: https://papermap.readthedocs.io/en/stable/

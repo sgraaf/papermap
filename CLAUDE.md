@@ -1,8 +1,8 @@
-# CLAUDE.md - AI Assistant Guide for PaperMap
+# CLAUDE.md - AI Assistant Guide for papermap
 
 ## Project Overview
 
-**PaperMap** is a Python package and CLI tool for creating ready-to-print paper maps from various tile providers (OpenStreetMap, Google Maps, ESRI, etc.). The project generates PDF maps at customizable scales, sizes (A0-A7, letter, legal), and orientations with optional UTM grid overlays.
+**papermap** is a Python package and CLI tool for creating ready-to-print paper maps from various tile providers (OpenStreetMap, Google Maps, ESRI, etc.). The project generates PDF maps at customizable scales, sizes (A0-A7, letter, legal), and orientations with optional UTM grid overlays.
 
 - **Current Version:** 2026.1.0 (CalVer: YYYY.N.N)
 - **License:** GNU General Public License v3+
@@ -853,4 +853,4 @@ uv run papermap latlon 40.7128 -74.0060 test.pdf
 
 ______________________________________________________________________
 
-_This document is intended for AI assistants (like Claude) to understand the PaperMap codebase structure, development workflows, and conventions. Keep it updated as the project evolves._
+_This document is intended for AI assistants (like Claude) to understand the papermap codebase structure, development workflows, and conventions. Keep it updated as the project evolves._

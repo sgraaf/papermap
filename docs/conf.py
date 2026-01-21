@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "PaperMap"
+project = "papermap"
 author = "Steven van de Graaf"
 copyright = f"2019, {author}"  # noqa: A001
 

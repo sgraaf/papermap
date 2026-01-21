@@ -1,1 +1,1 @@
-"""PaperMap test suite."""
+"""papermap test suite."""

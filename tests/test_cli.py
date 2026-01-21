@@ -120,7 +120,7 @@ class TestCliHelp:
     def test_cli_help(self, runner: CliRunner) -> None:
         result = runner.invoke(cli, ["--help"])
         assert result.exit_code == 0
-        assert "PaperMap" in result.output
+        assert "papermap" in result.output
         assert "latlon" in result.output
         assert "utm" in result.output
         assert "mgrs" in result.output

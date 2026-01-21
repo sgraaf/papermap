@@ -1,6 +1,6 @@
 <!-- start docs-include-index -->
 
-# PaperMap
+# papermap
 
 [![PyPI](https://img.shields.io/pypi/v/papermap)](https://img.shields.io/pypi/v/papermap)
 [![Supported Python Versions](https://img.shields.io/pypi/pyversions/papermap)](https://pypi.org/project/papermap/)
@@ -9,7 +9,7 @@
 [![Documentation Status](https://readthedocs.org/projects/papermap/badge/?version=latest)](https://papermap.readthedocs.io/en/latest/?badge=latest)
 [![PyPI - License](https://img.shields.io/pypi/l/papermap)](https://img.shields.io/pypi/l/papermap)
 
-PaperMap is a Python library and CLI tool for creating ready-to-print paper maps.
+*papermap* is a Python library and CLI tool for creating ready-to-print paper maps.
 
 <!-- end docs-include-index -->
 
@@ -17,7 +17,7 @@ PaperMap is a Python library and CLI tool for creating ready-to-print paper maps
 
 <!-- start docs-include-installation -->
 
-PaperMap is available on [PyPI](https://pypi.org/project/papermap/). Install with [uv](https://docs.astral.sh/uv/) or your package manager of choice:
+*papermap* is available on [PyPI](https://pypi.org/project/papermap/). Install with [uv](https://docs.astral.sh/uv/) or your package manager of choice:
 
 ```sh
 uv add papermap
@@ -27,13 +27,13 @@ uv add papermap
 
 ## Documentation
 
-Check out the [PaperMap documentation](https://papermap.readthedocs.io/en/stable/) for the [User's Guide](https://papermap.readthedocs.io/en/stable/usage.html), [API Reference](https://papermap.readthedocs.io/en/stable/api.html) and [CLI Reference](https://papermap.readthedocs.io/en/stable/cli.html).
+Check out the [*papermap* documentation](https://papermap.readthedocs.io/en/stable/) for the [User's Guide](https://papermap.readthedocs.io/en/stable/usage.html), [API Reference](https://papermap.readthedocs.io/en/stable/api.html) and [CLI Reference](https://papermap.readthedocs.io/en/stable/cli.html).
 
 ## Usage
 
 <!-- start docs-include-usage -->
 
-PaperMap can be used both in your own applications as a package, as well as a CLI tool.
+*papermap* can be used both in your own applications as a package, as well as a CLI tool.
 
 ### As a Library
 

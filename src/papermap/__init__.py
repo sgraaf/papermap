@@ -1,4 +1,4 @@
-"""PaperMap is a Python library and CLI tool for creating ready-to-print paper maps."""
+"""papermap is a Python library and CLI tool for creating ready-to-print paper maps."""
 
 from .geodesy import (
     ecef_to_latlon,

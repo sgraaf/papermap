@@ -5,11 +5,11 @@ build-backend = "uv_build"
 [project]
 name = "papermap"
 version = "2026.1.0"
-description = "PaperMap is a Python library and CLI tool for creating ready-to-print paper maps."
+description = "papermap is a Python library and CLI tool for creating ready-to-print paper maps."
 authors = [{name = "Steven van de Graaf", email = "steven@vandegraaf.xyz"}]
 readme = "README.md"
 license = {file = "LICENSE"}
-keywords = ["paper", "map", "topography", "osm", "openstreetmap"]
+keywords = ["map", "maps", "paper", "cartography", "openstreetmap", "osm", "topography", "geodesy", "utm", "topography", "mgrs"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",

@@ -463,23 +463,6 @@ class TestPaperMapComputeGridCoordinates:
             assert isclose(spacing, float(pm.grid_size_scaled), rel_tol=0.01)
 
 
-class TestPaperMapRepr:
-    """Tests for PaperMap string representation."""
-
-    def test_repr(self) -> None:
-        pm = PaperMap(lat=40.7128, lon=-74.0060)
-        result = repr(pm)
-        assert "PaperMap" in result
-        assert "40.7128" in result
-        assert "-74.006" in result
-
-    def test_repr_with_different_coordinates(self) -> None:
-        pm = PaperMap(lat=-33.8688, lon=151.2093)
-        result = repr(pm)
-        assert "-33.8688" in result
-        assert "151.2093" in result
-
-
 class TestPaperMapTileCalculations:
     """Tests for tile calculation logic."""
 
