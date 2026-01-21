@@ -91,6 +91,9 @@ pydocstyle.convention = "google"
 "src/papermap/cli.py" = [
     "ANN401",  # any-type (flake8-annotations)
 ]
+"src/papermap/papermap.py" = [
+    "ANN401",  # any-type (flake8-annotations) - Used in classmethod **kwargs
+]
 "src/papermap/geodesy.py" = [
     "ERA001",  # commented-out-code (eradicate) - Mathematical formulas
     "N806",  # non-lowercase-variable-in-function (pep8-naming) - Greek letters

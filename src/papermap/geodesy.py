@@ -521,6 +521,218 @@ def _get_100km_square_row(zone: int, northing: float) -> str:
     return letters[row_index]
 
 
+def _parse_utm_zone_hemisphere(
+    parts: list[str],
+) -> tuple[int, str, int]:
+    """Parse zone and hemisphere from UTM string parts.
+
+    Args:
+        parts: Split UTM string parts.
+
+    Returns:
+        Tuple of (zone, hemisphere, easting_idx).
+
+    Raises:
+        ValueError: If zone or hemisphere cannot be parsed.
+    """
+    first_part = parts[0]
+
+    # Check if hemisphere is in the first part or separate
+    if first_part[-1] in ("N", "S"):
+        zone_str = first_part[:-1]
+        hemisphere = first_part[-1]
+        easting_idx = 1
+    elif len(parts) > 1 and parts[1] in ("N", "S"):
+        zone_str = first_part
+        hemisphere = parts[1]
+        easting_idx = 2
+    else:
+        msg = f"Invalid UTM string format (missing hemisphere): {' '.join(parts)}"
+        raise ValueError(msg)
+
+    # Parse and validate zone
+    try:
+        zone = int(zone_str)
+    except ValueError:
+        msg = f"Invalid zone in UTM string: {' '.join(parts)}"
+        raise ValueError(msg) from None
+
+    if not 1 <= zone <= 60:
+        msg = f"Zone must be 1-60, got {zone}"
+        raise ValueError(msg)
+
+    return zone, hemisphere, easting_idx
+
+
+def _parse_utm_string(utm_str: str) -> UTMCoordinate:
+    """Parse a UTM string into a UTMCoordinate object.
+
+    UTM format: ZZ[H] EEEEEE[E] NNNNNNN[N]
+    - ZZ: Zone number (1-60)
+    - H: Hemisphere ('N' or 'S')
+    - EEEEEE: Easting in meters, optionally followed by 'E'
+    - NNNNNNN: Northing in meters, optionally followed by 'N'
+
+    Examples of valid formats:
+    - "18N 583960E 4507523N"
+    - "18 N 583960 E 4507523 N" (with extra spaces)
+    - "18N 583960 4507523" (without E/N suffixes)
+    - "56S 334786E 6252182N"
+
+    Args:
+        utm_str: UTM string to parse.
+
+    Returns:
+        UTMCoordinate object.
+
+    Raises:
+        ValueError: If the string cannot be parsed or contains invalid values.
+    """
+    # Remove extra whitespace and convert to uppercase
+    utm_str = " ".join(utm_str.split()).upper()
+
+    # Split into parts
+    parts = utm_str.split()
+
+    if len(parts) < 3:
+        msg = f"Invalid UTM string format: {utm_str}"
+        raise ValueError(msg)
+
+    # Parse zone and hemisphere
+    zone, hemisphere, easting_idx = _parse_utm_zone_hemisphere(parts)
+
+    # Parse easting and northing
+    if easting_idx + 1 >= len(parts):
+        msg = f"Invalid UTM string format (missing coordinates): {utm_str}"
+        raise ValueError(msg)
+
+    # Easting might have "E" attached or as separate token
+    easting_str = parts[easting_idx].rstrip("E")
+    northing_idx = easting_idx + 1
+
+    # Skip standalone "E" token if present
+    if northing_idx < len(parts) and parts[northing_idx] == "E":
+        northing_idx += 1
+
+    # Northing might have "N" attached or as separate token
+    if northing_idx >= len(parts):
+        msg = f"Invalid UTM string format (missing coordinates): {utm_str}"
+        raise ValueError(msg)
+
+    northing_str = parts[northing_idx].rstrip("N")
+
+    try:
+        easting = float(easting_str)
+        northing = float(northing_str)
+    except ValueError:
+        msg = f"Invalid coordinates in UTM string: {utm_str}"
+        raise ValueError(msg) from None
+
+    # Validate ranges
+    if not 0 <= easting <= 1_000_000 or not 0 <= northing <= 10_000_000:
+        msg = f"Easting must be 0-1000000 and northing 0-10000000, got {easting}, {northing}"
+        raise ValueError(msg)
+
+    return UTMCoordinate(
+        easting=easting,
+        northing=northing,
+        zone=zone,
+        hemisphere=hemisphere,
+    )
+
+
+def _parse_mgrs_string(mgrs_str: str) -> MGRSCoordinate:
+    """Parse an MGRS string into its components.
+
+    MGRS format: ZZB SS EEEEE NNNNN
+    - ZZ: Zone number (1-60)
+    - B: Latitude band (C-X)
+    - SS: 100km square identifier (two letters)
+    - EEEEE NNNNN: Easting and northing (same length, 1-5 digits each)
+
+    Examples of valid formats:
+    - "4QFJ12345678"  (1m precision)
+    - "4QFJ1234567890"  (1m precision with 5-digit coords)
+    - "4Q FJ 12345 67890"  (with spaces)
+    - "4QFJ"  (center of 100km square)
+
+    Args:
+        mgrs_str: MGRS string to parse.
+
+    Returns:
+        MGRSCoordinate object.
+
+    Raises:
+        ValueError: If the string cannot be parsed.
+    """
+    # Remove spaces
+    mgrs_str = mgrs_str.replace(" ", "").upper()
+
+    # Minimum length is 4 (zone + band + 2-letter square)
+    if len(mgrs_str) < 4:
+        msg = f"MGRS string too short: {mgrs_str}"
+        raise ValueError(msg)
+
+    # Find where the numeric zone ends
+    # Zone is 1-2 digits (1-60)
+    zone_end = 1 if mgrs_str[1].isalpha() else 2
+
+    try:
+        zone = int(mgrs_str[:zone_end])
+    except ValueError:
+        msg = f"Invalid zone in MGRS string: {mgrs_str}"
+        raise ValueError(msg) from None
+
+    if not 1 <= zone <= 60:
+        msg = f"Zone must be 1-60, got {zone}"
+        raise ValueError(msg)
+
+    # Band letter is next
+    band = mgrs_str[zone_end]
+    if band not in MGRS_LATITUDE_BANDS:
+        msg = f"Invalid latitude band '{band}' in MGRS string"
+        raise ValueError(msg)
+
+    # 100km square identifier (2 letters)
+    square_start = zone_end + 1
+    square = mgrs_str[square_start : square_start + 2]
+
+    if len(square) != 2 or not square.isalpha():
+        msg = f"Invalid 100km square identifier in MGRS string: {mgrs_str}"
+        raise ValueError(msg)
+
+    # Remaining digits are easting and northing (equal length)
+    coords = mgrs_str[square_start + 2 :]
+
+    # Handle empty coordinates (center of 100km square)
+    if not coords:
+        return MGRSCoordinate(zone, band, square, 50_000, 50_000)
+
+    # Coordinates must be even length (equal easting and northing)
+    if len(coords) % 2 != 0:
+        msg = f"Easting and northing must have equal length in MGRS: {mgrs_str}"
+        raise ValueError(msg)
+
+    precision = len(coords) // 2
+    if precision > 5:
+        msg = f"Precision too high (max 5 digits): {mgrs_str}"
+        raise ValueError(msg)
+
+    try:
+        easting_digits = int(coords[:precision])
+        northing_digits = int(coords[precision:])
+    except ValueError:
+        msg = f"Invalid coordinates in MGRS string: {mgrs_str}"
+        raise ValueError(msg) from None
+
+    # Scale to full 5-digit precision (multiply by 10^(5-precision))
+    scale = 10 ** (5 - precision)
+    easting = easting_digits * scale
+    northing = northing_digits * scale
+
+    return MGRSCoordinate(zone, band, square, easting, northing)
+
+
 # =============================================================================
 # Coordinate Conversion Functions
 # =============================================================================
@@ -737,14 +949,15 @@ def latlon_to_utm(
 
 
 def utm_to_latlon(
-    utm: UTMCoordinate,
+    utm: UTMCoordinate | str,
     *,
     ellipsoid: Ellipsoid = WGS_84_ELLIPSOID,
 ) -> LatLonCoordinate:
     """Convert UTM coordinates to geographic coordinates.
 
     This function uses Karney's (2011) inverse Transverse Mercator series
-    to convert UTM coordinates back to latitude/longitude with high accuracy.
+    to convert UTM coordinates (either as an UTMCoordinate object or a string)
+    back to latitude/longitude with high accuracy.
 
     The conversion process:
     1. Remove false origins from easting/northing
@@ -754,11 +967,14 @@ def utm_to_latlon(
     5. Compute longitude from the conformal coordinates
 
     Args:
-        utm: UTMCoordinate object containing easting, northing, zone, and hemisphere.
+        utm: Either an UTMCoordinate object or a UTM string (e.g., "18N 583960E 4507523N").
         ellipsoid: Reference ellipsoid for calculations. Defaults to WGS84.
 
     Returns:
         Tuple of (latitude, longitude) in degrees.
+
+    Raises:
+        ValueError: If the UTM string is malformed.
 
     Examples:
         >>> utm = UTMCoordinate(583960, 4507523, 18, "N")
@@ -769,7 +985,13 @@ def utm_to_latlon(
         40.71435, -74.00597
     """
     # -------------------------------------------------------------------------
-    # Step 1: Remove false origin offsets
+    # Step 1: Parse UTM string if necessary
+    # -------------------------------------------------------------------------
+    if isinstance(utm, str):
+        utm = _parse_utm_string(utm)
+
+    # -------------------------------------------------------------------------
+    # Step 2: Remove false origin offsets
     # -------------------------------------------------------------------------
     # Reverse the false origin offsets applied during forward conversion
 
@@ -780,7 +1002,7 @@ def utm_to_latlon(
         northing -= UTM_FALSE_NORTHING
 
     # -------------------------------------------------------------------------
-    # Step 2: Compute ellipsoid-derived constants
+    # Step 3: Compute ellipsoid-derived constants
     # -------------------------------------------------------------------------
     e = sqrt(ellipsoid.flattening * (2 - ellipsoid.flattening))  # First eccentricity
     n = ellipsoid.flattening / (2 - ellipsoid.flattening)  # Third flattening
@@ -793,7 +1015,7 @@ def utm_to_latlon(
     n6 = n5 * n
 
     # -------------------------------------------------------------------------
-    # Step 3: Compute meridian arc parameter A
+    # Step 4: Compute meridian arc parameter A
     # -------------------------------------------------------------------------
     # Same as forward transformation
     meridian_arc = (ellipsoid.semi_major_axis / (1 + n)) * (
@@ -801,7 +1023,7 @@ def utm_to_latlon(
     )
 
     # -------------------------------------------------------------------------
-    # Step 4: Compute normalized conformal coordinates
+    # Step 5: Compute normalized conformal coordinates
     # -------------------------------------------------------------------------
     # Karney (2011) Equation (15):
     # ξ = y / (k₀ × A)
@@ -811,7 +1033,7 @@ def utm_to_latlon(
     η = easting / (UTM_SCALE_FACTOR * meridian_arc)
 
     # -------------------------------------------------------------------------
-    # Step 5: Compute inverse Krüger series coefficients (β)
+    # Step 6: Compute inverse Krüger series coefficients (β)
     # -------------------------------------------------------------------------
     # These coefficients are used for the inverse transformation.
     # Karney (2011) Equation (36):
@@ -837,7 +1059,7 @@ def utm_to_latlon(
     )
 
     # -------------------------------------------------------------------------
-    # Step 6: Apply inverse Krüger series to get ξ' and η'
+    # Step 7: Apply inverse Krüger series to get ξ' and η'
     # -------------------------------------------------------------------------
     # Karney (2011) Equation (11) (inverse form):
     # ξ' = ξ - Σⱼ βⱼ sin(2jξ) cosh(2jη)
@@ -852,7 +1074,7 @@ def utm_to_latlon(
         η_prime -= β[j - 1] * cos(2 * j * ξ) * sinh(2 * j * η)
 
     # -------------------------------------------------------------------------
-    # Step 7: Compute conformal latitude tangent τ'
+    # Step 8: Compute conformal latitude tangent τ'
     # -------------------------------------------------------------------------
     # Karney (2011) Equation (18):
     # τ' = sin(ξ') / sqrt(sinh²(η') + cos²(ξ'))
@@ -863,14 +1085,14 @@ def utm_to_latlon(
     τ_prime = sin(ξ_prime) / sqrt(sinh_η_prime**2 + cos_ξ_prime**2)
 
     # -------------------------------------------------------------------------
-    # Step 8: Compute longitude from conformal coordinates
+    # Step 9: Compute longitude from conformal coordinates
     # -------------------------------------------------------------------------
     # λ = atan2(sinh(η'), cos(ξ'))
 
     λ = atan2(sinh_η_prime, cos_ξ_prime)
 
     # -------------------------------------------------------------------------
-    # Step 9: Iteratively solve for geodetic latitude τ
+    # Step 10: Iteratively solve for geodetic latitude τ
     # -------------------------------------------------------------------------
     # The relationship between τ' and τ is implicit, so we must iterate.
     # Karney (2011) Equations (19-21):
@@ -914,13 +1136,13 @@ def utm_to_latlon(
             break
 
     # -------------------------------------------------------------------------
-    # Step 10: Convert from conformal tangent to latitude
+    # Step 11: Convert from conformal tangent to latitude
     # -------------------------------------------------------------------------
     # φ = atan(τ)
     φ = atan(τ)
 
     # -------------------------------------------------------------------------
-    # Step 11: Convert to degrees and adjust for zone
+    # Step 12: Convert to degrees and adjust for zone
     # -------------------------------------------------------------------------
     lat = degrees(φ)
 
@@ -1165,98 +1387,6 @@ def _latlon_to_utm_components(
     if utm.hemisphere == "S":
         northing -= UTM_FALSE_NORTHING
     return utm.easting, northing, utm.zone, utm.hemisphere
-
-
-def _parse_mgrs_string(mgrs_str: str) -> MGRSCoordinate:
-    """Parse an MGRS string into its components.
-
-    MGRS format: ZZB SS EEEEE NNNNN
-    - ZZ: Zone number (1-60)
-    - B: Latitude band (C-X)
-    - SS: 100km square identifier (two letters)
-    - EEEEE NNNNN: Easting and northing (same length, 1-5 digits each)
-
-    Examples of valid formats:
-    - "4QFJ12345678"  (1m precision)
-    - "4QFJ1234567890"  (1m precision with 5-digit coords)
-    - "4Q FJ 12345 67890"  (with spaces)
-    - "4QFJ"  (center of 100km square)
-
-    Args:
-        mgrs_str: MGRS string to parse.
-
-    Returns:
-        MGRSCoordinate object.
-
-    Raises:
-        ValueError: If the string cannot be parsed.
-    """
-    # Remove spaces
-    mgrs_str = mgrs_str.replace(" ", "").upper()
-
-    # Minimum length is 4 (zone + band + 2-letter square)
-    if len(mgrs_str) < 4:
-        msg = f"MGRS string too short: {mgrs_str}"
-        raise ValueError(msg)
-
-    # Find where the numeric zone ends
-    # Zone is 1-2 digits (1-60)
-    zone_end = 1 if mgrs_str[1].isalpha() else 2
-
-    try:
-        zone = int(mgrs_str[:zone_end])
-    except ValueError:
-        msg = f"Invalid zone in MGRS string: {mgrs_str}"
-        raise ValueError(msg) from None
-
-    if not 1 <= zone <= 60:
-        msg = f"Zone must be 1-60, got {zone}"
-        raise ValueError(msg)
-
-    # Band letter is next
-    band = mgrs_str[zone_end]
-    if band not in MGRS_LATITUDE_BANDS:
-        msg = f"Invalid latitude band '{band}' in MGRS string"
-        raise ValueError(msg)
-
-    # 100km square identifier (2 letters)
-    square_start = zone_end + 1
-    square = mgrs_str[square_start : square_start + 2]
-
-    if len(square) != 2 or not square.isalpha():
-        msg = f"Invalid 100km square identifier in MGRS string: {mgrs_str}"
-        raise ValueError(msg)
-
-    # Remaining digits are easting and northing (equal length)
-    coords = mgrs_str[square_start + 2 :]
-
-    # Handle empty coordinates (center of 100km square)
-    if not coords:
-        return MGRSCoordinate(zone, band, square, 50_000, 50_000)
-
-    # Coordinates must be even length (equal easting and northing)
-    if len(coords) % 2 != 0:
-        msg = f"Easting and northing must have equal length in MGRS: {mgrs_str}"
-        raise ValueError(msg)
-
-    precision = len(coords) // 2
-    if precision > 5:
-        msg = f"Precision too high (max 5 digits): {mgrs_str}"
-        raise ValueError(msg)
-
-    try:
-        easting_digits = int(coords[:precision])
-        northing_digits = int(coords[precision:])
-    except ValueError:
-        msg = f"Invalid coordinates in MGRS string: {mgrs_str}"
-        raise ValueError(msg) from None
-
-    # Scale to full 5-digit precision (multiply by 10^(5-precision))
-    scale = 10 ** (5 - precision)
-    easting = easting_digits * scale
-    northing = northing_digits * scale
-
-    return MGRSCoordinate(zone, band, square, easting, northing)
 
 
 def latlon_to_ecef(

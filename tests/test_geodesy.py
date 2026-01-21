@@ -11,6 +11,7 @@ from papermap.geodesy import (
     LatLonCoordinate,
     MGRSCoordinate,
     UTMCoordinate,
+    _parse_utm_string,
     ecef_to_latlon,
     format_ecef,
     format_mgrs,
@@ -329,6 +330,133 @@ class TestUTMToLatLon:
             lat2, lon2, _ = utm_to_latlon(utm)
             assert math.isclose(lat, lat2, abs_tol=1e-6)
             assert math.isclose(lon, lon2, abs_tol=1e-6)
+
+
+class TestParseUTMString:
+    """Tests for _parse_utm_string helper function."""
+
+    def test_parse_standard_format(self) -> None:
+        """Test parsing standard UTM format with E/N suffixes."""
+        utm = _parse_utm_string("18N 583960E 4507523N")
+        assert utm.zone == 18
+        assert utm.hemisphere == "N"
+        assert utm.easting == 583960
+        assert utm.northing == 4507523
+
+    def test_parse_without_suffixes(self) -> None:
+        """Test parsing without E/N suffixes."""
+        utm = _parse_utm_string("18N 583960 4507523")
+        assert utm.zone == 18
+        assert utm.hemisphere == "N"
+        assert utm.easting == 583960
+        assert utm.northing == 4507523
+
+    def test_parse_lowercase(self) -> None:
+        """Test that lowercase input is handled correctly."""
+        utm = _parse_utm_string("18n 583960e 4507523n")
+        assert utm.zone == 18
+        assert utm.hemisphere == "N"
+        assert utm.easting == 583960
+        assert utm.northing == 4507523
+
+    def test_parse_with_extra_spaces(self) -> None:
+        """Test parsing with extra whitespace."""
+        utm = _parse_utm_string("  18  N  583960  E  4507523  N  ")
+        assert utm.zone == 18
+        assert utm.hemisphere == "N"
+        assert utm.easting == 583960
+        assert utm.northing == 4507523
+
+    def test_parse_separate_hemisphere(self) -> None:
+        """Test parsing with separate hemisphere letter."""
+        utm = _parse_utm_string("18 N 583960E 4507523N")
+        assert utm.zone == 18
+        assert utm.hemisphere == "N"
+        assert utm.easting == 583960
+        assert utm.northing == 4507523
+
+    def test_parse_southern_hemisphere(self) -> None:
+        """Test parsing Southern Hemisphere coordinates."""
+        utm = _parse_utm_string("56S 334786E 6252182N")
+        assert utm.zone == 56
+        assert utm.hemisphere == "S"
+        assert utm.easting == 334786
+        assert utm.northing == 6252182
+
+    def test_parse_with_decimals(self) -> None:
+        """Test parsing coordinates with decimal values."""
+        utm = _parse_utm_string("18N 583960.5E 4507523.7N")
+        assert utm.zone == 18
+        assert utm.hemisphere == "N"
+        assert math.isclose(utm.easting, 583960.5)
+        assert math.isclose(utm.northing, 4507523.7)
+
+    def test_parse_single_digit_zone(self) -> None:
+        """Test parsing single-digit zone number."""
+        utm = _parse_utm_string("5N 500000E 5000000N")
+        assert utm.zone == 5
+        assert utm.hemisphere == "N"
+
+    def test_parse_two_digit_zone(self) -> None:
+        """Test parsing two-digit zone number."""
+        utm = _parse_utm_string("32N 500000E 5000000N")
+        assert utm.zone == 32
+        assert utm.hemisphere == "N"
+
+    def test_parse_invalid_too_short(self) -> None:
+        """Test that string with missing parts raises ValueError."""
+        with pytest.raises(ValueError, match="Invalid UTM string format"):
+            _parse_utm_string("18N 583960")
+
+    def test_parse_invalid_no_hemisphere(self) -> None:
+        """Test that missing hemisphere raises ValueError."""
+        with pytest.raises(ValueError, match="missing hemisphere"):
+            _parse_utm_string("18 583960E 4507523N")
+
+    def test_parse_invalid_zone_too_low(self) -> None:
+        """Test that zone < 1 raises ValueError."""
+        with pytest.raises(ValueError, match="Zone must be 1-60"):
+            _parse_utm_string("0N 583960E 4507523N")
+
+    def test_parse_invalid_zone_too_high(self) -> None:
+        """Test that zone > 60 raises ValueError."""
+        with pytest.raises(ValueError, match="Zone must be 1-60"):
+            _parse_utm_string("61N 583960E 4507523N")
+
+    def test_parse_invalid_zone_non_numeric(self) -> None:
+        """Test that non-numeric zone raises ValueError."""
+        with pytest.raises(ValueError, match="Invalid zone"):
+            _parse_utm_string("XXN 583960E 4507523N")
+
+    def test_parse_invalid_easting_non_numeric(self) -> None:
+        """Test that non-numeric easting raises ValueError."""
+        with pytest.raises(ValueError, match="Invalid coordinates"):
+            _parse_utm_string("18N ABCE 4507523N")
+
+    def test_parse_invalid_northing_non_numeric(self) -> None:
+        """Test that non-numeric northing raises ValueError."""
+        with pytest.raises(ValueError, match="Invalid coordinates"):
+            _parse_utm_string("18N 583960E ABCN")
+
+    def test_parse_invalid_easting_out_of_range(self) -> None:
+        """Test that easting out of valid range raises ValueError."""
+        with pytest.raises(ValueError, match=r"Easting must be.*northing"):
+            _parse_utm_string("18N 1500000E 4507523N")
+
+    def test_parse_invalid_northing_out_of_range(self) -> None:
+        """Test that northing out of valid range raises ValueError."""
+        with pytest.raises(ValueError, match=r"Easting must be.*northing"):
+            _parse_utm_string("18N 583960E 11000000N")
+
+    def test_roundtrip_with_format(self) -> None:
+        """Test that format_utm output can be parsed back."""
+        original = UTMCoordinate(583960, 4507523, 18, "N")
+        formatted = format_utm(original)
+        parsed = _parse_utm_string(formatted)
+        assert parsed.zone == original.zone
+        assert parsed.hemisphere == original.hemisphere
+        assert math.isclose(parsed.easting, original.easting)
+        assert math.isclose(parsed.northing, original.northing)
 
 
 class TestLatLonToMGRS:
