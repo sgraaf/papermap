@@ -154,6 +154,30 @@ class TestPaperMapValidation:
         pm = PaperMap(lat=40.7128, lon=-74.0060, scale=100_000_000)
         assert pm.zoom_scaled >= 0
 
+    def test_latitude_below_valid_range(self) -> None:
+        # Test latitude < -90
+        with pytest.raises(ValueError, match="Latitude must be in \\[-90, 90\\] range"):
+            PaperMap(lat=-91, lon=0)
+
+    def test_latitude_above_valid_range(self) -> None:
+        # Test latitude > 90
+        with pytest.raises(ValueError, match="Latitude must be in \\[-90, 90\\] range"):
+            PaperMap(lat=91, lon=0)
+
+    def test_longitude_below_valid_range(self) -> None:
+        # Test longitude < -180
+        with pytest.raises(
+            ValueError, match="Longitude must be in \\[-180, 180\\] range"
+        ):
+            PaperMap(lat=0, lon=-181)
+
+    def test_longitude_above_valid_range(self) -> None:
+        # Test longitude > 180
+        with pytest.raises(
+            ValueError, match="Longitude must be in \\[-180, 180\\] range"
+        ):
+            PaperMap(lat=0, lon=181)
+
 
 class TestPaperMapEdgeCases:
     """Tests for edge cases and boundary conditions."""
