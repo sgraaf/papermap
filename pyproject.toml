@@ -17,14 +17,13 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Typing :: Typed",
 ]
-requires-python = ">=3.10, <4"
+requires-python = ">=3.11, <4"
 dependencies = [
     "click",
     "click_default_group",
@@ -92,6 +91,9 @@ pydocstyle.convention = "google"
 "src/papermap/cli.py" = [
     "ANN401",  # any-type (flake8-annotations)
 ]
+"src/papermap/papermap.py" = [
+    "ANN401",  # any-type (flake8-annotations) - Used in classmethod **kwargs
+]
 "src/papermap/geodesy.py" = [
     "ERA001",  # commented-out-code (eradicate) - Mathematical formulas
     "N806",  # non-lowercase-variable-in-function (pep8-naming) - Greek letters
@@ -117,4 +119,4 @@ pydocstyle.convention = "google"
 ]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"

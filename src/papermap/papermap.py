@@ -8,12 +8,21 @@ from io import BytesIO
 from itertools import count
 from math import ceil, floor, radians
 from pathlib import Path
+from typing import Any, Self
 
 import httpx
 from fpdf import FPDF
 from PIL import Image
 
-from .geodesy import latlon_to_utm
+from .geodesy import (
+    ECEFCoordinate,
+    MGRSCoordinate,
+    UTMCoordinate,
+    ecef_to_latlon,
+    latlon_to_utm,
+    mgrs_to_latlon,
+    utm_to_latlon,
+)
 from .tile import TILE_SIZE, Tile
 from .tile_provider import TileProvider
 from .tile_providers import (
@@ -170,6 +179,90 @@ class PaperMap:
 
         # Initialize PDF document
         self._initialize_pdf()
+
+    @classmethod
+    def from_utm(
+        cls,
+        utm: UTMCoordinate | str,
+        **kwargs: Any,
+    ) -> Self:
+        """Create a paper map from Universal Transverse Mercator (UTM) coordinates.
+
+        Args:
+            utm: Either an UTMCoordinate object or a UTM string (e.g., "18N 583960E 4507523N").
+            **kwargs: Additional keyword arguments to pass to PaperMap constructor.
+
+        Returns:
+            A new PaperMap instance centered on the converted coordinates.
+
+        Examples:
+            >>> from papermap import PaperMap
+            >>> from papermap.geodesy import UTMCoordinate
+            >>> utm = UTMCoordinate(583960, 4507523, 18, "N")
+            >>> pm = PaperMap.from_utm(utm)
+            >>> pm.render()
+            >>> pm.save("map_from_utm.pdf")
+        """
+        lat, lon, _ = utm_to_latlon(utm)
+        return cls(lat, lon, **kwargs)
+
+    @classmethod
+    def from_mgrs(
+        cls,
+        mgrs: MGRSCoordinate | str,
+        **kwargs: Any,
+    ) -> Self:
+        """Create a paper map from Military Grid Reference System (MGRS) coordinates.
+
+        Args:
+            mgrs: Either an MGRSCoordinate object or an MGRS string
+                (e.g., "18TWK8395907523").
+            **kwargs: Additional keyword arguments to pass to PaperMap constructor.
+
+        Returns:
+            A new PaperMap instance centered on the converted coordinates.
+
+        Raises:
+            ValueError: If the MGRS string is malformed.
+
+        Examples:
+            >>> from papermap import PaperMap
+            >>> pm = PaperMap.from_mgrs("18TWK8395907523")
+            >>> pm.render()
+            >>> pm.save("map_from_mgrs.pdf")
+
+            >>> from papermap.geodesy import MGRSCoordinate
+            >>> mgrs = MGRSCoordinate(18, "T", "WK", 83959, 7523)
+            >>> pm = PaperMap.from_mgrs(mgrs)
+        """
+        lat, lon, _ = mgrs_to_latlon(mgrs)
+        return cls(lat, lon, **kwargs)
+
+    @classmethod
+    def from_ecef(
+        cls,
+        ecef: ECEFCoordinate,
+        **kwargs: Any,
+    ) -> Self:
+        """Create a paper map from Earth-Centered, Earth-Fixed (ECEF) Cartesian coordinates.
+
+        Args:
+            ecef: ECEFCoordinate with x, y, z in meters.
+            **kwargs: Additional keyword arguments to pass to PaperMap constructor.
+
+        Returns:
+            A new PaperMap instance centered on the converted coordinates.
+
+        Examples:
+            >>> from papermap import PaperMap
+            >>> from papermap.geodesy import ECEFCoordinate
+            >>> ecef = ECEFCoordinate(1334934, -4655474, 4137498)
+            >>> pm = PaperMap.from_ecef(ecef)
+            >>> pm.render()
+            >>> pm.save("map_from_ecef.pdf")
+        """
+        lat, lon, _ = ecef_to_latlon(ecef)
+        return cls(lat, lon, **kwargs)
 
     def _validate_coordinates(self) -> None:
         """Validate latitude and longitude are within valid ranges.

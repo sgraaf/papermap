@@ -8,6 +8,7 @@ import pytest
 from PIL import UnidentifiedImageError
 from pytest_httpx import HTTPXMock
 
+from papermap.geodesy import ECEFCoordinate, MGRSCoordinate, UTMCoordinate
 from papermap.papermap import (
     DEFAULT_DPI,
     DEFAULT_SCALE,
@@ -854,3 +855,185 @@ class TestPaperMapSave:
         pm.save(output_file, title="Test Map", author="Test Author")
 
         assert output_file.exists()
+
+
+class TestPaperMapFromUTM:
+    """Tests for PaperMap.from_utm() classmethod."""
+
+    def test_from_utm_basic(self) -> None:
+        """Test creating PaperMap from UTM coordinates."""
+        # New York City in UTM Zone 18N
+        utm = UTMCoordinate(easting=583960, northing=4507523, zone=18, hemisphere="N")
+        pm = PaperMap.from_utm(utm)
+
+        # Check that the PaperMap was created
+        assert isinstance(pm, PaperMap)
+
+        # Verify coordinates are approximately correct (within tolerance for UTM conversion)
+        assert isclose(pm.lat, 40.7143, abs_tol=0.01)
+        assert isclose(pm.lon, -74.0060, abs_tol=0.01)
+
+    def test_from_utm_with_kwargs(self) -> None:
+        """Test from_utm passes kwargs to PaperMap constructor."""
+        utm = UTMCoordinate(easting=583960, northing=4507523, zone=18, hemisphere="N")
+        pm = PaperMap.from_utm(
+            utm, paper_size="a3", scale=10000, use_landscape=True, add_grid=True
+        )
+
+        assert pm.width == 420  # A3 landscape width
+        assert pm.scale == 10000
+        assert pm.use_landscape
+        assert pm.add_grid
+
+    def test_from_utm_southern_hemisphere(self) -> None:
+        """Test from_utm with Southern Hemisphere coordinates."""
+        # Sydney, Australia in UTM Zone 56S
+        utm = UTMCoordinate(easting=334786, northing=6252182, zone=56, hemisphere="S")
+        pm = PaperMap.from_utm(utm)
+
+        assert isinstance(pm, PaperMap)
+        assert isclose(pm.lat, -33.8688, abs_tol=0.02)
+        assert isclose(pm.lon, 151.2093, abs_tol=0.02)
+
+    def test_from_utm_with_different_zones(self) -> None:
+        """Test from_utm with different UTM zones."""
+        # London in UTM Zone 30N
+        utm_london = UTMCoordinate(
+            easting=699331, northing=5710164, zone=30, hemisphere="N"
+        )
+        pm_london = PaperMap.from_utm(utm_london)
+
+        assert isinstance(pm_london, PaperMap)
+        assert isclose(pm_london.lat, 51.5074, abs_tol=0.01)
+        assert isclose(pm_london.lon, -0.1278, abs_tol=0.01)
+
+        # Tokyo in UTM Zone 54N
+        utm_tokyo = UTMCoordinate(
+            easting=388570, northing=3950379, zone=54, hemisphere="N"
+        )
+        pm_tokyo = PaperMap.from_utm(utm_tokyo)
+
+        assert isinstance(pm_tokyo, PaperMap)
+        assert isclose(pm_tokyo.lat, 35.6762, abs_tol=0.02)
+        assert isclose(pm_tokyo.lon, 139.6503, abs_tol=0.15)
+
+
+class TestPaperMapFromMGRS:
+    """Tests for PaperMap.from_mgrs() classmethod."""
+
+    def test_from_mgrs_string(self) -> None:
+        """Test creating PaperMap from MGRS string."""
+        # New York City area
+        mgrs_str = "18TWK8395907523"
+        pm = PaperMap.from_mgrs(mgrs_str)
+
+        assert isinstance(pm, PaperMap)
+        # Verify coordinates are approximately in NYC area
+        assert isclose(pm.lat, 39.81, abs_tol=1.0)
+        assert isclose(pm.lon, -74.02, abs_tol=1.0)
+
+    def test_from_mgrs_coordinate(self) -> None:
+        """Test creating PaperMap from MGRSCoordinate object."""
+        mgrs = MGRSCoordinate(
+            zone=18, band="T", square="WK", easting=83959, northing=7523
+        )
+        pm = PaperMap.from_mgrs(mgrs)
+
+        assert isinstance(pm, PaperMap)
+        # Verify coordinates are approximately correct
+        assert isclose(pm.lat, 39.81, abs_tol=1.0)
+        assert isclose(pm.lon, -74.02, abs_tol=1.0)
+
+    def test_from_mgrs_with_kwargs(self) -> None:
+        """Test from_mgrs passes kwargs to PaperMap constructor."""
+        mgrs_str = "18TWK8395907523"
+        pm = PaperMap.from_mgrs(
+            mgrs_str, paper_size="letter", scale=50000, use_landscape=True
+        )
+
+        assert pm.width == 279  # Letter landscape width
+        assert pm.scale == 50000
+        assert pm.use_landscape
+
+    def test_from_mgrs_different_zones(self) -> None:
+        """Test from_mgrs with different MGRS zones."""
+        # London area
+        mgrs_london = "30UXC9902899088"
+        pm_london = PaperMap.from_mgrs(mgrs_london)
+
+        assert isinstance(pm_london, PaperMap)
+        # Verify coordinates are in London area
+        assert isclose(pm_london.lat, 51.5, abs_tol=1.0)
+        assert isclose(pm_london.lon, -0.12, abs_tol=1.0)
+
+    def test_from_mgrs_invalid_string_raises_error(self) -> None:
+        """Test that invalid MGRS string raises ValueError."""
+        with pytest.raises(ValueError, match=r"Invalid.*MGRS"):
+            PaperMap.from_mgrs("INVALID_MGRS")
+
+
+class TestPaperMapFromECEF:
+    """Tests for PaperMap.from_ecef() classmethod."""
+
+    def test_from_ecef_basic(self) -> None:
+        """Test creating PaperMap from ECEF coordinates."""
+        # New York City in ECEF
+        ecef = ECEFCoordinate(x=1334934, y=-4655474, z=4137498)
+        pm = PaperMap.from_ecef(ecef)
+
+        assert isinstance(pm, PaperMap)
+        # Verify coordinates are approximately in NYC
+        assert isclose(pm.lat, 40.71, abs_tol=1.0)
+        assert isclose(pm.lon, -74.01, abs_tol=1.0)
+
+    def test_from_ecef_with_kwargs(self) -> None:
+        """Test from_ecef passes kwargs to PaperMap constructor."""
+        ecef = ECEFCoordinate(x=1334934, y=-4655474, z=4137498)
+        pm = PaperMap.from_ecef(
+            ecef, paper_size="a5", scale=15000, add_grid=True, grid_size=500
+        )
+
+        assert pm.width == 148  # A5 width
+        assert pm.scale == 15000
+        assert pm.add_grid
+        assert pm.grid_size == 500
+
+    def test_from_ecef_southern_hemisphere(self) -> None:
+        """Test from_ecef with Southern Hemisphere location."""
+        # Sydney, Australia in ECEF
+        ecef = ECEFCoordinate(x=-4648137, y=2560916, z=-3530000)
+        pm = PaperMap.from_ecef(ecef)
+
+        assert isinstance(pm, PaperMap)
+        # Verify coordinates are approximately in Sydney area
+        assert isclose(pm.lat, -33.87, abs_tol=1.0)
+        assert isclose(pm.lon, 151.21, abs_tol=1.0)
+
+    def test_from_ecef_equator(self) -> None:
+        """Test from_ecef with coordinates near equator."""
+        # Equator in Africa (approximately Gabon)
+        ecef = ECEFCoordinate(x=6378137, y=0, z=0)
+        pm = PaperMap.from_ecef(ecef)
+
+        assert isinstance(pm, PaperMap)
+        # Should be on equator
+        assert isclose(pm.lat, 0.0, abs_tol=0.1)
+        assert isclose(pm.lon, 0.0, abs_tol=0.1)
+
+    def test_from_ecef_different_longitudes(self) -> None:
+        """Test from_ecef with different longitude positions."""
+        # London area in ECEF
+        ecef_london = ECEFCoordinate(x=3980469, y=-8867, z=4966810)
+        pm_london = PaperMap.from_ecef(ecef_london)
+
+        assert isinstance(pm_london, PaperMap)
+        assert isclose(pm_london.lat, 51.51, abs_tol=1.0)
+        assert isclose(pm_london.lon, -0.13, abs_tol=1.0)
+
+        # Tokyo area in ECEF
+        ecef_tokyo = ECEFCoordinate(x=-3959167, y=3350900, z=3697472)
+        pm_tokyo = PaperMap.from_ecef(ecef_tokyo)
+
+        assert isinstance(pm_tokyo, PaperMap)
+        assert isclose(pm_tokyo.lat, 35.68, abs_tol=1.0)
+        assert isclose(pm_tokyo.lon, 139.65, abs_tol=1.0)
