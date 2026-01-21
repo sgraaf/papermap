@@ -73,6 +73,7 @@
   - Extracted image dimension calculations into `_compute_image_dimensions`
   - Extracted tile initialization into `_initialize_tiles`
   - Extracted PDF initialization into `_initialize_pdf`
+- Renamed `PaperMap` to `papermap` (purely aesthetically, no changes in installation or usage required).
 
 ### Removed
 

@@ -133,6 +133,8 @@ Options:
 
 <!-- [[[end]]] -->
 
+## papermap mgrs
+
 <!-- [[[cog
 help_output(["mgrs", "--help"])
 ]]] -->
@@ -168,6 +170,8 @@ Options:
 ```
 
 <!-- [[[end]]] -->
+
+## papermap ecef
 
 <!-- [[[cog
 help_output(["ecef", "--help"])
