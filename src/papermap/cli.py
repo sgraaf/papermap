@@ -7,6 +7,7 @@ from typing import Any
 import click
 from click_default_group import DefaultGroup
 
+from .geodesy import UTMCoordinate, utm_to_latlon
 from .papermap import (
     DEFAULT_DPI,
     DEFAULT_GRID_SIZE,
@@ -17,7 +18,6 @@ from .papermap import (
     PaperMap,
 )
 from .tile_providers import DEFAULT_TILE_PROVIDER_KEY, TILE_PROVIDER_KEYS
-from .utils import utm_to_spherical
 
 CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
 
@@ -243,7 +243,7 @@ def utm(  # noqa: PLR0913
 ) -> None:
     """Generates a paper map for the given UTM coordinate and outputs it to file."""
     # convert UTM coordinate to spherical (i.e. lat, lon)
-    lat, lon = utm_to_spherical(easting, northing, zone, hemisphere)
+    lat, lon, _ = utm_to_latlon(UTMCoordinate(easting, northing, zone, hemisphere))
     _create_and_save_map(
         lat,
         lon,

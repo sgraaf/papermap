@@ -7,6 +7,13 @@
    :members:
 ```
 
+## `papermap.geodesy` Module
+
+```{eval-rst}
+.. automodule:: papermap.geodesy
+   :members:
+```
+
 ## `papermap.tile` Module
 
 ```{eval-rst}

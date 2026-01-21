@@ -13,6 +13,7 @@ import httpx
 from fpdf import FPDF
 from PIL import Image
 
+from .geodesy import latlon_to_utm
 from .tile import TILE_SIZE, Tile
 from .tile_provider import TileProvider
 from .tile_providers import (
@@ -28,7 +29,6 @@ from .utils import (
     mm_to_px,
     pt_to_mm,
     scale_to_zoom,
-    spherical_to_utm,
 )
 
 NAME: str = "PaperMap"
@@ -337,49 +337,57 @@ class PaperMap:
     def compute_grid_coordinates(
         self,
     ) -> tuple[list[tuple[Decimal, str]], list[tuple[Decimal, str]]]:
-        # convert WGS 84 point (lat, lon) into UTM coordinate (x, y, zone_number, hemisphere)
-        x, y, _, _ = spherical_to_utm(self.lat, self.lon)
+        # convert Lat/Lon coordinate into UTM coordinate (easting, northing, zone, hemisphere)
+        easting, northing, _, _ = latlon_to_utm(self.lat, self.lon)
 
-        # round UTM/RD coordinates to nearest thousand
-        x_rnd = round(x, -3)
-        y_rnd = round(y, -3)
+        # round easting/northing to nearest thousand
+        easting_rnd = round(easting, -3)
+        northing_rnd = round(northing, -3)
 
         # compute distance between x/y and x/y_rnd in mm
-        dx = Decimal((x - x_rnd) / self.scale * 1000)
-        dy = Decimal((y - y_rnd) / self.scale * 1000)
+        d_easting = Decimal((easting - easting_rnd) / self.scale * 1000)
+        d_northing = Decimal((northing - northing_rnd) / self.scale * 1000)
 
         # determine center grid coordinate (in mm)
-        x_grid_center = Decimal(self.image_width / 2) - dx
-        y_grid_center = Decimal(self.image_height / 2) - dy
+        easting_grid_center = Decimal(self.image_width / 2) - d_easting
+        northing_grid_center = Decimal(self.image_height / 2) - d_northing
 
         # determine start grid coordinate (in mm)
-        x_grid_start = x_grid_center % self.grid_size_scaled
-        y_grid_start = y_grid_center % self.grid_size_scaled
+        easting_grid_start = easting_grid_center % self.grid_size_scaled
+        northing_grid_start = northing_grid_center % self.grid_size_scaled
 
         # determine the start grid coordinate label
-        x_label_start = int(
-            Decimal(x_rnd / 1000) - x_grid_center // self.grid_size_scaled
+        easting_label_start = int(
+            Decimal(easting_rnd / 1000) - easting_grid_center // self.grid_size_scaled
         )
-        y_label_start = int(
-            Decimal(y_rnd / 1000) + y_grid_center // self.grid_size_scaled
+        northing_label_start = int(
+            Decimal(northing_rnd / 1000) + northing_grid_center // self.grid_size_scaled
         )
 
         # determine the grid coordinates (in mm)
-        x_grid_cs = list(
-            drange(x_grid_start, Decimal(self.image_width), self.grid_size_scaled)
+        easting_grid_cs = list(
+            drange(easting_grid_start, Decimal(self.image_width), self.grid_size_scaled)
         )
-        y_grid_cs = list(
-            drange(y_grid_start, Decimal(self.image_height), self.grid_size_scaled)
+        northing_grid_cs = list(
+            drange(
+                northing_grid_start, Decimal(self.image_height), self.grid_size_scaled
+            )
         )
 
         # determine the grid coordinates labels
-        x_labels = [x_label_start + i for i in range(len(x_grid_cs))]
-        y_labels = [y_label_start - i for i in range(len(y_grid_cs))]
+        easting_labels = [easting_label_start + i for i in range(len(easting_grid_cs))]
+        northing_labels = [
+            northing_label_start - i for i in range(len(northing_grid_cs))
+        ]
 
-        x_grid_cs_and_labels = list(zip(x_grid_cs, map(str, x_labels), strict=True))
-        y_grid_cs_and_labels = list(zip(y_grid_cs, map(str, y_labels), strict=True))
+        easting_grid_cs_and_labels = list(
+            zip(easting_grid_cs, map(str, easting_labels), strict=True)
+        )
+        northing_grid_cs_and_labels = list(
+            zip(northing_grid_cs, map(str, northing_labels), strict=True)
+        )
 
-        return x_grid_cs_and_labels, y_grid_cs_and_labels
+        return easting_grid_cs_and_labels, northing_grid_cs_and_labels
 
     def _draw_grid_line(  # noqa: PLR0913
         self,

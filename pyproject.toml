@@ -92,6 +92,13 @@ pydocstyle.convention = "google"
 "src/papermap/cli.py" = [
     "ANN401",  # any-type (flake8-annotations)
 ]
+"src/papermap/geodesy.py" = [
+    "ERA001",  # commented-out-code (eradicate) - Mathematical formulas
+    "N806",  # non-lowercase-variable-in-function (pep8-naming) - Greek letters
+    "PLR2004",  # magic-value-comparison (Pylint) - Geographic/mathematical constants
+    "RUF002",  # ambiguous-unicode-character-docstring (Ruff) - Math symbols (×)
+    "RUF003",  # ambiguous-unicode-character-comment (Ruff) - Math symbols (×)
+]
 "src/papermap/utils.py" = [
     "N806",  # non-lowercase-variable-in-function (pep8-naming)
     "PLR2004",  # magic-value-comparison (Pylint)
