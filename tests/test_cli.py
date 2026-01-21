@@ -123,6 +123,8 @@ class TestCliHelp:
         assert "PaperMap" in result.output
         assert "latlon" in result.output
         assert "utm" in result.output
+        assert "mgrs" in result.output
+        assert "ecef" in result.output
 
     def test_cli_version(self, runner: CliRunner) -> None:
         result = runner.invoke(cli, ["--version"])
@@ -147,6 +149,22 @@ class TestCliHelp:
         assert "ZONE-NUMBER" in result.output
         assert "HEMISPHERE" in result.output
 
+    def test_mgrs_help(self, runner: CliRunner) -> None:
+        result = runner.invoke(cli, ["mgrs", "--help"])
+        assert result.exit_code == 0
+        assert "ZONE-NUMBER" in result.output
+        assert "BAND" in result.output
+        assert "SQUARE" in result.output
+        assert "EASTING" in result.output
+        assert "NORTHING" in result.output
+
+    def test_ecef_help(self, runner: CliRunner) -> None:
+        result = runner.invoke(cli, ["ecef", "--help"])
+        assert result.exit_code == 0
+        assert "X" in result.output
+        assert "Y" in result.output
+        assert "Z" in result.output
+
 
 class TestLatLonCommand:
     """Tests for the latlon command."""
@@ -166,9 +184,9 @@ class TestLatLonCommand:
 
         assert result.exit_code == 0
         mock_class.assert_called_once()
-        call_kwargs = mock_class.call_args[1]
-        assert call_kwargs["lat"] == TEST_LAT
-        assert call_kwargs["lon"] == TEST_LON
+        call_args = mock_class.call_args.args
+        assert call_args[0] == TEST_LAT
+        assert call_args[1] == TEST_LON
         mock_instance.render.assert_called_once()
         mock_instance.save.assert_called_once()
 
@@ -188,9 +206,10 @@ class TestLatLonCommand:
         )
 
         assert result.exit_code == 0
-        call_kwargs = mock_class.call_args[1]
-        assert call_kwargs["lat"] == 40.7128
-        assert call_kwargs["lon"] == -74.0060
+        mock_class.assert_called_once()
+        call_args = mock_class.call_args.args
+        assert call_args[0] == 40.7128
+        assert call_args[1] == -74.0060
 
     def test_latlon_with_tile_provider(
         self,
@@ -475,79 +494,325 @@ class TestUtmCommand:
     def test_utm_basic_execution(
         self,
         runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
         tmp_path: Path,
     ) -> None:
         """Test that UTM command converts coordinates and creates map."""
+        mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
 
-        # Mock the latlon function to avoid Click context issues
-        with patch("papermap.cli._create_and_save_map") as mock_create_and_save_map:
-            # UTM coordinates (zone 31N)
-            result = runner.invoke(
-                cli, ["utm", "430000", "4580000", "31", "N", str(output_file)]
-            )
+        # UTM coordinates (zone 31N)
+        result = runner.invoke(
+            cli, ["utm", "430000", "4580000", "31", "N", str(output_file)]
+        )
 
-            assert result.exit_code == 0
-            mock_create_and_save_map.assert_called_once()
-            call_args = mock_create_and_save_map.call_args.args
-            # Verify coordinates were converted to valid lat/lon ranges
-            assert -90 <= call_args[0] <= 90
-            assert -180 <= call_args[1] <= 180
-            # Should be in northern hemisphere (zone 31N)
-            assert call_args[0] > 0
+        assert result.exit_code == 0
+        mock_class.from_utm.assert_called_once()
+        call_args = mock_class.from_utm.call_args.args
+        # Should be in northern hemisphere (zone 31N)
+        assert call_args[0][-1] == "N"
 
     def test_utm_southern_hemisphere(
         self,
         runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
         tmp_path: Path,
     ) -> None:
         """Test that UTM command works for southern hemisphere."""
+        mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
 
-        with patch(
-            "papermap.cli._create_and_save_map"
-        ) as mock_create_and_save_mapmock_create_and_save_map:
-            # UTM coordinates for Sydney (zone 56S)
-            result = runner.invoke(
-                cli, ["utm", "334000", "6252000", "56", "S", str(output_file)]
-            )
+        # UTM coordinates for Sydney (zone 56S)
+        result = runner.invoke(
+            cli, ["utm", "334000", "6252000", "56", "S", str(output_file)]
+        )
 
-            assert result.exit_code == 0
-            call_args = mock_create_and_save_mapmock_create_and_save_map.call_args.args
-            # Should be in southern hemisphere (negative latitude)
-            assert call_args[0] < 0
+        assert result.exit_code == 0
+        call_args = mock_class.from_utm.call_args.args
+        # Should be in southern hemisphere (negative latitude)
+        assert call_args[0][-1] == "S"
 
     def test_utm_with_options(
         self,
         runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
         tmp_path: Path,
     ) -> None:
         """Test that UTM command passes through options to latlon."""
+        mock_class, _mock_instance = mock_papermap
         output_file = tmp_path / "test.pdf"
 
-        with patch("papermap.cli._create_and_save_map") as mock_create_and_save_map:
-            result = runner.invoke(
-                cli,
-                [
-                    "utm",
-                    "430000",
-                    "4580000",
-                    "31",
-                    "N",
-                    str(output_file),
-                    "--scale",
-                    "10000",
-                    "--grid",
-                    "--paper-size",
-                    "a3",
-                ],
-            )
+        result = runner.invoke(
+            cli,
+            [
+                "utm",
+                "430000",
+                "4580000",
+                "31",
+                "N",
+                str(output_file),
+                "--scale",
+                "10000",
+                "--grid",
+                "--paper-size",
+                "a3",
+            ],
+        )
 
-            assert result.exit_code == 0
-            call_kwargs = mock_create_and_save_map.call_args.kwargs
-            assert call_kwargs["scale"] == 10000
-            assert call_kwargs["add_grid"]
-            assert call_kwargs["paper_size"] == "a3"
+        assert result.exit_code == 0
+        call_kwargs = mock_class.from_utm.call_args.kwargs
+        assert call_kwargs["scale"] == 10000
+        assert call_kwargs["add_grid"]
+        assert call_kwargs["paper_size"] == "a3"
+
+
+class TestMgrsCommand:
+    """Tests for the mgrs command."""
+
+    def test_mgrs_help(self, runner: CliRunner) -> None:
+        """Test that MGRS help displays correctly."""
+        result = runner.invoke(cli, ["mgrs", "--help"])
+        assert result.exit_code == 0
+        assert "ZONE-NUMBER" in result.output
+        assert "BAND" in result.output
+        assert "SQUARE" in result.output
+        assert "EASTING" in result.output
+        assert "NORTHING" in result.output
+
+    def test_mgrs_missing_arguments(self, runner: CliRunner) -> None:
+        """Test that MGRS command requires all arguments."""
+        result = runner.invoke(cli, ["mgrs", "18", "T"])
+        assert result.exit_code != 0
+
+    def test_mgrs_invalid_zone(self, runner: CliRunner, tmp_path: Path) -> None:
+        """Test that MGRS command validates zone type."""
+        output_file = tmp_path / "test.pdf"
+        result = runner.invoke(
+            cli, ["mgrs", "invalid", "T", "WL", "85000", "50000", str(output_file)]
+        )
+        assert result.exit_code != 0
+
+    def test_mgrs_basic_execution(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        """Test that MGRS command converts coordinates and creates map."""
+        mock_class, _mock_instance = mock_papermap
+        output_file = tmp_path / "test.pdf"
+
+        # MGRS coordinates for New York (18T WL 85000 50000)
+        result = runner.invoke(
+            cli, ["mgrs", "18", "T", "WL", "85000", "50000", str(output_file)]
+        )
+
+        assert result.exit_code == 0
+        mock_class.from_mgrs.assert_called_once()
+        call_args = mock_class.from_mgrs.call_args.args
+        # Should have zone 18, band T, square WL
+        assert call_args[0][0] == 18
+        assert call_args[0][1] == "T"
+        assert call_args[0][2] == "WL"
+
+    def test_mgrs_with_options(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        """Test that MGRS command passes through options."""
+        mock_class, _mock_instance = mock_papermap
+        output_file = tmp_path / "test.pdf"
+
+        result = runner.invoke(
+            cli,
+            [
+                "mgrs",
+                "18",
+                "T",
+                "WL",
+                "85000",
+                "50000",
+                str(output_file),
+                "--scale",
+                "10000",
+                "--grid",
+                "--paper-size",
+                "a3",
+                "--landscape",
+            ],
+        )
+
+        assert result.exit_code == 0
+        call_kwargs = mock_class.from_mgrs.call_args.kwargs
+        assert call_kwargs["scale"] == 10000
+        assert call_kwargs["add_grid"]
+        assert call_kwargs["paper_size"] == "a3"
+        assert call_kwargs["use_landscape"]
+
+    def test_mgrs_with_tile_provider(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        """Test that MGRS command works with different tile providers."""
+        mock_class, _mock_instance = mock_papermap
+        output_file = tmp_path / "test.pdf"
+
+        result = runner.invoke(
+            cli,
+            [
+                "mgrs",
+                "18",
+                "T",
+                "WL",
+                "85000",
+                "50000",
+                str(output_file),
+                "--tile-provider",
+                "google-maps",
+            ],
+        )
+
+        assert result.exit_code == 0
+        call_kwargs = mock_class.from_mgrs.call_args.kwargs
+        assert call_kwargs["tile_provider_key"] == "google-maps"
+
+
+class TestEcefCommand:
+    """Tests for the ecef command."""
+
+    def test_ecef_help(self, runner: CliRunner) -> None:
+        """Test that ECEF help displays correctly."""
+        result = runner.invoke(cli, ["ecef", "--help"])
+        assert result.exit_code == 0
+        assert "X" in result.output
+        assert "Y" in result.output
+        assert "Z" in result.output
+
+    def test_ecef_missing_arguments(self, runner: CliRunner) -> None:
+        """Test that ECEF command requires all arguments."""
+        result = runner.invoke(cli, ["ecef", "4000000", "3000000"])
+        assert result.exit_code != 0
+
+    def test_ecef_invalid_coordinate(self, runner: CliRunner, tmp_path: Path) -> None:
+        """Test that ECEF command validates coordinate types."""
+        output_file = tmp_path / "test.pdf"
+        result = runner.invoke(
+            cli, ["ecef", "invalid", "3000000", "5000000", str(output_file)]
+        )
+        assert result.exit_code != 0
+
+    def test_ecef_basic_execution(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        """Test that ECEF command converts coordinates and creates map."""
+        mock_class, _mock_instance = mock_papermap
+        output_file = tmp_path / "test.pdf"
+
+        # ECEF coordinates for London (approximately)
+        result = runner.invoke(
+            cli, ["ecef", "3980574", "7675", "4966993", str(output_file)]
+        )
+
+        assert result.exit_code == 0
+        mock_class.from_ecef.assert_called_once()
+        call_args = mock_class.from_ecef.call_args.args
+        # Should have x, y, z coordinates
+        assert call_args[0][0] == 3980574
+        assert call_args[0][1] == 7675
+        assert call_args[0][2] == 4966993
+
+    def test_ecef_with_negative_coordinates(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        """Test ECEF with negative coordinates using -- separator."""
+        mock_class, _mock_instance = mock_papermap
+        output_file = tmp_path / "test.pdf"
+
+        # Use -- to prevent negative values from being interpreted as options
+        result = runner.invoke(
+            cli, ["ecef", "--", "-1334195", "-4654175", "4138342", str(output_file)]
+        )
+
+        assert result.exit_code == 0
+        call_args = mock_class.from_ecef.call_args.args
+        assert call_args[0][0] == -1334195
+        assert call_args[0][1] == -4654175
+        assert call_args[0][2] == 4138342
+
+    def test_ecef_with_options(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        """Test that ECEF command passes through options."""
+        mock_class, _mock_instance = mock_papermap
+        output_file = tmp_path / "test.pdf"
+
+        result = runner.invoke(
+            cli,
+            [
+                "ecef",
+                "3980574",
+                "7675",
+                "4966993",
+                str(output_file),
+                "--scale",
+                "50000",
+                "--grid",
+                "--paper-size",
+                "a2",
+                "--dpi",
+                "150",
+            ],
+        )
+
+        assert result.exit_code == 0
+        call_kwargs = mock_class.from_ecef.call_args.kwargs
+        assert call_kwargs["scale"] == 50000
+        assert call_kwargs["add_grid"]
+        assert call_kwargs["paper_size"] == "a2"
+        assert call_kwargs["dpi"] == 150
+
+    def test_ecef_with_tile_provider_and_api_key(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        """Test that ECEF command works with tile provider and API key."""
+        mock_class, _mock_instance = mock_papermap
+        output_file = tmp_path / "test.pdf"
+
+        result = runner.invoke(
+            cli,
+            [
+                "ecef",
+                "3980574",
+                "7675",
+                "4966993",
+                str(output_file),
+                "--tile-provider",
+                "thunderforest-landscape",
+                "--api-key",
+                "test_key_123",
+            ],
+        )
+
+        assert result.exit_code == 0
+        call_kwargs = mock_class.from_ecef.call_args.kwargs
+        assert call_kwargs["tile_provider_key"] == "thunderforest-landscape"
+        assert call_kwargs["api_key"] == "test_key_123"
 
 
 class TestDefaultCommand:
@@ -567,9 +832,9 @@ class TestDefaultCommand:
 
         assert result.exit_code == 0
         mock_class.assert_called_once()
-        call_kwargs = mock_class.call_args[1]
-        assert call_kwargs["lat"] == TEST_LAT
-        assert call_kwargs["lon"] == TEST_LON
+        call_args = mock_class.call_args.args
+        assert call_args[0] == TEST_LAT
+        assert call_args[1] == TEST_LON
 
 
 class TestTileProviderChoices:

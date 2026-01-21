@@ -22,6 +22,7 @@
 - Added `PaperMap.from_utm()` classmethod to create a PaperMap instance from UTM coordinates
 - Added `PaperMap.from_mgrs()` classmethod to create a PaperMap instance from MGRS coordinates (supports both MGRSCoordinate objects and MGRS strings)
 - Added `PaperMap.from_ecef()` classmethod to create a PaperMap instance from ECEF coordinates
+- Added `mgrs`, and `ecef` CLI sub-commands to generate paper maps from MGRS and ECEF coordinates, respectively
 - Added `--strict` flag to CLI and `strict_download` parameter to `PaperMap` class to control tile download failure behavior. By default (strict=False), PaperMap now allows graceful degradation when some tiles fail to download, rendering failed tiles as background color and issuing a warning. When strict=True, the previous behavior is maintained where any tile download failure raises an exception.
 - Added new `tile_providers` subpackage with provider-based organization for improved maintainability
 - Added 100+ new tile providers from various providers including:

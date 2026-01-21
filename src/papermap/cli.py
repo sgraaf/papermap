@@ -7,7 +7,7 @@ from typing import Any
 import click
 from click_default_group import DefaultGroup
 
-from .geodesy import UTMCoordinate, utm_to_latlon
+from .geodesy import ECEFCoordinate, MGRSCoordinate, UTMCoordinate
 from .papermap import (
     DEFAULT_DPI,
     DEFAULT_GRID_SIZE,
@@ -20,52 +20,6 @@ from .papermap import (
 from .tile_providers import DEFAULT_TILE_PROVIDER_KEY, TILE_PROVIDER_KEYS
 
 CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
-
-
-def _create_and_save_map(  # noqa: PLR0913
-    lat: float,
-    lon: float,
-    file: Path,
-    *,
-    tile_provider_key: str = DEFAULT_TILE_PROVIDER_KEY,
-    api_key: str | None = None,
-    paper_size: str = DEFAULT_PAPER_SIZE,
-    use_landscape: bool = False,
-    margin_top: int = DEFAULT_MARGIN,
-    margin_right: int = DEFAULT_MARGIN,
-    margin_bottom: int = DEFAULT_MARGIN,
-    margin_left: int = DEFAULT_MARGIN,
-    scale: int = DEFAULT_SCALE,
-    dpi: int = DEFAULT_DPI,
-    add_grid: bool = False,
-    grid_size: int = DEFAULT_GRID_SIZE,
-    strict_download: bool = False,
-) -> None:
-    """Shared map creation logic for all coordinate input methods."""
-    # initialize PaperMap object
-    pm = PaperMap(
-        lat=lat,
-        lon=lon,
-        tile_provider_key=tile_provider_key,
-        api_key=api_key,
-        paper_size=paper_size,
-        use_landscape=use_landscape,
-        margin_top=margin_top,
-        margin_right=margin_right,
-        margin_bottom=margin_bottom,
-        margin_left=margin_left,
-        scale=scale,
-        dpi=dpi,
-        add_grid=add_grid,
-        grid_size=grid_size,
-        strict_download=strict_download,
-    )
-
-    # render it
-    pm.render()
-
-    # save it
-    pm.save(file)
 
 
 def margin_option(side: str) -> Callable:
@@ -193,11 +147,10 @@ def latlon(  # noqa: PLR0913
     grid_size: int = DEFAULT_GRID_SIZE,
     strict_download: bool = False,
 ) -> None:
-    """Generates a paper map for the given spherical coordinate (i.e. lat, lon) and outputs it to file."""
-    _create_and_save_map(
+    """Generates a paper map for the given geographic coordinates (i.e. lat, lon) and outputs it to file."""
+    pm = PaperMap(
         lat,
         lon,
-        file,
         tile_provider_key=tile_provider_key,
         api_key=api_key,
         paper_size=paper_size,
@@ -212,6 +165,8 @@ def latlon(  # noqa: PLR0913
         grid_size=grid_size,
         strict_download=strict_download,
     )
+    pm.render()
+    pm.save(file)
 
 
 @cli.command()
@@ -241,13 +196,9 @@ def utm(  # noqa: PLR0913
     grid_size: int = DEFAULT_GRID_SIZE,
     strict_download: bool = False,
 ) -> None:
-    """Generates a paper map for the given UTM coordinate and outputs it to file."""
-    # convert UTM coordinate to spherical (i.e. lat, lon)
-    lat, lon, _ = utm_to_latlon(UTMCoordinate(easting, northing, zone, hemisphere))
-    _create_and_save_map(
-        lat,
-        lon,
-        file,
+    """Generates a paper map for the given UTM (Universal Transverse Mercator) coordinates and outputs it to file."""
+    pm = PaperMap.from_utm(
+        UTMCoordinate(easting, northing, zone, hemisphere),
         tile_provider_key=tile_provider_key,
         api_key=api_key,
         paper_size=paper_size,
@@ -262,3 +213,101 @@ def utm(  # noqa: PLR0913
         grid_size=grid_size,
         strict_download=strict_download,
     )
+    pm.render()
+    pm.save(file)
+
+
+@cli.command()
+@click.argument("zone", type=int, metavar="ZONE-NUMBER")
+@click.argument("band", type=str, metavar="BAND")
+@click.argument("square", type=str, metavar="SQUARE")
+@click.argument("easting", type=float, metavar="EASTING")
+@click.argument("northing", type=float, metavar="NORTHING")
+@common_parameters
+def mgrs(  # noqa: PLR0913
+    zone: int,
+    band: str,
+    square: str,
+    easting: float,
+    northing: float,
+    file: Path,
+    *,
+    tile_provider_key: str = DEFAULT_TILE_PROVIDER_KEY,
+    api_key: str | None = None,
+    paper_size: str = DEFAULT_PAPER_SIZE,
+    use_landscape: bool = False,
+    margin_top: int = DEFAULT_MARGIN,
+    margin_right: int = DEFAULT_MARGIN,
+    margin_bottom: int = DEFAULT_MARGIN,
+    margin_left: int = DEFAULT_MARGIN,
+    scale: int = DEFAULT_SCALE,
+    dpi: int = DEFAULT_DPI,
+    add_grid: bool = False,
+    grid_size: int = DEFAULT_GRID_SIZE,
+    strict_download: bool = False,
+) -> None:
+    """Generates a paper map for the given MGRS (Military Grid Reference System) coordinates and outputs it to file."""
+    pm = PaperMap.from_mgrs(
+        MGRSCoordinate(zone, band, square, easting, northing),
+        tile_provider_key=tile_provider_key,
+        api_key=api_key,
+        paper_size=paper_size,
+        use_landscape=use_landscape,
+        margin_top=margin_top,
+        margin_right=margin_right,
+        margin_bottom=margin_bottom,
+        margin_left=margin_left,
+        scale=scale,
+        dpi=dpi,
+        add_grid=add_grid,
+        grid_size=grid_size,
+        strict_download=strict_download,
+    )
+    pm.render()
+    pm.save(file)
+
+
+@cli.command()
+@click.argument("x", type=float, metavar="X")
+@click.argument("y", type=float, metavar="Y")
+@click.argument("z", type=float, metavar="Z")
+@common_parameters
+def ecef(  # noqa: PLR0913
+    x: float,
+    y: float,
+    z: float,
+    file: Path,
+    *,
+    tile_provider_key: str = DEFAULT_TILE_PROVIDER_KEY,
+    api_key: str | None = None,
+    paper_size: str = DEFAULT_PAPER_SIZE,
+    use_landscape: bool = False,
+    margin_top: int = DEFAULT_MARGIN,
+    margin_right: int = DEFAULT_MARGIN,
+    margin_bottom: int = DEFAULT_MARGIN,
+    margin_left: int = DEFAULT_MARGIN,
+    scale: int = DEFAULT_SCALE,
+    dpi: int = DEFAULT_DPI,
+    add_grid: bool = False,
+    grid_size: int = DEFAULT_GRID_SIZE,
+    strict_download: bool = False,
+) -> None:
+    """Generates a paper map for the given ECEF (Earth-Centered, Earth-Fixed) Cartesian coordinates and outputs it to file."""
+    pm = PaperMap.from_ecef(
+        ECEFCoordinate(x, y, z),
+        tile_provider_key=tile_provider_key,
+        api_key=api_key,
+        paper_size=paper_size,
+        use_landscape=use_landscape,
+        margin_top=margin_top,
+        margin_right=margin_right,
+        margin_bottom=margin_bottom,
+        margin_left=margin_left,
+        scale=scale,
+        dpi=dpi,
+        add_grid=add_grid,
+        grid_size=grid_size,
+        strict_download=strict_download,
+    )
+    pm.render()
+    pm.save(file)
