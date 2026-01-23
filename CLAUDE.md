@@ -105,11 +105,11 @@ papermap/
 
 1. **Tests:** Any missing tests are added to the test suite.
 1. **Tests Pass:** All tests must pass:
-   ```bash
+   ```shell
    uv run pytest
    ```
 1. **Pre-commit Hooks Pass:** All checks in the pre-commit hooks must pass:
-   ```bash
+   ```shell
    uv run prek run --all-files
    ```
 1. **API Documentation:** Any new modules are added to the API reference in `docs/api.md`.
@@ -128,7 +128,7 @@ papermap/
 
 ### Setting Up Development Environment
 
-```bash
+```shell
 # Clone repository
 git clone https://github.com/sgraaf/papermap.git
 cd papermap
@@ -377,7 +377,7 @@ Tests are located in the `tests/` directory and use pytest:
 
 ### Running Tests
 
-```bash
+```shell
 # Run all tests
 uv run pytest
 
@@ -488,7 +488,7 @@ def function_name(arg1: Type1, arg2: Type2) -> ReturnType:
 
 The CLI reference in `docs/cli.md` uses cog for auto-generation. When CLI commands change, the documentation is automatically updated by running:
 
-```bash
+```shell
 uv run cog -r docs/cli.md
 ```
 
@@ -591,13 +591,13 @@ Example: `:sparkles: Add support for custom tile providers`
 
 1. **Always run tests:**
 
-   ```bash
+   ```shell
    uv run pytest
    ```
 
 1. **Always run pre-commit hooks:**
 
-   ```bash
+   ```shell
    uv run prek run --all-files
    ```
 
@@ -813,33 +813,33 @@ ______________________________________________________________________
 
 **Install for development:**
 
-```bash
+```shell
 uv sync --dev
 uv run prek install
 ```
 
 **Run tests:**
 
-```bash
+```shell
 uv run pytest
 ```
 
 **Run code quality checks:**
 
-```bash
+```shell
 uv run prek run --all-files
 ```
 
 **Build documentation locally:**
 
-```bash
+```shell
 cd docs
 uv run sphinx-build -b html . _build/html
 ```
 
 **Test CLI locally:**
 
-```bash
+```shell
 uv run papermap latlon 40.7128 -74.0060 test.pdf
 ```
 
