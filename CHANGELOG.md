@@ -10,6 +10,12 @@ The **third number** is for emergencies when we need to start branches for older
 
 ## [Unreleased]
 
+### Added
+
+- `.github/CODE_OF_CONDUCT.md` referring to the Python Software Foundation (PSF) Code of Conduct
+- `.github/CONTRIBUTING.md` with contribution guidelines and development setup
+- `.github/SECURITY.md` with vulnerability reporting policy
+
 ## [2026.1.0](https://github.com/sgraaf/gpx/compare/0.3.0...2026.1.0) (2026-01-21)
 
 This is a major release featuring comprehensive geodetic coordinate conversion support, a massive expansion of tile providers, and significant architectural improvements. The new `geodesy` module implements high-precision coordinate conversions between geographic (lat/lon), UTM, MGRS, and ECEF coordinate systems using Karney (2011) and Bowring (1985) algorithms. The tile provider ecosystem has grown from 20+ to over 100 providers, including OpenStreetMap variants, Stadia Maps, CartoDB, ESRI, NASA GIBS, and regional providers. The HTTP client has been modernized by migrating from `requests` to `httpx`, and tile downloads now gracefully handle failures by default. This release also drops support for Python 3.7-3.10 and adds support for Python 3.12-3.14.
