@@ -8,7 +8,6 @@
 [![Test](https://github.com/sgraaf/papermap/actions/workflows/test.yml/badge.svg)](https://github.com/sgraaf/papermap/actions/workflows/test.yml)
 [![Documentation Status](https://readthedocs.org/projects/papermap/badge/?version=latest)](https://papermap.readthedocs.io/en/latest/?badge=latest)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/11822/badge)](https://www.bestpractices.dev/projects/11822)
-[![PyPI - License](https://img.shields.io/pypi/l/papermap)](https://img.shields.io/pypi/l/papermap)
 
 *papermap* is a Python library and CLI tool for creating ready-to-print paper maps.
 
