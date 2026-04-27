@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from collections import _tuplegetter  # type: ignore[attr-defined]
+from collections import _tuplegetter  # type: ignore[attr-defined, ty:unresolved-import]
 from importlib import metadata
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from sphinx.application import Sphinx
-    from sphinx.ext.autodoc._property_types import (  # pyrefly: ignore[missing-import], # ty: ignore[unresolved-import]
+    from sphinx.ext.autodoc._property_types import (  # pyrefly: ignore[missing-import]
         _AutodocObjType,
     )
 

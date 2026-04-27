@@ -60,7 +60,7 @@ class TestEllipsoid:
     def test_ellipsoid_immutable(self) -> None:
         # Ellipsoid should be frozen (immutable)
         with pytest.raises(AttributeError):
-            WGS_84_ELLIPSOID.semi_major_axis = 1000  # type: ignore[misc]
+            WGS_84_ELLIPSOID.semi_major_axis = 1000  # type: ignore[misc, ty:invalid-assignment]
 
 
 class TestEllipsoidParameter:
@@ -689,22 +689,22 @@ class TestNamedTuplesImmutable:
     def test_utm_coordinate_immutable(self) -> None:
         utm = UTMCoordinate(500000, 4500000, 18, "N")
         with pytest.raises(AttributeError):
-            utm.easting = 600000  # type: ignore[misc]
+            utm.easting = 600000  # type: ignore[misc, ty:invalid-assignment]
 
     def test_mgrs_coordinate_immutable(self) -> None:
         mgrs = MGRSCoordinate(18, "T", "WK", 50000, 50000)
         with pytest.raises(AttributeError):
-            mgrs.zone = 19  # type: ignore[misc]
+            mgrs.zone = 19  # type: ignore[misc, ty:invalid-assignment]
 
     def test_ecef_coordinate_immutable(self) -> None:
         ecef = ECEFCoordinate(1000, 2000, 3000)
         with pytest.raises(AttributeError):
-            ecef.x = 5000  # type: ignore[misc]
+            ecef.x = 5000  # type: ignore[misc, ty:invalid-assignment]
 
     def test_latlon_coordinate_immutable(self) -> None:
         latlon = LatLonCoordinate(40.7128, -74.0060, 0)
         with pytest.raises(AttributeError):
-            latlon.lat = 45.0  # type: ignore[misc]
+            latlon.lat = 45.0  # type: ignore[misc, ty:invalid-assignment]
 
 
 class TestLatLonCoordinate:

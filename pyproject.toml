@@ -37,7 +37,7 @@ docs = [
     "cogapp",
     "furo",
     "myst-parser",
-    "sphinx",
+    "sphinx<9.1.0",
     "sphinx-autobuild",
     "sphinx-copybutton",
     "sphinxext-opengraph",
@@ -51,6 +51,7 @@ typing = [
     "mypy",
     "pyrefly",
     "ty",
+    "types-click-default-group",
 ]
 dev = [
     { include-group = "docs" },
