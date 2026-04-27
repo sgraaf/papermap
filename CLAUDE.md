@@ -114,7 +114,7 @@ papermap/
    ```
 1. **API Documentation:** Any new modules are added to the API reference in `docs/api.md`.
 1. **CLI Documentation:** Any new CLI sub-commands are added to the CLI reference in `docs/cli.md`.
-1. **Changelog:** An entry (based on the Keep a Changelog format) is added to `CHANGELOG.md`.
+1. **Changelog:** For any **user-facing changes**, an entry (based on the Keep a Changelog format) is added to `CHANGELOG.md`.
 1. **README:** Any user-facing changes are reflected in the readme in `README.md`.
 
 ## Development Environment and Tools
@@ -609,7 +609,7 @@ Example: `:sparkles: Add support for custom tile providers`
 
 1. **Update documentation:** Changes to public API require documentation updates in `docs/`
 
-1. **Update changelog:** All changes require an entry in `CHANGELOG.md`
+1. **Update changelog:** All **user-facing** changes require an entry in `CHANGELOG.md`
 
 1. **Add tests:** All new functionality requires corresponding tests
 
