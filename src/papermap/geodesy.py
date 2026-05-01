@@ -462,12 +462,46 @@ def _get_latitude_band(lat: float) -> str:
     return MGRS_LATITUDE_BANDS[band_index]
 
 
+def _column_letter_set(zone: int) -> str:
+    """Return the MGRS 100km column letter set for a UTM zone.
+
+    The column letters cycle through three sets (A-H, J-R, S-Z) based on
+    which zone group the coordinate is in (zone % 3).
+
+    Args:
+        zone: UTM zone number (1-60).
+
+    Returns:
+        The 8-letter column set for this zone.
+    """
+    zone_mod = zone % 3
+    if zone_mod == 1:
+        return MGRS_COLUMN_LETTERS_SET1
+    if zone_mod == 2:
+        return MGRS_COLUMN_LETTERS_SET2
+    return MGRS_COLUMN_LETTERS_SET3
+
+
+def _row_letter_set(zone: int) -> str:
+    """Return the MGRS 100km row letter set for a UTM zone.
+
+    Row letters cycle through 20 letters (A-V, excluding I and O), but
+    odd and even zones use different starting points to avoid ambiguity
+    at zone boundaries.
+
+    Args:
+        zone: UTM zone number (1-60).
+
+    Returns:
+        The 20-letter row set for this zone.
+    """
+    return MGRS_ROW_LETTERS_ODD if zone % 2 == 1 else MGRS_ROW_LETTERS_EVEN
+
+
 def _get_100km_square_column(zone: int, easting: float) -> str:
     """Get the MGRS 100km square column letter.
 
-    The column letters cycle through three sets (A-H, J-R, S-Z) based on
-    which zone group the coordinate is in (zone % 3). Within each zone,
-    the letters repeat every 8 * 100km = 800km.
+    Within each zone, the letters repeat every 8 * 100km = 800km.
 
     Args:
         zone: UTM zone number (1-60).
@@ -476,33 +510,18 @@ def _get_100km_square_column(zone: int, easting: float) -> str:
     Returns:
         Single-character column letter.
     """
-    # Determine which letter set to use based on zone
-    zone_mod = zone % 3
-    if zone_mod == 1:
-        letters = MGRS_COLUMN_LETTERS_SET1
-    elif zone_mod == 2:
-        letters = MGRS_COLUMN_LETTERS_SET2
-    else:
-        letters = MGRS_COLUMN_LETTERS_SET3
-
-    # Calculate column index within the 100km grid
+    # Calculate column index within the 100km grid.
     # Easting of 100km-199km -> index 0, 200km-299km -> index 1, etc.
     # We subtract 1 because UTM eastings start at 100km (the central
-    # meridian is at 500km, and the zone edge is about 100km from the edge)
-    col_index = int(easting // 100_000) - 1
+    # meridian is at 500km, and the zone edge is about 100km from the edge).
+    # Wrap to stay within the 8-letter set.
+    col_index = (int(easting // 100_000) - 1) % 8
 
-    # Wrap index to stay within the 8-letter set
-    col_index = col_index % 8
-
-    return letters[col_index]
+    return _column_letter_set(zone)[col_index]
 
 
 def _get_100km_square_row(zone: int, northing: float) -> str:
     """Get the MGRS 100km square row letter.
-
-    Row letters cycle through 20 letters (A-V, excluding I and O), but
-    odd and even zones use different starting points to avoid ambiguity
-    at zone boundaries.
 
     Args:
         zone: UTM zone number (1-60).
@@ -511,14 +530,10 @@ def _get_100km_square_row(zone: int, northing: float) -> str:
     Returns:
         Single-character row letter.
     """
-    # Use different letter sets for odd and even zones
-    letters = MGRS_ROW_LETTERS_ODD if zone % 2 == 1 else MGRS_ROW_LETTERS_EVEN
-
-    # Calculate row index from northing
-    # The row letters cycle every 2,000km (20 rows * 100km each)
+    # The row letters cycle every 2,000km (20 rows * 100km each).
     row_index = int(northing // 100_000) % 20
 
-    return letters[row_index]
+    return _row_letter_set(zone)[row_index]
 
 
 def _parse_utm_zone_hemisphere(
@@ -734,6 +749,39 @@ def _parse_mgrs_string(mgrs_str: str) -> MGRSCoordinate:
 
 
 # =============================================================================
+# Krüger Series Constants
+# =============================================================================
+
+
+def _kruger_constants(ellipsoid: Ellipsoid) -> tuple[float, float, float]:
+    """Compute the shared constants used by the forward and inverse Krüger series.
+
+    Karney (2011) Equations (8) and (14):
+    - First eccentricity: e = sqrt(f * (2 - f))
+    - Third flattening: n = f / (2 - f)
+    - Meridian arc parameter: A = (a / (1 + n)) * (1 + n²/4 + n⁴/64 + n⁶/256)
+
+    Args:
+        ellipsoid: Reference ellipsoid for calculations.
+
+    Returns:
+        Tuple of (eccentricity, third flattening, meridian arc parameter).
+    """
+    e = sqrt(ellipsoid.flattening * (2 - ellipsoid.flattening))
+    n = ellipsoid.flattening / (2 - ellipsoid.flattening)
+
+    n2 = n * n
+    n4 = n2 * n2
+    n6 = n4 * n2
+
+    meridian_arc = (ellipsoid.semi_major_axis / (1 + n)) * (
+        1 + n2 / 4 + n4 / 64 + n6 / 256
+    )
+
+    return e, n, meridian_arc
+
+
+# =============================================================================
 # Coordinate Conversion Functions
 # =============================================================================
 
@@ -806,15 +854,11 @@ def latlon_to_utm(
     # -------------------------------------------------------------------------
     # Step 4: Compute ellipsoid-derived constants
     # -------------------------------------------------------------------------
-    # First eccentricity: measures how much the ellipse deviates from a circle
-    # e² = (a² - b²) / a² = f(2-f)
-    e = sqrt(ellipsoid.flattening * (2 - ellipsoid.flattening))
+    # First eccentricity (e) measures how much the ellipse deviates from a
+    # circle. Third flattening (n) is the parameterization used by the Krüger
+    # series. Pre-compute powers of n for the coefficients below.
+    e, n, meridian_arc = _kruger_constants(ellipsoid)
 
-    # Third flattening: an alternative parameterization useful for series
-    # n = (a - b) / (a + b) = f / (2 - f)
-    n = ellipsoid.flattening / (2 - ellipsoid.flattening)
-
-    # Pre-compute powers of n for efficiency (used in Krüger series)
     n2 = n * n
     n3 = n2 * n
     n4 = n3 * n
@@ -901,31 +945,20 @@ def latlon_to_utm(
         η += α[j - 1] * cos(2 * j * ξ_prime) * sinh(2 * j * η_prime)
 
     # -------------------------------------------------------------------------
-    # Step 9: Compute the meridian arc parameter A
-    # -------------------------------------------------------------------------
-    # A relates the meridian arc length to the ellipsoid parameters.
-    # 2πA is the meridian arc length from equator to pole.
-    # Karney (2011) Equation (14):
-    # A = (a / (1 + n)) * (1 + n²/4 + n⁴/64 + n⁶/256 + ...)
-
-    meridian_arc = (ellipsoid.semi_major_axis / (1 + n)) * (
-        1 + n2 / 4 + n4 / 64 + n6 / 256
-    )
-
-    # -------------------------------------------------------------------------
-    # Step 10: Compute final easting and northing
+    # Step 9: Compute final easting and northing
     # -------------------------------------------------------------------------
     # Karney (2011) Equation (13):
     # x = k₀ × A × η
     # y = k₀ × A × ξ
     #
-    # Where k₀ = 0.9996 is the UTM scale factor
+    # Where k₀ = 0.9996 is the UTM scale factor and A is the meridian arc
+    # parameter (2πA is the equator-to-pole arc length).
 
     easting = UTM_SCALE_FACTOR * meridian_arc * η
     northing = UTM_SCALE_FACTOR * meridian_arc * ξ
 
     # -------------------------------------------------------------------------
-    # Step 11: Apply false origin offsets
+    # Step 10: Apply false origin offsets
     # -------------------------------------------------------------------------
     # UTM uses false origins to ensure all coordinates are positive:
     # - False easting of 500,000m is added to all eastings
@@ -1004,10 +1037,10 @@ def utm_to_latlon(
     # -------------------------------------------------------------------------
     # Step 3: Compute ellipsoid-derived constants
     # -------------------------------------------------------------------------
-    e = sqrt(ellipsoid.flattening * (2 - ellipsoid.flattening))  # First eccentricity
-    n = ellipsoid.flattening / (2 - ellipsoid.flattening)  # Third flattening
+    # First eccentricity (e), third flattening (n) and meridian arc parameter
+    # A. Pre-compute powers of n for the inverse Krüger coefficients below.
+    e, n, meridian_arc = _kruger_constants(ellipsoid)
 
-    # Pre-compute powers of n
     n2 = n * n
     n3 = n2 * n
     n4 = n3 * n
@@ -1015,15 +1048,7 @@ def utm_to_latlon(
     n6 = n5 * n
 
     # -------------------------------------------------------------------------
-    # Step 4: Compute meridian arc parameter A
-    # -------------------------------------------------------------------------
-    # Same as forward transformation
-    meridian_arc = (ellipsoid.semi_major_axis / (1 + n)) * (
-        1 + n2 / 4 + n4 / 64 + n6 / 256
-    )
-
-    # -------------------------------------------------------------------------
-    # Step 5: Compute normalized conformal coordinates
+    # Step 4: Compute normalized conformal coordinates
     # -------------------------------------------------------------------------
     # Karney (2011) Equation (15):
     # ξ = y / (k₀ × A)
@@ -1033,7 +1058,7 @@ def utm_to_latlon(
     η = easting / (UTM_SCALE_FACTOR * meridian_arc)
 
     # -------------------------------------------------------------------------
-    # Step 6: Compute inverse Krüger series coefficients (β)
+    # Step 5: Compute inverse Krüger series coefficients (β)
     # -------------------------------------------------------------------------
     # These coefficients are used for the inverse transformation.
     # Karney (2011) Equation (36):
@@ -1059,7 +1084,7 @@ def utm_to_latlon(
     )
 
     # -------------------------------------------------------------------------
-    # Step 7: Apply inverse Krüger series to get ξ' and η'
+    # Step 6: Apply inverse Krüger series to get ξ' and η'
     # -------------------------------------------------------------------------
     # Karney (2011) Equation (11) (inverse form):
     # ξ' = ξ - Σⱼ βⱼ sin(2jξ) cosh(2jη)
@@ -1074,7 +1099,7 @@ def utm_to_latlon(
         η_prime -= β[j - 1] * cos(2 * j * ξ) * sinh(2 * j * η)
 
     # -------------------------------------------------------------------------
-    # Step 8: Compute conformal latitude tangent τ'
+    # Step 7: Compute conformal latitude tangent τ'
     # -------------------------------------------------------------------------
     # Karney (2011) Equation (18):
     # τ' = sin(ξ') / sqrt(sinh²(η') + cos²(ξ'))
@@ -1085,14 +1110,14 @@ def utm_to_latlon(
     τ_prime = sin(ξ_prime) / sqrt(sinh_η_prime**2 + cos_ξ_prime**2)
 
     # -------------------------------------------------------------------------
-    # Step 9: Compute longitude from conformal coordinates
+    # Step 8: Compute longitude from conformal coordinates
     # -------------------------------------------------------------------------
     # λ = atan2(sinh(η'), cos(ξ'))
 
     λ = atan2(sinh_η_prime, cos_ξ_prime)
 
     # -------------------------------------------------------------------------
-    # Step 10: Iteratively solve for geodetic latitude τ
+    # Step 9: Iteratively solve for geodetic latitude τ
     # -------------------------------------------------------------------------
     # The relationship between τ' and τ is implicit, so we must iterate.
     # Karney (2011) Equations (19-21):
@@ -1136,13 +1161,13 @@ def utm_to_latlon(
             break
 
     # -------------------------------------------------------------------------
-    # Step 11: Convert from conformal tangent to latitude
+    # Step 10: Convert from conformal tangent to latitude
     # -------------------------------------------------------------------------
     # φ = atan(τ)
     φ = atan(τ)
 
     # -------------------------------------------------------------------------
-    # Step 12: Convert to degrees and adjust for zone
+    # Step 11: Convert to degrees and adjust for zone
     # -------------------------------------------------------------------------
     lat = degrees(φ)
 
@@ -1279,31 +1304,16 @@ def mgrs_to_latlon(
     # -------------------------------------------------------------------------
     # Step 3: Calculate 100km easting from column letter
     # -------------------------------------------------------------------------
-    # Determine which letter set is used for this zone
-    zone_mod = mgrs.zone % 3
-    if zone_mod == 1:
-        letters = MGRS_COLUMN_LETTERS_SET1
-    elif zone_mod == 2:
-        letters = MGRS_COLUMN_LETTERS_SET2
-    else:
-        letters = MGRS_COLUMN_LETTERS_SET3
-
-    # Find the index of the column letter
-    col_index = letters.index(mgrs.square[0])
-
-    # Convert to easting (add 1 because index 0 corresponds to 100km easting)
+    # Find the index of the column letter in the zone's letter set.
+    # Add 1 because index 0 corresponds to 100km easting.
+    col_index = _column_letter_set(mgrs.zone).index(mgrs.square[0])
     easting_100km = (col_index + 1) * 100_000
 
     # -------------------------------------------------------------------------
     # Step 4: Calculate 100km northing from row letter
     # -------------------------------------------------------------------------
-    # Use the appropriate letter set for odd/even zones
-    row_letters = MGRS_ROW_LETTERS_ODD if mgrs.zone % 2 == 1 else MGRS_ROW_LETTERS_EVEN
-
-    # Find the index of the row letter
-    row_index = row_letters.index(mgrs.square[1])
-
-    # The row letters cycle every 2,000km (20 × 100km)
+    # The row letters cycle every 2,000km (20 × 100km).
+    row_index = _row_letter_set(mgrs.zone).index(mgrs.square[1])
     northing_100km = row_index * 100_000
 
     # -------------------------------------------------------------------------
@@ -1312,22 +1322,13 @@ def mgrs_to_latlon(
     # The row letters repeat every 2,000km, so we need to figure out which
     # 2,000km band we're in based on the latitude band.
 
-    # Get the approximate latitude for the center of this band
+    # Convert the southern edge of the band to UTM to get the approximate
+    # northing in UTM-stored form (i.e. with false northing applied for
+    # southern bands). `latlon_to_utm` already encodes both hemispheres
+    # consistently, so we can use the value directly.
     band_index = MGRS_LATITUDE_BANDS.index(mgrs.band)
     band_lat_south = -80 + band_index * 8
-
-    # Convert the southern edge of the band to UTM to get approximate northing
-    if band_lat_south >= 0:
-        # Northern hemisphere
-        _, approx_northing, _, _ = _latlon_to_utm_components(
-            band_lat_south, 0, ellipsoid=ellipsoid
-        )
-    else:
-        # Southern hemisphere - need to account for false northing
-        _, approx_northing, _, _ = _latlon_to_utm_components(
-            band_lat_south, 0, ellipsoid=ellipsoid
-        )
-        approx_northing += UTM_FALSE_NORTHING
+    approx_northing = latlon_to_utm(band_lat_south, 0, ellipsoid=ellipsoid).northing
 
     # Determine which 2,000km block we're in
     base_northing = (approx_northing // 2_000_000) * 2_000_000
@@ -1346,47 +1347,17 @@ def mgrs_to_latlon(
     easting = easting_100km + mgrs.easting
     northing = northing + mgrs.northing
 
-    # Adjust for Southern Hemisphere
-    if hemisphere == "S":
-        northing -= UTM_FALSE_NORTHING
-
     # -------------------------------------------------------------------------
     # Step 7: Convert UTM to lat/lon
     # -------------------------------------------------------------------------
     utm = UTMCoordinate(
         easting=easting,
-        northing=northing if hemisphere == "N" else northing + UTM_FALSE_NORTHING,
+        northing=northing,
         zone=mgrs.zone,
         hemisphere=hemisphere,
     )
 
     return utm_to_latlon(utm, ellipsoid=ellipsoid)
-
-
-def _latlon_to_utm_components(
-    lat: float,
-    lon: float,
-    *,
-    ellipsoid: Ellipsoid = WGS_84_ELLIPSOID,
-) -> tuple[float, float, int, str]:
-    """Helper function to get raw UTM components without creating an object.
-
-    This is used internally for MGRS calculations where we need the raw values.
-
-    Args:
-        lat: Latitude in degrees.
-        lon: Longitude in degrees.
-        ellipsoid: Reference ellipsoid for calculations. Defaults to WGS84.
-
-    Returns:
-        Tuple of (easting, northing, zone, hemisphere).
-    """
-    utm = latlon_to_utm(lat, lon, ellipsoid=ellipsoid)
-    # For southern hemisphere, remove the false northing to get raw value
-    northing = utm.northing
-    if utm.hemisphere == "S":
-        northing -= UTM_FALSE_NORTHING
-    return utm.easting, northing, utm.zone, utm.hemisphere
 
 
 def latlon_to_ecef(
