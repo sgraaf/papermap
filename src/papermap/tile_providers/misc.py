@@ -22,7 +22,7 @@ TILE_PROVIDERS: list[TileProvider] = [
             f"Map data: {OSM_HTML_ATTRIBUTION}. "
             'Map style: © <a href="https://www.opnvkarte.de/">ÖPNVKarte</a>'
         ),
-        url_template="https://tileprovider.memomaps.de/tilegen/{z}/{x}/{y}.png",
+        url_template="https://tileserver.memomaps.de/tilegen/{z}/{x}/{y}.png",
         subdomains=None,
         zoom_min=0,
         zoom_max=18,
@@ -81,7 +81,7 @@ TILE_PROVIDERS: list[TileProvider] = [
             f"Map data: {OSM_HTML_ATTRIBUTION}. "
             'Map style: © <a href="https://www.seznam.cz/">Seznam.cz</a>'
         ),
-        url_template="https://m{s}.mapprovider.mapy.cz/turist-m/{z}-{x}-{y}.png",
+        url_template="https://m{s}.mapserver.mapy.cz/turist-m/{z}-{x}-{y}.png",
         subdomains=[1, 2, 3, 4],
         zoom_min=0,
         zoom_max=19,

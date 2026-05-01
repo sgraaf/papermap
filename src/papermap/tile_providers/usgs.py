@@ -28,7 +28,7 @@ def _usgs_provider(
         name=name,
         attribution=USGS_ATTRIBUTION,
         html_attribution=USGS_HTML_ATTRIBUTION,
-        url_template=f"https://basemap.nationalmap.gov/arcgis/rest/services/{variant}/MapProvider/tile/{{z}}/{{y}}/{{x}}",
+        url_template=f"https://basemap.nationalmap.gov/arcgis/rest/services/{variant}/MapServer/tile/{{z}}/{{y}}/{{x}}",
         subdomains=None,
         zoom_min=0,
         zoom_max=zoom_max,

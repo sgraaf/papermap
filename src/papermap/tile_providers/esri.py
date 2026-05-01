@@ -29,7 +29,7 @@ def _esri_provider(
         name=name,
         attribution=attribution,
         html_attribution=html_attribution,
-        url_template=f"https://provider.arcgisonline.com/ArcGIS/rest/services/{variant}/MapProvider/tile/{{z}}/{{y}}/{{x}}",
+        url_template=f"https://server.arcgisonline.com/ArcGIS/rest/services/{variant}/MapServer/tile/{{z}}/{{y}}/{{x}}",
         subdomains=None,
         zoom_min=0,
         zoom_max=zoom_max,
