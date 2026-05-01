@@ -355,8 +355,8 @@ class PaperMap:
         self.φ = radians(self.lat)
         self.λ = radians(self.lon)
 
-        # Compute the scaled grid size (in mm)
-        self.grid_size_scaled = Decimal(self.grid_size * 1_000 / self.scale)
+        # Compute the scaled grid size (in mm) using exact Decimal arithmetic
+        self.grid_size_scaled = Decimal(self.grid_size * 1_000) / Decimal(self.scale)
 
         # Compute the scaled width and height of the image (in px)
         self.image_width_scaled_px = round(self.image_width_px * self.resize_factor)
@@ -435,13 +435,13 @@ class PaperMap:
         easting_rnd = round(easting, -3)
         northing_rnd = round(northing, -3)
 
-        # compute distance between x/y and x/y_rnd in mm
-        d_easting = Decimal((easting - easting_rnd) / self.scale * 1000)
-        d_northing = Decimal((northing - northing_rnd) / self.scale * 1000)
+        # compute distance between x/y and x/y_rnd in mm using Decimal arithmetic
+        d_easting = Decimal(easting - easting_rnd) / Decimal(self.scale) * 1000
+        d_northing = Decimal(northing - northing_rnd) / Decimal(self.scale) * 1000
 
         # determine center grid coordinate (in mm)
-        easting_grid_center = Decimal(self.image_width / 2) - d_easting
-        northing_grid_center = Decimal(self.image_height / 2) - d_northing
+        easting_grid_center = Decimal(self.image_width) / 2 - d_easting
+        northing_grid_center = Decimal(self.image_height) / 2 - d_northing
 
         # determine start grid coordinate (in mm)
         easting_grid_start = easting_grid_center % self.grid_size_scaled
@@ -449,10 +449,10 @@ class PaperMap:
 
         # determine the start grid coordinate label
         easting_label_start = int(
-            Decimal(easting_rnd / 1000) - easting_grid_center // self.grid_size_scaled
+            Decimal(easting_rnd) / 1000 - easting_grid_center // self.grid_size_scaled
         )
         northing_label_start = int(
-            Decimal(northing_rnd / 1000) + northing_grid_center // self.grid_size_scaled
+            Decimal(northing_rnd) / 1000 + northing_grid_center // self.grid_size_scaled
         )
 
         # determine the grid coordinates (in mm)
