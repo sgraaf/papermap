@@ -9,12 +9,13 @@ See: https://stadiamaps.com/
 from __future__ import annotations
 
 from papermap.tile_provider import TileProvider
+from papermap.tile_providers._attribution import OSM_ATTRIBUTION, OSM_HTML_ATTRIBUTION
 
-STADIA_ATTRIBUTION = "© Stadia Maps, © OpenMapTiles, © OpenStreetMap contributors"
+STADIA_ATTRIBUTION = f"© Stadia Maps, © OpenMapTiles, {OSM_ATTRIBUTION}"
 STADIA_HTML_ATTRIBUTION = (
     '© <a href="https://stadiamaps.com/">Stadia Maps</a>, '
     '© <a href="https://openmaptiles.org/">OpenMapTiles</a>, '
-    '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+    f"{OSM_HTML_ATTRIBUTION}"
 )
 
 STAMEN_ATTRIBUTION = (

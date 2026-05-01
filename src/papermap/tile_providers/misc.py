@@ -7,11 +7,7 @@ or are standalone providers without multiple variants.
 from __future__ import annotations
 
 from papermap.tile_provider import TileProvider
-
-OSM_ATTRIBUTION = "© OpenStreetMap contributors"
-OSM_HTML_ATTRIBUTION = (
-    '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
-)
+from papermap.tile_providers._attribution import OSM_ATTRIBUTION, OSM_HTML_ATTRIBUTION
 
 TILE_PROVIDERS: list[TileProvider] = [
     TileProvider(

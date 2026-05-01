@@ -9,11 +9,11 @@ See: https://carto.com/basemaps/
 from __future__ import annotations
 
 from papermap.tile_provider import TileProvider
+from papermap.tile_providers._attribution import OSM_ATTRIBUTION, OSM_HTML_ATTRIBUTION
 
-CARTO_ATTRIBUTION = "© OpenStreetMap contributors, © CARTO"
+CARTO_ATTRIBUTION = f"{OSM_ATTRIBUTION}, © CARTO"
 CARTO_HTML_ATTRIBUTION = (
-    '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>, '
-    '© <a href="https://carto.com/attributions">CARTO</a>'
+    f'{OSM_HTML_ATTRIBUTION}, © <a href="https://carto.com/attributions">CARTO</a>'
 )
 
 

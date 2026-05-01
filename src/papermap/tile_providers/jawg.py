@@ -9,11 +9,11 @@ See: https://www.jawg.io/
 from __future__ import annotations
 
 from papermap.tile_provider import TileProvider
+from papermap.tile_providers._attribution import OSM_ATTRIBUTION, OSM_HTML_ATTRIBUTION
 
-JAWG_ATTRIBUTION = "© Jawg Maps, © OpenStreetMap contributors"
+JAWG_ATTRIBUTION = f"© Jawg Maps, {OSM_ATTRIBUTION}"
 JAWG_HTML_ATTRIBUTION = (
-    '© <a href="https://www.jawg.io/">Jawg</a> Maps, '
-    '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+    f'© <a href="https://www.jawg.io/">Jawg</a> Maps, {OSM_HTML_ATTRIBUTION}'
 )
 
 

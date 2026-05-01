@@ -9,14 +9,15 @@ See: https://maps.wikimedia.org/
 from __future__ import annotations
 
 from papermap.tile_provider import TileProvider
+from papermap.tile_providers._attribution import OSM_ATTRIBUTION, OSM_HTML_ATTRIBUTION
 
 TILE_PROVIDERS: list[TileProvider] = [
     TileProvider(
         key="wikimedia",
         name="Wikimedia",
-        attribution="Map data: © OpenStreetMap contributors. Map style: © Wikimedia Foundation",
+        attribution=(f"Map data: {OSM_ATTRIBUTION}. Map style: © Wikimedia Foundation"),
         html_attribution=(
-            'Map data: © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>. '
+            f"Map data: {OSM_HTML_ATTRIBUTION}. "
             'Map style: © <a href="https://foundation.wikimedia.org/">Wikimedia Foundation</a>'
         ),
         url_template="https://maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png",

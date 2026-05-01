@@ -9,11 +9,12 @@ See: https://www.thunderforest.com/
 from __future__ import annotations
 
 from papermap.tile_provider import TileProvider
+from papermap.tile_providers._attribution import OSM_ATTRIBUTION, OSM_HTML_ATTRIBUTION
 
-TF_ATTRIBUTION = "Maps © Thunderforest, Data © OpenStreetMap contributors"
+TF_ATTRIBUTION = f"Maps © Thunderforest, Data {OSM_ATTRIBUTION}"
 TF_HTML_ATTRIBUTION = (
     'Maps © <a href="https://www.thunderforest.com/">Thunderforest</a>, '
-    'Data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+    f"Data {OSM_HTML_ATTRIBUTION}"
 )
 
 

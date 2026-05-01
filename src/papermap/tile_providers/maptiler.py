@@ -9,11 +9,12 @@ See: https://www.maptiler.com/
 from __future__ import annotations
 
 from papermap.tile_provider import TileProvider
+from papermap.tile_providers._attribution import OSM_ATTRIBUTION, OSM_HTML_ATTRIBUTION
 
-MAPTILER_ATTRIBUTION = "© MapTiler, © OpenStreetMap contributors"
+MAPTILER_ATTRIBUTION = f"© MapTiler, {OSM_ATTRIBUTION}"
 MAPTILER_HTML_ATTRIBUTION = (
     '© <a href="https://www.maptiler.com/copyright/">MapTiler</a>, '
-    '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+    f"{OSM_HTML_ATTRIBUTION}"
 )
 
 

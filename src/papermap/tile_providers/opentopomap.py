@@ -9,18 +9,17 @@ See: https://opentopomap.org/
 from __future__ import annotations
 
 from papermap.tile_provider import TileProvider
+from papermap.tile_providers._attribution import OSM_ATTRIBUTION, OSM_HTML_ATTRIBUTION
 
 TILE_PROVIDERS: list[TileProvider] = [
     TileProvider(
         key="opentopomap",
         name="OpenTopoMap",
         attribution=(
-            "Map data: © OpenStreetMap contributors, SRTM. "
-            "Map style: © OpenTopoMap (CC-BY-SA)"
+            f"Map data: {OSM_ATTRIBUTION}, SRTM. Map style: © OpenTopoMap (CC-BY-SA)"
         ),
         html_attribution=(
-            'Map data: © <a href="https://www.openstreetmap.org/copyright">'
-            "OpenStreetMap contributors</a>, "
+            f"Map data: {OSM_HTML_ATTRIBUTION}, "
             '<a href="https://www2.jpl.nasa.gov/srtm/">SRTM</a>. '
             'Map style: © <a href="https://opentopomap.org/">OpenTopoMap</a> '
             '(<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'

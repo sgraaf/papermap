@@ -48,9 +48,11 @@ if TYPE_CHECKING:
 
 
 def _discover_tile_providers() -> list[TileProvider]:
-    """Import every submodule and collect their ``TILE_PROVIDERS`` lists."""
+    """Import every public submodule and collect their ``TILE_PROVIDERS`` lists."""
     providers: list[TileProvider] = []
     for module_info in pkgutil.iter_modules(__path__):
+        if module_info.name.startswith("_"):
+            continue
         module = importlib.import_module(f"{__name__}.{module_info.name}")
         providers.extend(getattr(module, "TILE_PROVIDERS", []))
     return providers
