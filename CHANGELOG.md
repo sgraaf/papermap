@@ -20,7 +20,7 @@ The **third number** is for emergencies when we need to start branches for older
 
 - Fixed broken URL templates for the Esri, USGS, ÖPNVKarte, and Mapy.cz tile providers, where the upstream `server`/`MapServer` hostnames and paths had been incorrectly renamed to `provider`/`MapProvider`
 
-## [2026.1.0](https://github.com/sgraaf/gpx/compare/0.3.0...2026.1.0) (2026-01-21)
+## [2026.1.0](https://github.com/sgraaf/papermap/compare/0.3.0...2026.1.0) (2026-01-21)
 
 This is a major release featuring comprehensive geodetic coordinate conversion support, a massive expansion of tile providers, and significant architectural improvements. The new `geodesy` module implements high-precision coordinate conversions between geographic (lat/lon), UTM, MGRS, and ECEF coordinate systems using Karney (2011) and Bowring (1985) algorithms. The tile provider ecosystem has grown from 20+ to over 100 providers, including OpenStreetMap variants, Stadia Maps, CartoDB, ESRI, NASA GIBS, and regional providers. The HTTP client has been modernized by migrating from `requests` to `httpx`, and tile downloads now gracefully handle failures by default. This release also drops support for Python 3.7-3.10 and adds support for Python 3.12-3.14.
 

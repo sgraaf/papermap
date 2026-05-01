@@ -11,7 +11,7 @@ from papermap.cli import cli
 def help_output(args):
     result = CliRunner().invoke(cli, args)
     output = result.output.replace("Usage: cli ", "Usage: papermap ")
-    cog.out(f"\nRunning `gpx {' '.join(args)}` or `python -m gpx {' '.join(args)}` shows a list of all of the available options and arguments:\n")
+    cog.out(f"\nRunning `papermap {' '.join(args)}` or `python -m papermap {' '.join(args)}` shows a list of all of the available options and arguments:\n")
     cog.out(f"\n```sh\n{output}```\n\n")
 cog.outl()
 ]]] -->
@@ -28,7 +28,7 @@ Running `papermap` without specifying a command runs the default command, `paper
 help_output(["--help"])
 ]]] -->
 
-Running `gpx --help` or `python -m gpx --help` shows a list of all of the available options and arguments:
+Running `papermap --help` or `python -m papermap --help` shows a list of all of the available options and arguments:
 
 ```sh
 Usage: papermap [OPTIONS] COMMAND [ARGS]...
@@ -61,7 +61,7 @@ This command generates a paper map for the given spherical coordinate (i.e. lat,
 help_output(["latlon", "--help"])
 ]]] -->
 
-Running `gpx latlon --help` or `python -m gpx latlon --help` shows a list of all of the available options and arguments:
+Running `papermap latlon --help` or `python -m papermap latlon --help` shows a list of all of the available options and arguments:
 
 ```sh
 Usage: papermap latlon [OPTIONS] LATITUDE LONGITUDE FILE
@@ -101,7 +101,7 @@ This command generates a paper map for the given UTM coordinate (i.e. easting, n
 help_output(["utm", "--help"])
 ]]] -->
 
-Running `gpx utm --help` or `python -m gpx utm --help` shows a list of all of the available options and arguments:
+Running `papermap utm --help` or `python -m papermap utm --help` shows a list of all of the available options and arguments:
 
 ```sh
 Usage: papermap utm [OPTIONS] EASTING NORTHING ZONE-NUMBER HEMISPHERE FILE
@@ -139,7 +139,7 @@ Options:
 help_output(["mgrs", "--help"])
 ]]] -->
 
-Running `gpx mgrs --help` or `python -m gpx mgrs --help` shows a list of all of the available options and arguments:
+Running `papermap mgrs --help` or `python -m papermap mgrs --help` shows a list of all of the available options and arguments:
 
 ```sh
 Usage: papermap mgrs [OPTIONS] ZONE-NUMBER BAND SQUARE EASTING NORTHING FILE
@@ -177,7 +177,7 @@ Options:
 help_output(["ecef", "--help"])
 ]]] -->
 
-Running `gpx ecef --help` or `python -m gpx ecef --help` shows a list of all of the available options and arguments:
+Running `papermap ecef --help` or `python -m papermap ecef --help` shows a list of all of the available options and arguments:
 
 ```sh
 Usage: papermap ecef [OPTIONS] X Y Z FILE
