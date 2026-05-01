@@ -64,6 +64,3 @@ TILE_PROVIDERS: list[TileProvider] = [
     _thunderforest_provider("thunderforest-atlas", "Thunderforest Atlas", "atlas"),
 ]
 """Thunderforest tile providers."""
-
-KEY_TO_TILE_PROVIDER: dict[str, TileProvider] = {ts.key: ts for ts in TILE_PROVIDERS}
-"""Mapping from tile provider key to TileProvider instance."""

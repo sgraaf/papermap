@@ -237,6 +237,3 @@ TILE_PROVIDERS: list[TileProvider] = [
     ),
 ]
 """Miscellaneous tile providers."""
-
-KEY_TO_TILE_PROVIDER: dict[str, TileProvider] = {ts.key: ts for ts in TILE_PROVIDERS}
-"""Mapping from tile provider key to TileProvider instance."""

@@ -45,6 +45,3 @@ TILE_PROVIDERS: list[TileProvider] = [
     _jawg_provider("jawg-matrix", "Jawg Matrix", "jawg-matrix"),
 ]
 """Jawg Maps tile providers."""
-
-KEY_TO_TILE_PROVIDER: dict[str, TileProvider] = {ts.key: ts for ts in TILE_PROVIDERS}
-"""Mapping from tile provider key to TileProvider instance."""
