@@ -558,12 +558,10 @@ class TestPaperMapDownloadTiles:
         for tile in pm.tiles:
             assert tile.success
 
+    @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
     def test_download_tiles_raises_after_max_retries(
         self, httpx_mock: HTTPXMock
     ) -> None:
-        # Disable unused response assertion
-        httpx_mock._options.assert_all_responses_were_requested = False  # noqa: SLF001
-
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         num_tiles = len(pm.tiles)
@@ -609,11 +607,9 @@ class TestPaperMapDownloadTiles:
         assert len(sleep_calls) >= 1
         assert all(duration == 1 for duration in sleep_calls)
 
+    @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
     def test_download_tiles_graceful_failure(self, httpx_mock: HTTPXMock) -> None:
         """Test that partial tile failure with strict=False logs warning but completes."""
-        # Disable unused response assertion
-        httpx_mock._options.assert_all_responses_were_requested = False  # noqa: SLF001
-
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         num_tiles = len(pm.tiles)
@@ -627,11 +623,9 @@ class TestPaperMapDownloadTiles:
         with pytest.warns(UserWarning, match="Could not download"):
             pm.download_tiles(num_retries=num_retries, strict=False)
 
+    @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
     def test_download_tiles_strict_failure(self, httpx_mock: HTTPXMock) -> None:
         """Test that partial tile failure with strict=True raises RuntimeError."""
-        # Disable unused response assertion
-        httpx_mock._options.assert_all_responses_were_requested = False  # noqa: SLF001
-
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         num_tiles = len(pm.tiles)
@@ -649,11 +643,9 @@ class TestPaperMapDownloadTiles:
 class TestPaperMapHttpErrors:
     """Tests for HTTP error handling in tile downloads."""
 
+    @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
     def test_download_tiles_404_error(self, httpx_mock: HTTPXMock) -> None:
         """Test handling of HTTP 404 Not Found errors."""
-        # Disable unused response assertion
-        httpx_mock._options.assert_all_responses_were_requested = False  # noqa: SLF001
-
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         num_tiles = len(pm.tiles)
@@ -665,11 +657,9 @@ class TestPaperMapHttpErrors:
         with pytest.raises(RuntimeError, match="Could not download"):
             pm.download_tiles(num_retries=1, strict=True)
 
+    @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
     def test_download_tiles_500_error(self, httpx_mock: HTTPXMock) -> None:
         """Test handling of HTTP 500 Provider Error."""
-        # Disable unused response assertion
-        httpx_mock._options.assert_all_responses_were_requested = False  # noqa: SLF001
-
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         num_tiles = len(pm.tiles)
@@ -681,11 +671,9 @@ class TestPaperMapHttpErrors:
         with pytest.raises(RuntimeError, match="Could not download"):
             pm.download_tiles(num_retries=1, strict=True)
 
+    @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
     def test_download_tiles_403_forbidden(self, httpx_mock: HTTPXMock) -> None:
         """Test handling of HTTP 403 Forbidden errors (invalid API key)."""
-        # Disable unused response assertion
-        httpx_mock._options.assert_all_responses_were_requested = False  # noqa: SLF001
-
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         num_tiles = len(pm.tiles)
@@ -697,11 +685,9 @@ class TestPaperMapHttpErrors:
         with pytest.raises(RuntimeError, match="Could not download"):
             pm.download_tiles(num_retries=1, strict=True)
 
+    @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
     def test_download_tiles_empty_response(self, httpx_mock: HTTPXMock) -> None:
         """Test handling of empty response body."""
-        # Disable unused response assertion in case exception prevents all downloads
-        httpx_mock._options.assert_all_responses_were_requested = False  # noqa: SLF001
-
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         # Return empty content (one per tile)
@@ -712,11 +698,9 @@ class TestPaperMapHttpErrors:
         with pytest.raises(UnidentifiedImageError):
             pm.download_tiles(num_retries=1)
 
+    @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
     def test_download_tiles_invalid_image_data(self, httpx_mock: HTTPXMock) -> None:
         """Test handling of invalid/corrupted image data."""
-        # Disable unused response assertion in case exception prevents all downloads
-        httpx_mock._options.assert_all_responses_were_requested = False  # noqa: SLF001
-
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         # Return invalid image data (one per tile)
@@ -776,14 +760,12 @@ class TestPaperMapRenderBaseLayer:
         assert hasattr(pm, "map_image")
         assert pm.map_image.size == (pm.image_width_px, pm.image_height_px)
 
+    @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
     def test_render_base_layer_with_strict_download_failure(
         self,
         httpx_mock: HTTPXMock,
     ) -> None:
         """Test that render_base_layer respects strict_download flag."""
-        # Disable unused response assertion
-        httpx_mock._options.assert_all_responses_were_requested = False  # noqa: SLF001
-
         pm = PaperMap(lat=40.7128, lon=-74.0060, strict_download=True)
 
         num_tiles = len(pm.tiles)
@@ -796,14 +778,12 @@ class TestPaperMapRenderBaseLayer:
         with pytest.raises(RuntimeError, match="Could not download"):
             pm.render_base_layer()
 
+    @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
     def test_render_base_layer_with_graceful_download_failure(
         self,
         httpx_mock: HTTPXMock,
     ) -> None:
         """Test that render_base_layer allows graceful degradation with strict_download=False."""
-        # Disable unused response assertion
-        httpx_mock._options.assert_all_responses_were_requested = False  # noqa: SLF001
-
         pm = PaperMap(lat=40.7128, lon=-74.0060, strict_download=False)
 
         num_tiles = len(pm.tiles)

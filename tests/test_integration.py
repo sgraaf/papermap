@@ -256,11 +256,9 @@ class TestTileDownloadBehavior:
         for tile in pm.tiles:
             assert tile.success
 
+    @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
     def test_tile_download_max_retries_exceeded(self, httpx_mock: HTTPXMock) -> None:
         """Test that an error is raised when max retries are exceeded with strict=True."""
-        # Disable unused response assertion
-        httpx_mock._options.assert_all_responses_were_requested = False  # noqa: SLF001
-
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         # All attempts fail
