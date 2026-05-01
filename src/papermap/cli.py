@@ -2,7 +2,7 @@ from collections.abc import Callable
 from functools import wraps
 from importlib import metadata
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict, Unpack
 
 import click
 from click_default_group import DefaultGroup
@@ -20,6 +20,29 @@ from .papermap import (
 from .tile_providers import DEFAULT_TILE_PROVIDER_KEY, TILE_PROVIDER_KEYS
 
 CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
+
+
+class CommonParameters(TypedDict):
+    """Common parameters shared by every CLI sub-command.
+
+    These mirror the keyword arguments installed by the
+    `common_parameters` decorator and ultimately forwarded to the
+    `PaperMap` constructor or one of its `from_*` classmethods.
+    """
+
+    tile_provider_key: str
+    api_key: str | None
+    paper_size: str
+    use_landscape: bool
+    margin_top: int
+    margin_right: int
+    margin_bottom: int
+    margin_left: int
+    scale: int
+    dpi: int
+    add_grid: bool
+    grid_size: int
+    strict_download: bool
 
 
 def margin_option(side: str) -> Callable:
@@ -110,6 +133,12 @@ def common_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
     return wrapper
 
 
+def _render_and_save(pm: PaperMap, file: Path) -> None:
+    """Render the map and write it to *file*."""
+    pm.render()
+    pm.save(file)
+
+
 @click.group(
     cls=DefaultGroup,
     default="latlon",
@@ -128,45 +157,11 @@ def cli() -> None:
 @click.argument("lat", type=float, metavar="LATITUDE")
 @click.argument("lon", type=float, metavar="LONGITUDE")
 @common_parameters
-def latlon(  # noqa: PLR0913
-    lat: float,
-    lon: float,
-    file: Path,
-    *,
-    tile_provider_key: str = DEFAULT_TILE_PROVIDER_KEY,
-    api_key: str | None = None,
-    paper_size: str = DEFAULT_PAPER_SIZE,
-    use_landscape: bool = False,
-    margin_top: int = DEFAULT_MARGIN,
-    margin_right: int = DEFAULT_MARGIN,
-    margin_bottom: int = DEFAULT_MARGIN,
-    margin_left: int = DEFAULT_MARGIN,
-    scale: int = DEFAULT_SCALE,
-    dpi: int = DEFAULT_DPI,
-    add_grid: bool = False,
-    grid_size: int = DEFAULT_GRID_SIZE,
-    strict_download: bool = False,
+def latlon(
+    lat: float, lon: float, file: Path, **kwargs: Unpack[CommonParameters]
 ) -> None:
     """Generates a paper map for the given geographic coordinates (i.e. lat, lon) and outputs it to file."""
-    pm = PaperMap(
-        lat,
-        lon,
-        tile_provider_key=tile_provider_key,
-        api_key=api_key,
-        paper_size=paper_size,
-        use_landscape=use_landscape,
-        margin_top=margin_top,
-        margin_right=margin_right,
-        margin_bottom=margin_bottom,
-        margin_left=margin_left,
-        scale=scale,
-        dpi=dpi,
-        add_grid=add_grid,
-        grid_size=grid_size,
-        strict_download=strict_download,
-    )
-    pm.render()
-    pm.save(file)
+    _render_and_save(PaperMap(lat, lon, **kwargs), file)
 
 
 @cli.command()
@@ -175,46 +170,19 @@ def latlon(  # noqa: PLR0913
 @click.argument("zone", type=int, metavar="ZONE-NUMBER")
 @click.argument("hemisphere", type=str, metavar="HEMISPHERE")
 @common_parameters
-def utm(  # noqa: PLR0913
+def utm(
     easting: float,
     northing: float,
     zone: int,
     hemisphere: str,
     file: Path,
-    *,
-    tile_provider_key: str = DEFAULT_TILE_PROVIDER_KEY,
-    api_key: str | None = None,
-    paper_size: str = DEFAULT_PAPER_SIZE,
-    use_landscape: bool = False,
-    margin_top: int = DEFAULT_MARGIN,
-    margin_right: int = DEFAULT_MARGIN,
-    margin_bottom: int = DEFAULT_MARGIN,
-    margin_left: int = DEFAULT_MARGIN,
-    scale: int = DEFAULT_SCALE,
-    dpi: int = DEFAULT_DPI,
-    add_grid: bool = False,
-    grid_size: int = DEFAULT_GRID_SIZE,
-    strict_download: bool = False,
+    **kwargs: Unpack[CommonParameters],
 ) -> None:
     """Generates a paper map for the given UTM (Universal Transverse Mercator) coordinates and outputs it to file."""
-    pm = PaperMap.from_utm(
-        UTMCoordinate(easting, northing, zone, hemisphere),
-        tile_provider_key=tile_provider_key,
-        api_key=api_key,
-        paper_size=paper_size,
-        use_landscape=use_landscape,
-        margin_top=margin_top,
-        margin_right=margin_right,
-        margin_bottom=margin_bottom,
-        margin_left=margin_left,
-        scale=scale,
-        dpi=dpi,
-        add_grid=add_grid,
-        grid_size=grid_size,
-        strict_download=strict_download,
+    _render_and_save(
+        PaperMap.from_utm(UTMCoordinate(easting, northing, zone, hemisphere), **kwargs),
+        file,
     )
-    pm.render()
-    pm.save(file)
 
 
 @cli.command()
@@ -231,40 +199,15 @@ def mgrs(  # noqa: PLR0913
     easting: float,
     northing: float,
     file: Path,
-    *,
-    tile_provider_key: str = DEFAULT_TILE_PROVIDER_KEY,
-    api_key: str | None = None,
-    paper_size: str = DEFAULT_PAPER_SIZE,
-    use_landscape: bool = False,
-    margin_top: int = DEFAULT_MARGIN,
-    margin_right: int = DEFAULT_MARGIN,
-    margin_bottom: int = DEFAULT_MARGIN,
-    margin_left: int = DEFAULT_MARGIN,
-    scale: int = DEFAULT_SCALE,
-    dpi: int = DEFAULT_DPI,
-    add_grid: bool = False,
-    grid_size: int = DEFAULT_GRID_SIZE,
-    strict_download: bool = False,
+    **kwargs: Unpack[CommonParameters],
 ) -> None:
     """Generates a paper map for the given MGRS (Military Grid Reference System) coordinates and outputs it to file."""
-    pm = PaperMap.from_mgrs(
-        MGRSCoordinate(zone, band, square, easting, northing),
-        tile_provider_key=tile_provider_key,
-        api_key=api_key,
-        paper_size=paper_size,
-        use_landscape=use_landscape,
-        margin_top=margin_top,
-        margin_right=margin_right,
-        margin_bottom=margin_bottom,
-        margin_left=margin_left,
-        scale=scale,
-        dpi=dpi,
-        add_grid=add_grid,
-        grid_size=grid_size,
-        strict_download=strict_download,
+    _render_and_save(
+        PaperMap.from_mgrs(
+            MGRSCoordinate(zone, band, square, easting, northing), **kwargs
+        ),
+        file,
     )
-    pm.render()
-    pm.save(file)
 
 
 @cli.command()
@@ -272,42 +215,8 @@ def mgrs(  # noqa: PLR0913
 @click.argument("y", type=float, metavar="Y")
 @click.argument("z", type=float, metavar="Z")
 @common_parameters
-def ecef(  # noqa: PLR0913
-    x: float,
-    y: float,
-    z: float,
-    file: Path,
-    *,
-    tile_provider_key: str = DEFAULT_TILE_PROVIDER_KEY,
-    api_key: str | None = None,
-    paper_size: str = DEFAULT_PAPER_SIZE,
-    use_landscape: bool = False,
-    margin_top: int = DEFAULT_MARGIN,
-    margin_right: int = DEFAULT_MARGIN,
-    margin_bottom: int = DEFAULT_MARGIN,
-    margin_left: int = DEFAULT_MARGIN,
-    scale: int = DEFAULT_SCALE,
-    dpi: int = DEFAULT_DPI,
-    add_grid: bool = False,
-    grid_size: int = DEFAULT_GRID_SIZE,
-    strict_download: bool = False,
+def ecef(
+    x: float, y: float, z: float, file: Path, **kwargs: Unpack[CommonParameters]
 ) -> None:
     """Generates a paper map for the given ECEF (Earth-Centered, Earth-Fixed) Cartesian coordinates and outputs it to file."""
-    pm = PaperMap.from_ecef(
-        ECEFCoordinate(x, y, z),
-        tile_provider_key=tile_provider_key,
-        api_key=api_key,
-        paper_size=paper_size,
-        use_landscape=use_landscape,
-        margin_top=margin_top,
-        margin_right=margin_right,
-        margin_bottom=margin_bottom,
-        margin_left=margin_left,
-        scale=scale,
-        dpi=dpi,
-        add_grid=add_grid,
-        grid_size=grid_size,
-        strict_download=strict_download,
-    )
-    pm.render()
-    pm.save(file)
+    _render_and_save(PaperMap.from_ecef(ECEFCoordinate(x, y, z), **kwargs), file)
