@@ -263,11 +263,7 @@ class PaperMap:
         return cls(lat, lon, **kwargs)
 
     def _validate_coordinates(self) -> None:
-        """Validate latitude and longitude are within valid ranges.
-
-        Args:
-            lat: Latitude to validate.
-            lon: Longitude to validate.
+        """Validate ``self.lat`` and ``self.lon`` are within valid ranges.
 
         Raises:
             ValueError: If latitude is not in [-90, 90] range.
@@ -306,7 +302,7 @@ class PaperMap:
             raise ValueError(msg)
 
     def _validate_and_set_paper_size(self, paper_size: str) -> None:
-        """Validate paper size and set width and height.
+        """Validate paper size and set ``self.width`` and ``self.height``.
 
         Args:
             paper_size: The paper size name to validate.
@@ -428,6 +424,20 @@ class PaperMap:
     def compute_grid_coordinates(
         self,
     ) -> tuple[list[tuple[Decimal, str]], list[tuple[Decimal, str]]]:
+        """Compute the UTM grid line positions and labels for the map overlay.
+
+        The map's geographic centre is converted to UTM and snapped to the
+        nearest 1km grid intersection. From there, line positions (in mm
+        relative to the image's top-left corner) are walked outward at
+        ``grid_size_scaled`` intervals, and the matching kilometre labels
+        are derived from the rounded UTM coordinates.
+
+        Returns:
+            A pair ``(easting_lines, northing_lines)``. Each list holds
+            ``(position_mm, label)`` tuples, where ``position_mm`` is a
+            ``Decimal`` distance from the top-left of the image area and
+            ``label`` is the UTM coordinate in kilometres.
+        """
         # convert Lat/Lon coordinate into UTM coordinate (easting, northing, zone, hemisphere)
         easting, northing, _, _ = latlon_to_utm(self.lat, self.lon)
 
@@ -503,6 +513,13 @@ class PaperMap:
                 self.pdf.cell(w=label_width, text=label, align="C", fill=True)
 
     def render_grid(self) -> None:
+        """Draw the UTM coordinate grid overlay onto the PDF, if enabled.
+
+        Does nothing when ``self.add_grid`` is ``False``. When enabled, draws
+        vertical (easting) and horizontal (northing) grid lines at the
+        positions returned by :meth:`compute_grid_coordinates` and labels
+        each line with its UTM coordinate in kilometres.
+        """
         if self.add_grid:
             self.pdf.set_draw_color(0, 0, 0)
             self.pdf.set_line_width(0.1)
@@ -533,6 +550,10 @@ class PaperMap:
             self.pdf.set_font_size(12)
 
     def render_attribution_and_scale(self) -> None:
+        """Draw the tile provider attribution and map scale on the PDF.
+
+        The text is anchored to the bottom-right of the image area.
+        """
         text = f"{self.tile_provider.attribution}. Created with {NAME}. Scale: 1:{self.scale}"
         self.pdf.set_xy(
             self.margin_left + self.pdf.epw - self.pdf.get_string_width(text),
@@ -546,6 +567,23 @@ class PaperMap:
         sleep_between_retries: int | None = None,
         strict: bool = False,  # noqa: FBT001, FBT002
     ) -> None:
+        """Download all tile images for the map in parallel, with retries.
+
+        Tiles that have already been downloaded are skipped. Failed tiles
+        are retried up to ``num_retries`` times. When ``strict`` is ``False``
+        and tiles still fail after all retries, a warning is emitted; when
+        ``strict`` is ``True``, a ``RuntimeError`` is raised instead.
+
+        Args:
+            num_retries: Maximum number of retry passes before giving up.
+            sleep_between_retries: Optional delay (in seconds) between retry
+                passes.
+            strict: Raise on persistent failures instead of warning.
+
+        Raises:
+            RuntimeError: If ``strict`` is ``True`` and one or more tiles
+                cannot be downloaded after ``num_retries`` retries.
+        """
         # download the tile images
         with (
             ThreadPoolExecutor() as executor,
@@ -596,6 +634,13 @@ class PaperMap:
                         tile.image = Image.open(BytesIO(r.content)).convert("RGBA")
 
     def render_base_layer(self) -> None:
+        """Download all tiles and assemble the map image.
+
+        Tiles are downloaded in parallel (honouring ``self.strict_download``),
+        composited onto a scaled canvas, and then resampled down to the
+        target image size in pixels. The result is stored on
+        ``self.map_image`` for subsequent embedding in the PDF.
+        """
         # download all the required tiles
         self.download_tiles(strict=self.strict_download)
 
