@@ -31,6 +31,7 @@ from .tile_providers import (
     TILE_PROVIDER_KEYS,
 )
 from .utils import (
+    DEFAULT_DPI,
     drange,
     get_string_formatting_arguments,
     lat_to_y,
@@ -68,9 +69,6 @@ DEFAULT_SCALE: int = 25_000
 
 DEFAULT_MARGIN: int = 10
 """Default margin in mm."""
-
-DEFAULT_DPI: int = 300
-"""Default dots per inch."""
 
 DEFAULT_BACKGROUND_COLOR: str = "#fff"
 """Default background color."""
