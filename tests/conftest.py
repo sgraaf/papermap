@@ -1,6 +1,7 @@
 """Shared fixtures for PaperMap tests."""
 
 import io
+from pathlib import Path
 
 import pytest
 from PIL import Image
@@ -64,6 +65,22 @@ def tile_provider_with_mirrors() -> TileProvider:
         zoom_max=19,
         subdomains=["a", "b", "c"],
     )
+
+
+@pytest.fixture
+def icon_image() -> Image.Image:
+    """Return a tiny RGBA marker icon for IconMarker tests."""
+    return Image.new("RGBA", (16, 24), color=(255, 0, 0, 255))
+
+
+@pytest.fixture
+def icon_image_path(
+    tmp_path_factory: pytest.TempPathFactory, icon_image: Image.Image
+) -> Path:
+    """Return the path to a tiny PNG icon for IconMarker tests."""
+    path = tmp_path_factory.mktemp("icons") / "marker.png"
+    icon_image.save(path)
+    return path
 
 
 @pytest.fixture

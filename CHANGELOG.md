@@ -12,9 +12,18 @@ The **third number** is for emergencies when we need to start branches for older
 
 ### Added
 
-- `.github/CODE_OF_CONDUCT.md` referring to the Python Software Foundation (PSF) Code of Conduct
-- `.github/CONTRIBUTING.md` with contribution guidelines and development setup
-- `.github/SECURITY.md` with vulnerability reporting policy
+- Added new `papermap.features` module with public dataclasses for overlaying markers, lines and polygons (i.e., features), and a `geojson_to_features()` parser that accepts GeoJSON dicts or any object implementing the `__geo_interface__` protocol (with optional `simplestyle-spec` properties). Features render above the base map but below the grid, and are clipped to the map area.
+
+- Added convenience builder methods on `PaperMap` for adding features:
+
+  - `add_circle_marker()`
+  - `add_icon_marker()`
+  - `add_line()`
+  - `add_polygon()`
+  - `add_feature()`
+  - `add_geojson()`.
+
+  Features render above the base map but below the grid, and are clipped to the map area.
 
 ### Fixed
 

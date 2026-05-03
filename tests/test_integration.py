@@ -7,6 +7,7 @@ using mocked HTTP responses to avoid network dependencies.
 from pathlib import Path
 
 import pytest
+from PIL import Image
 from pytest_httpx import HTTPXMock
 
 from papermap.papermap import PaperMap
@@ -554,3 +555,260 @@ class TestGridCoordinates:
         # Smaller grid size should result in more grid lines
         assert len(x_small) >= len(x_large)
         assert len(y_small) >= len(y_large)
+
+
+class TestFeatureRendering:
+    """End-to-end tests for rendering GeoJSON-style features over the base map."""
+
+    def test_render_circle_marker(
+        self, tmp_path: Path, httpx_mock: HTTPXMock, tile_image_content: bytes
+    ) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        pm.add_circle_marker(40.7128, -74.0060, radius=4, fill_color="#f00")
+
+        for _ in range(len(pm.tiles)):
+            httpx_mock.add_response(content=tile_image_content)
+        pm.render()
+
+        output_file = tmp_path / "circle.pdf"
+        pm.save(output_file)
+        assert output_file.exists()
+        assert output_file.stat().st_size > 0
+
+    def test_render_icon_marker_from_path(
+        self,
+        tmp_path: Path,
+        httpx_mock: HTTPXMock,
+        tile_image_content: bytes,
+        icon_image_path: Path,
+    ) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        pm.add_icon_marker(40.7128, -74.0060, icon=icon_image_path, width=8.0)
+
+        for _ in range(len(pm.tiles)):
+            httpx_mock.add_response(content=tile_image_content)
+        pm.render()
+
+        output_file = tmp_path / "icon_path.pdf"
+        pm.save(output_file)
+        assert output_file.exists()
+        assert output_file.stat().st_size > 0
+
+    def test_render_icon_marker_from_pil_image(
+        self,
+        tmp_path: Path,
+        httpx_mock: HTTPXMock,
+        tile_image_content: bytes,
+        icon_image: Image.Image,
+    ) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        pm.add_icon_marker(40.7128, -74.0060, icon=icon_image, width=6.0)
+
+        for _ in range(len(pm.tiles)):
+            httpx_mock.add_response(content=tile_image_content)
+        pm.render()
+
+        output_file = tmp_path / "icon_pil.pdf"
+        pm.save(output_file)
+        assert output_file.exists()
+        assert output_file.stat().st_size > 0
+
+    def test_render_line(
+        self, tmp_path: Path, httpx_mock: HTTPXMock, tile_image_content: bytes
+    ) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        pm.add_line(
+            [(40.71, -74.01), (40.715, -74.005), (40.72, -74.0)],
+            stroke_color="#00f",
+            stroke_width=1.0,
+        )
+
+        for _ in range(len(pm.tiles)):
+            httpx_mock.add_response(content=tile_image_content)
+        pm.render()
+
+        output_file = tmp_path / "line.pdf"
+        pm.save(output_file)
+        assert output_file.exists()
+        assert output_file.stat().st_size > 0
+
+    def test_render_polygon_no_holes(
+        self, tmp_path: Path, httpx_mock: HTTPXMock, tile_image_content: bytes
+    ) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        pm.add_polygon(
+            [
+                [
+                    (40.71, -74.012),
+                    (40.71, -74.002),
+                    (40.72, -74.002),
+                    (40.72, -74.012),
+                    (40.71, -74.012),
+                ]
+            ],
+            fill_color="#0f0",
+            opacity=0.3,
+        )
+
+        for _ in range(len(pm.tiles)):
+            httpx_mock.add_response(content=tile_image_content)
+        pm.render()
+
+        output_file = tmp_path / "polygon.pdf"
+        pm.save(output_file)
+        assert output_file.exists()
+        assert output_file.stat().st_size > 0
+
+    def test_render_polygon_with_hole(
+        self, tmp_path: Path, httpx_mock: HTTPXMock, tile_image_content: bytes
+    ) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        pm.add_polygon(
+            [
+                [
+                    (40.705, -74.020),
+                    (40.705, -73.990),
+                    (40.725, -73.990),
+                    (40.725, -74.020),
+                    (40.705, -74.020),
+                ],
+                [
+                    (40.710, -74.010),
+                    (40.710, -74.005),
+                    (40.720, -74.005),
+                    (40.720, -74.010),
+                    (40.710, -74.010),
+                ],
+            ],
+            stroke_color="#800",
+            fill_color="#fa0",
+            opacity=0.4,
+        )
+
+        for _ in range(len(pm.tiles)):
+            httpx_mock.add_response(content=tile_image_content)
+        pm.render()
+
+        output_file = tmp_path / "polygon_hole.pdf"
+        pm.save(output_file)
+        assert output_file.exists()
+        assert output_file.stat().st_size > 0
+
+    def test_render_geojson_feature_collection(
+        self, tmp_path: Path, httpx_mock: HTTPXMock, tile_image_content: bytes
+    ) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        pm.add_geojson(
+            {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "Point",
+                            "coordinates": [-74.0060, 40.7128],
+                        },
+                        "properties": {"fill": "#f0f"},
+                    },
+                    {
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "LineString",
+                            "coordinates": [
+                                [-74.01, 40.71],
+                                [-74.0, 40.72],
+                            ],
+                        },
+                        "properties": {"stroke": "#0ff", "stroke-width": 1.5},
+                    },
+                ],
+            }
+        )
+
+        for _ in range(len(pm.tiles)):
+            httpx_mock.add_response(content=tile_image_content)
+        pm.render()
+
+        output_file = tmp_path / "geojson.pdf"
+        pm.save(output_file)
+        assert output_file.exists()
+        assert output_file.stat().st_size > 0
+
+    def test_render_out_of_bounds_feature_does_not_crash(
+        self, tmp_path: Path, httpx_mock: HTTPXMock, tile_image_content: bytes
+    ) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        # Feature on the other side of the planet -- must be silently clipped.
+        pm.add_circle_marker(0.0, 100.0, radius=5)
+
+        for _ in range(len(pm.tiles)):
+            httpx_mock.add_response(content=tile_image_content)
+        pm.render()
+
+        output_file = tmp_path / "oob.pdf"
+        pm.save(output_file)
+        assert output_file.exists()
+        assert output_file.stat().st_size > 0
+
+    def test_render_with_opacity(
+        self, tmp_path: Path, httpx_mock: HTTPXMock, tile_image_content: bytes
+    ) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        pm.add_circle_marker(
+            40.7128, -74.0060, radius=4, fill_color="#f00", opacity=0.5
+        )
+        pm.add_polygon(
+            [
+                [
+                    (40.71, -74.012),
+                    (40.71, -74.002),
+                    (40.72, -74.002),
+                    (40.72, -74.012),
+                    (40.71, -74.012),
+                ]
+            ],
+            fill_color="#00f",
+            stroke_color="#000",
+            opacity=0.5,
+        )
+
+        for _ in range(len(pm.tiles)):
+            httpx_mock.add_response(content=tile_image_content)
+        pm.render()
+
+        output_file = tmp_path / "opacity.pdf"
+        pm.save(output_file)
+        assert output_file.exists()
+        assert output_file.stat().st_size > 0
+
+    def test_render_features_with_grid(
+        self, tmp_path: Path, httpx_mock: HTTPXMock, tile_image_content: bytes
+    ) -> None:
+        """Features must coexist with the grid (drawn below it)."""
+        pm = PaperMap(lat=40.7128, lon=-74.0060, add_grid=True, grid_size=1000)
+        pm.add_circle_marker(40.7128, -74.0060, radius=4, fill_color="#f00")
+
+        for _ in range(len(pm.tiles)):
+            httpx_mock.add_response(content=tile_image_content)
+        pm.render()
+
+        output_file = tmp_path / "features_grid.pdf"
+        pm.save(output_file)
+        assert output_file.exists()
+        assert output_file.stat().st_size > 0
+
+    def test_render_features_skipped_when_empty(
+        self, tmp_path: Path, httpx_mock: HTTPXMock, tile_image_content: bytes
+    ) -> None:
+        """Existing maps without features must continue to render unchanged."""
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        assert pm.features == []
+
+        for _ in range(len(pm.tiles)):
+            httpx_mock.add_response(content=tile_image_content)
+        pm.render()
+
+        output_file = tmp_path / "no_features.pdf"
+        pm.save(output_file)
+        assert output_file.exists()
+        assert output_file.stat().st_size > 0

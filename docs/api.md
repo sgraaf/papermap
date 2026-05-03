@@ -14,6 +14,13 @@
    :members:
 ```
 
+## `papermap.features` Module
+
+```{eval-rst}
+.. automodule:: papermap.features
+   :members:
+```
+
 ## `papermap.tile` Module
 
 ```{eval-rst}

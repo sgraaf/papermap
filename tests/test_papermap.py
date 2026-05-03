@@ -1,5 +1,7 @@
 """Unit tests for papermap.papermap module."""
 
+import re
+import zlib
 from decimal import Decimal
 from math import isclose
 from pathlib import Path
@@ -8,6 +10,7 @@ import pytest
 from PIL import UnidentifiedImageError
 from pytest_httpx import HTTPXMock
 
+from papermap.features import CircleMarker, IconMarker, Line, Polygon
 from papermap.geodesy import ECEFCoordinate, MGRSCoordinate, UTMCoordinate
 from papermap.papermap import (
     DEFAULT_DPI,
@@ -1024,3 +1027,178 @@ class TestPaperMapFromECEF:
         assert isinstance(pm_tokyo, PaperMap)
         assert isclose(pm_tokyo.lat, 35.68, abs_tol=1.0)
         assert isclose(pm_tokyo.lon, 139.65, abs_tol=1.0)
+
+
+class TestFeatureBuilders:
+    """Tests for the feature builder methods on PaperMap."""
+
+    def test_features_starts_empty(self) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        assert pm.features == []
+
+    def test_add_circle_marker_appends_and_returns(self) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        marker = pm.add_circle_marker(40.7128, -74.0060, radius=4, fill_color="#f00")
+        assert isinstance(marker, CircleMarker)
+        assert marker.radius == 4
+        assert marker.fill_color == "#f00"
+        assert pm.features == [marker]
+
+    def test_add_icon_marker_appends_and_returns(self) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        marker = pm.add_icon_marker(40.7128, -74.0060, icon="path/to/icon.png")
+        assert isinstance(marker, IconMarker)
+        assert marker.icon == "path/to/icon.png"
+        assert pm.features == [marker]
+
+    def test_add_line_appends_and_returns(self) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        line = pm.add_line([(40.7, -74.0), (40.72, -74.01)], stroke_color="#00f")
+        assert isinstance(line, Line)
+        assert line.stroke_color == "#00f"
+        assert pm.features == [line]
+
+    def test_add_polygon_appends_and_returns(self) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        rings = [[(40.7, -74.0), (40.72, -74.0), (40.72, -74.01), (40.7, -74.0)]]
+        poly = pm.add_polygon(rings, fill_color="#0f0", opacity=0.3)
+        assert isinstance(poly, Polygon)
+        assert poly.fill_color == "#0f0"
+        assert poly.opacity == 0.3
+        assert pm.features == [poly]
+
+    def test_add_feature_appends_and_returns_same_instance(self) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        marker = CircleMarker(40.7, -74.0)
+        returned = pm.add_feature(marker)
+        assert returned is marker
+        assert pm.features == [marker]
+
+    def test_add_geojson_returns_parsed_features(self) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        added = pm.add_geojson({"type": "Point", "coordinates": [-74.0, 40.7]})
+        assert len(added) == 1
+        assert isinstance(added[0], CircleMarker)
+        assert added[0].lat == 40.7
+        assert added[0].lon == -74.0
+        assert pm.features == added
+
+    def test_add_geojson_extends_with_multiple_features(self) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        pm.add_circle_marker(40.7, -74.0)
+        added = pm.add_geojson(
+            {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "geometry": {"type": "Point", "coordinates": [-74.0, 40.7]},
+                        "properties": {},
+                    },
+                    {
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "LineString",
+                            "coordinates": [[-74.0, 40.7], [-74.01, 40.71]],
+                        },
+                        "properties": {},
+                    },
+                ],
+            }
+        )
+        assert len(added) == 2
+        assert len(pm.features) == 3  # 1 pre-existing + 2 added
+
+
+class TestLatLonToPdfMm:
+    """Tests for the PaperMap.latlon_to_pdf_mm helper."""
+
+    def test_center_maps_to_image_center(self) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        x, y = pm.latlon_to_pdf_mm(40.7128, -74.0060)
+        assert isclose(x, pm.margin_left + pm.image_width / 2, abs_tol=1e-9)
+        assert isclose(y, pm.margin_top + pm.image_height / 2, abs_tol=1e-9)
+
+    def test_north_of_center_yields_smaller_y(self) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        _, y_center = pm.latlon_to_pdf_mm(40.7128, -74.0060)
+        _, y_north = pm.latlon_to_pdf_mm(40.7228, -74.0060)
+        # Increasing latitude (going north) decreases pixel y on the page
+        assert y_north < y_center
+
+    def test_east_of_center_yields_larger_x(self) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        x_center, _ = pm.latlon_to_pdf_mm(40.7128, -74.0060)
+        x_east, _ = pm.latlon_to_pdf_mm(40.7128, -73.9960)
+        # Increasing longitude (going east) increases pixel x on the page
+        assert x_east > x_center
+
+    def test_offset_is_symmetric(self) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        cx = pm.margin_left + pm.image_width / 2
+        x_west, _ = pm.latlon_to_pdf_mm(40.7128, -74.0160)
+        x_east, _ = pm.latlon_to_pdf_mm(40.7128, -73.9960)
+        assert isclose((cx - x_west), (x_east - cx), abs_tol=1e-6)
+
+    def test_uses_custom_margins(self) -> None:
+        pm = PaperMap(
+            lat=40.7128,
+            lon=-74.0060,
+            margin_top=20,
+            margin_left=30,
+            margin_right=10,
+            margin_bottom=10,
+        )
+        x, y = pm.latlon_to_pdf_mm(40.7128, -74.0060)
+        assert isclose(x, 30 + pm.image_width / 2, abs_tol=1e-9)
+        assert isclose(y, 20 + pm.image_height / 2, abs_tol=1e-9)
+
+
+class TestCircleMarkerRendering:
+    """Regression tests for CircleMarker geometry on the rendered PDF."""
+
+    def test_circle_centered_on_geographic_position(self) -> None:
+        """A CircleMarker must be drawn centred on its (lat, lon).
+
+        ``fpdf2`` ≥ 2.8.1 takes the *centre* of the circle as the first two
+        arguments and the *radius* as the third. We verify by inspecting the
+        Bézier control points emitted to the PDF content stream.
+        """
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        cx, cy = pm.latlon_to_pdf_mm(40.7128, -74.0060)
+        radius_mm = 4.0
+        marker = CircleMarker(40.7128, -74.0060, radius=radius_mm, fill_color="#f00")
+        pm._render_circle_marker(marker)  # noqa: SLF001
+
+        output = pm.pdf.output()
+        assert output is not None
+        pdf_bytes = bytes(output)
+        xs: list[float] = []
+        ys: list[float] = []
+        mm_to_pt = 72.0 / 25.4
+        for stream in re.finditer(rb"stream\s*(.+?)\s*endstream", pdf_bytes, re.DOTALL):
+            try:
+                payload = zlib.decompress(stream.group(1)).decode()
+            except zlib.error:
+                continue
+            for op_match in re.finditer(
+                r"([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+) c", payload
+            ):
+                pts = [float(g) for g in op_match.groups()]
+                xs.extend(pts[0::2])
+                ys.extend(pts[1::2])
+
+        assert xs, "expected Bézier x control points in the PDF stream"
+        assert ys, "expected Bézier y control points in the PDF stream"
+        page_height_mm = pm.height
+        bbox_x = (min(xs) / mm_to_pt, max(xs) / mm_to_pt)
+        bbox_y = (
+            page_height_mm - max(ys) / mm_to_pt,
+            page_height_mm - min(ys) / mm_to_pt,
+        )
+        actual_cx = (bbox_x[0] + bbox_x[1]) / 2
+        actual_cy = (bbox_y[0] + bbox_y[1]) / 2
+        actual_radius = (bbox_x[1] - bbox_x[0]) / 2
+        assert isclose(actual_cx, cx, abs_tol=1e-3)
+        assert isclose(actual_cy, cy, abs_tol=1e-3)
+        assert isclose(actual_radius, radius_mm, abs_tol=1e-3)

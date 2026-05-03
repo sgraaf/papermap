@@ -185,6 +185,41 @@ Some tile providers require API keys. Here's how to use them:
 >>> pm.save("SF_Outdoors.pdf")
 ```
 
+#### Adding Features (i.e., Markers, Lines and Polygons)
+
+Overlay GeoJSON-style geometries (points, lines, polygons) on top of the base map. Features are styled per call, rendered above the base map but below the grid, and clipped to the map area. You can also add a raw GeoJSON dict (or any object implementing the `__geo_interface__` protocol) via `add_geojson()`.
+
+```python
+>>> from papermap import PaperMap
+>>> pm = PaperMap(lat=40.7128, lon=-74.0060, scale=25_000)
+>>> # A red dot at the map centre.
+>>> pm.add_circle_marker(40.7128, -74.0060, radius=3, fill_color="#f00")
+>>> # A blue route.
+>>> pm.add_line(
+...     [(40.7100, -74.0100), (40.7150, -74.0050), (40.7200, -74.0000)],
+...     stroke_color="#00f",
+...     stroke_width=1.0
+... )
+>>> # A semi-transparent green region from a GeoJSON Polygon.
+>>> pm.add_geojson(
+...     {
+...         "type": "Polygon",
+...         "coordinates": [
+...             [
+...                 [-74.020, 40.710],
+...                 [-74.000, 40.710],
+...                 [-74.000, 40.720],
+...                 [-74.020, 40.720],
+...                 [-74.020, 40.710]
+...             ]
+...         ]
+...     },
+...     style={"fill_color": "#0f0", "opacity": 0.3}
+... )
+>>> pm.render()
+>>> pm.save("NYC_Annotated.pdf")
+```
+
 For more options and details, see the [API Reference](https://papermap.readthedocs.io/en/stable/api.html#papermap.papermap.PaperMap).
 
 ### As a CLI Tool

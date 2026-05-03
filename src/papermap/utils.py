@@ -142,7 +142,7 @@ def mm_to_px(mm: float, dpi: int = DEFAULT_DPI) -> int:
     return round(mm * dpi / 25.4)
 
 
-def px_to_mm(px: int, dpi: int = DEFAULT_DPI) -> float:
+def px_to_mm(px: float, dpi: int = DEFAULT_DPI) -> float:
     """Convert pixels to millimeters, given the dpi.
 
     Args:

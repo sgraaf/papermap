@@ -1,5 +1,6 @@
 import time
 import warnings
+from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import KW_ONLY, InitVar, dataclass, field
 from decimal import Decimal
@@ -14,6 +15,15 @@ import httpx
 from fpdf import FPDF
 from PIL import Image
 
+from .features import (
+    CircleMarker,
+    IconMarker,
+    Line,
+    MapFeature,
+    Polygon,
+    SupportsGeoInterface,
+    geojson_to_features,
+)
 from .geodesy import (
     ECEFCoordinate,
     MGRSCoordinate,
@@ -38,6 +48,7 @@ from .utils import (
     lon_to_x,
     mm_to_px,
     pt_to_mm,
+    px_to_mm,
     scale_to_zoom,
 )
 
@@ -152,9 +163,10 @@ class PaperMap:
     y_max: int = field(init=False)
     tiles: list[Tile] = field(init=False)
     pdf: FPDF = field(init=False)
-    map_image_scaled: Image.Image = field(init=False)
-    map_image: Image.Image = field(init=False)
-    file: Path = field(init=False)
+    map_image_scaled: Image.Image = field(init=False, repr=False)
+    map_image: Image.Image = field(init=False, repr=False)
+    file: Path = field(init=False, repr=False)
+    features: list[MapFeature] = field(init=False)
 
     def __post_init__(self, tile_provider_key: str, paper_size: str) -> None:
         # Store basic parameters
@@ -177,6 +189,9 @@ class PaperMap:
 
         # Initialize PDF document
         self._initialize_pdf()
+
+        # Initialize the (empty) feature list
+        self.features = []
 
     @classmethod
     def from_utm(
@@ -421,6 +436,141 @@ class PaperMap:
         self.pdf.set_right_margin(self.margin_right)
         self.pdf.add_page()
 
+    def latlon_to_pdf_mm(self, lat: float, lon: float) -> tuple[float, float]:
+        """Convert a geographic position to absolute PDF coordinates in mm.
+
+        Args:
+            lat: Latitude.
+            lon: Longitude.
+
+        Returns:
+            ``(x_mm, y_mm)`` measured from the page origin (top-left).
+        """
+        x_tile = lon_to_x(lon, self.zoom_scaled)
+        y_tile = lat_to_y(lat, self.zoom_scaled)
+        dx_px = (x_tile - self.x_center) * TILE_SIZE / self.resize_factor
+        dy_px = (y_tile - self.y_center) * TILE_SIZE / self.resize_factor
+        x_mm = self.margin_left + self.image_width / 2 + px_to_mm(dx_px, self.dpi)
+        y_mm = self.margin_top + self.image_height / 2 + px_to_mm(dy_px, self.dpi)
+        return x_mm, y_mm
+
+    def add_circle_marker(
+        self,
+        lat: float,
+        lon: float,
+        **kwargs: Any,
+    ) -> CircleMarker:
+        """Add a :class:`CircleMarker` at the given position to the map.
+
+        Args:
+            lat: Latitude of the marker centre.
+            lon: Longitude of the marker centre.
+            **kwargs: Additional keyword arguments forwarded to
+                :class:`CircleMarker`.
+
+        Returns:
+            The newly added marker.
+        """
+        marker = CircleMarker(lat, lon, **kwargs)
+        self.features.append(marker)
+        return marker
+
+    def add_icon_marker(
+        self,
+        lat: float,
+        lon: float,
+        icon: str | Path | Image.Image,
+        **kwargs: Any,
+    ) -> IconMarker:
+        """Add an :class:`IconMarker` at the given position to the map.
+
+        Args:
+            lat: Latitude of the anchor point.
+            lon: Longitude of the anchor point.
+            icon: Path to an image file or a :class:`PIL.Image.Image` instance.
+            **kwargs: Additional keyword arguments forwarded to
+                :class:`IconMarker`.
+
+        Returns:
+            The newly added marker.
+        """
+        marker = IconMarker(lat, lon, icon, **kwargs)
+        self.features.append(marker)
+        return marker
+
+    def add_line(
+        self,
+        coordinates: Sequence[tuple[float, float]],
+        **kwargs: Any,
+    ) -> Line:
+        """Add a :class:`Line` (polyline) to the map.
+
+        Args:
+            coordinates: Sequence of ``(lat, lon)`` pairs.
+            **kwargs: Additional keyword arguments forwarded to :class:`Line`.
+
+        Returns:
+            The newly added line.
+        """
+        line = Line(coordinates, **kwargs)
+        self.features.append(line)
+        return line
+
+    def add_polygon(
+        self,
+        coordinates: Sequence[Sequence[tuple[float, float]]],
+        **kwargs: Any,
+    ) -> Polygon:
+        """Add a :class:`Polygon` to the map.
+
+        Args:
+            coordinates: Sequence of rings, where each ring is a sequence of
+                ``(lat, lon)`` pairs. The first ring is the outer boundary;
+                any subsequent rings are interior holes.
+            **kwargs: Additional keyword arguments forwarded to
+                :class:`Polygon`.
+
+        Returns:
+            The newly added polygon.
+        """
+        polygon = Polygon(coordinates, **kwargs)
+        self.features.append(polygon)
+        return polygon
+
+    def add_feature(self, feature: MapFeature) -> MapFeature:
+        """Add a pre-constructed feature to the map.
+
+        Args:
+            feature: A :class:`CircleMarker`, :class:`IconMarker`,
+                :class:`Line`, or :class:`Polygon`.
+
+        Returns:
+            The same feature, for chaining.
+        """
+        self.features.append(feature)
+        return feature
+
+    def add_geojson(
+        self,
+        obj: dict[str, Any] | SupportsGeoInterface,
+        style: dict[str, Any] | None = None,
+    ) -> list[MapFeature]:
+        """Add geometries from a GeoJSON object or ``__geo_interface__`` object.
+
+        See :func:`papermap.features.geojson_to_features` for the supported
+        GeoJSON types and the precedence rules for styling.
+
+        Args:
+            obj: A GeoJSON dict or an object exposing ``__geo_interface__``.
+            style: Default styling applied to every parsed feature.
+
+        Returns:
+            The list of features that were parsed and added to the map.
+        """
+        features = geojson_to_features(obj, style)
+        self.features.extend(features)
+        return features
+
     def compute_grid_coordinates(
         self,
     ) -> tuple[list[tuple[Decimal, str]], list[tuple[Decimal, str]]]:
@@ -549,6 +699,178 @@ class PaperMap:
 
             self.pdf.set_font_size(12)
 
+    @staticmethod
+    def _draw_style(stroke_color: str | None, fill_color: str | None) -> str:
+        """Return the FPDF style flag for a stroke/fill combination."""
+        if stroke_color is not None and fill_color is not None:
+            return "DF"
+        if fill_color is not None:
+            return "F"
+        return "D"
+
+    @staticmethod
+    def _local_context_kwargs(  # noqa: PLR0913
+        stroke_color: str | None,
+        stroke_width: float,
+        fill_color: str | None,
+        opacity: float,
+        stroke_opacity: float | None,
+        fill_opacity: float | None,
+    ) -> dict[str, Any]:
+        """Build ``local_context`` kwargs from a feature's stroke/fill style."""
+        ctx_kwargs: dict[str, Any] = {"line_width": stroke_width}
+        if stroke_color is not None:
+            ctx_kwargs["draw_color"] = stroke_color
+        if fill_color is not None:
+            ctx_kwargs["fill_color"] = fill_color
+        ctx_kwargs["stroke_opacity"] = (
+            stroke_opacity if stroke_opacity is not None else opacity
+        )
+        ctx_kwargs["fill_opacity"] = (
+            fill_opacity if fill_opacity is not None else opacity
+        )
+        return ctx_kwargs
+
+    def _render_circle_marker(self, marker: CircleMarker) -> None:
+        """Render a single :class:`CircleMarker` to the PDF."""
+        if marker.stroke_color is None and marker.fill_color is None:
+            return
+        cx, cy = self.latlon_to_pdf_mm(marker.lat, marker.lon)
+        ctx_kwargs = self._local_context_kwargs(
+            marker.stroke_color,
+            marker.stroke_width,
+            marker.fill_color,
+            marker.opacity,
+            marker.stroke_opacity,
+            marker.fill_opacity,
+        )
+        style = self._draw_style(marker.stroke_color, marker.fill_color)
+        with self.pdf.local_context(**ctx_kwargs):
+            self.pdf.circle(cx, cy, marker.radius, style=style)
+
+    def _render_icon_marker(self, marker: IconMarker) -> None:
+        """Render a single :class:`IconMarker` to the PDF."""
+        if marker._loaded_icon is None:  # noqa: SLF001
+            if isinstance(marker.icon, Image.Image):
+                marker._loaded_icon = marker.icon  # noqa: SLF001
+            else:
+                marker._loaded_icon = Image.open(marker.icon)  # noqa: SLF001
+        img = marker._loaded_icon  # noqa: SLF001
+        width = marker.width
+        if marker.height is None:
+            height = width * img.height / img.width
+        else:
+            height = marker.height
+        ax, ay = marker.anchor
+        cx, cy = self.latlon_to_pdf_mm(marker.lat, marker.lon)
+        tlx = cx - ax * width
+        tly = cy - ay * height
+        if marker.opacity < 1.0:
+            with self.pdf.local_context(
+                fill_opacity=marker.opacity, stroke_opacity=marker.opacity
+            ):
+                self.pdf.image(img, x=tlx, y=tly, w=width, h=height)
+        else:
+            self.pdf.image(img, x=tlx, y=tly, w=width, h=height)
+
+    def _render_line(self, line: Line) -> None:
+        """Render a single :class:`Line` to the PDF."""
+        points = [self.latlon_to_pdf_mm(lat, lon) for lat, lon in line.coordinates]
+        if len(points) < 2:  # noqa: PLR2004
+            return
+        ctx_kwargs = self._local_context_kwargs(
+            line.stroke_color,
+            line.stroke_width,
+            None,
+            line.opacity,
+            line.stroke_opacity,
+            None,
+        )
+        with self.pdf.local_context(**ctx_kwargs):
+            self.pdf.polyline(points, style="D")
+
+    @staticmethod
+    def _polygon_paint_rule(polygon: Polygon) -> str:
+        """Return the FPDF ``paint_rule`` for a polygon's stroke/fill combo."""
+        if polygon.stroke_color is not None and polygon.fill_color is not None:
+            return "stroke_fill_evenodd"
+        if polygon.fill_color is not None:
+            return "fill_evenodd"
+        return "stroke"
+
+    @staticmethod
+    def _strip_closing_vertex(
+        ring: list[tuple[float, float]],
+    ) -> list[tuple[float, float]]:
+        """Drop a GeoJSON ring's closing duplicate vertex if present."""
+        return ring[:-1] if ring and ring[0] == ring[-1] else ring
+
+    def _render_polygon_path(
+        self, rings: list[list[tuple[float, float]]], paint_rule: str
+    ) -> None:
+        """Render a multi-ring polygon (with holes) via the FPDF path API."""
+        first_x, first_y = rings[0][0]
+        with self.pdf.new_path(first_x, first_y) as path:
+            path.style.paint_rule = paint_rule
+            for ring in rings:
+                trimmed = self._strip_closing_vertex(ring)
+                path.move_to(*trimmed[0])
+                for pt in trimmed[1:]:
+                    path.line_to(*pt)
+                path.close()
+
+    def _render_polygon(self, polygon: Polygon) -> None:
+        """Render a single :class:`Polygon` to the PDF, with optional holes."""
+        if polygon.stroke_color is None and polygon.fill_color is None:
+            return
+        rings = [
+            [self.latlon_to_pdf_mm(lat, lon) for lat, lon in ring]
+            for ring in polygon.coordinates
+        ]
+        # Drop any ring (outer or hole) that doesn't have enough vertices to
+        # form a triangle once the GeoJSON closing duplicate is removed.
+        rings = [r for r in rings if len(self._strip_closing_vertex(r)) >= 3]  # noqa: PLR2004
+        if not rings:
+            return
+
+        ctx_kwargs = self._local_context_kwargs(
+            polygon.stroke_color,
+            polygon.stroke_width,
+            polygon.fill_color,
+            polygon.opacity,
+            polygon.stroke_opacity,
+            polygon.fill_opacity,
+        )
+        with self.pdf.local_context(**ctx_kwargs):
+            if len(rings) == 1:
+                ring = self._strip_closing_vertex(rings[0])
+                style = self._draw_style(polygon.stroke_color, polygon.fill_color)
+                self.pdf.polygon(ring, style=style)
+            else:
+                self._render_polygon_path(rings, self._polygon_paint_rule(polygon))
+
+    def render_features(self) -> None:
+        """Draw all added geometries onto the PDF, clipped to the map area.
+
+        Features are rendered in the order they were added. Anything that
+        falls outside the map's image rectangle is clipped via
+        :meth:`fpdf.FPDF.rect_clip` so it cannot bleed into the page margins.
+        """
+        if not self.features:
+            return
+        with self.pdf.rect_clip(
+            self.margin_left, self.margin_top, self.image_width, self.image_height
+        ):
+            for feature in self.features:
+                if isinstance(feature, CircleMarker):
+                    self._render_circle_marker(feature)
+                elif isinstance(feature, IconMarker):
+                    self._render_icon_marker(feature)
+                elif isinstance(feature, Line):
+                    self._render_line(feature)
+                elif isinstance(feature, Polygon):
+                    self._render_polygon(feature)
+
     def render_attribution_and_scale(self) -> None:
         """Draw the tile provider attribution and map scale on the PDF.
 
@@ -662,14 +984,17 @@ class PaperMap:
         )
 
     def render(self) -> None:
-        """Render the paper map, consisting of the map image, grid (if applicable), attribution and scale."""
+        """Render the paper map, consisting of the map image, features (if any), grid (if applicable), attribution and scale."""
         # render the base layer
         self.render_base_layer()
 
         # paste the map image onto the paper map
         self.pdf.image(self.map_image, w=self.image_width, h=self.image_height)
 
-        # possibly render a coordinate grid
+        # render any added GeoJSON-style features above the base map
+        self.render_features()
+
+        # possibly render a coordinate grid (drawn above features)
         self.render_grid()
 
         # render the attribution and scale to the map
