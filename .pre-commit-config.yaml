@@ -14,7 +14,7 @@ repos:
       - id: validate-pyproject
         additional_dependencies: ["validate-pyproject-schema-store[all]"]
   - repo: https://github.com/python-jsonschema/check-jsonschema
-    rev: 0.37.1
+    rev: 0.37.2
     hooks:
       - id: check-github-workflows
       - id: check-readthedocs
@@ -28,13 +28,13 @@ repos:
           - --show-fixes
       - id: ruff-format
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.20.2
+    rev: v2.0.0
     hooks:
       - id: mypy
         entry: uv run mypy
         language: system
   - repo: https://github.com/facebook/pyrefly-pre-commit
-    rev: 0.63.1
+    rev: 0.64.1
     hooks:
       - id: pyrefly-check
         entry: uv run pyrefly check
