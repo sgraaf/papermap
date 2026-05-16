@@ -8,6 +8,8 @@ The **first number** of the version is the year.
 The **second number** is incremented with each release, starting at 1 for each year.
 The **third number** is for emergencies when we need to start branches for older releases.
 
+## [Unreleased]
+
 ## [2026.2.0](https://github.com/sgraaf/papermap/compare/2026.1.0...2026.2.0) (2026-05-17)
 
 This second major release in the year 2026 adds the ability to overlay your own geometries on maps — drop in circle or icon markers, lines, and polygons directly, or load them from GeoJSON and GPX files via new `add_*` methods, the `from_features/from_geojson/from_gpx` classmethods (which can auto-fit the scale to your data with optional padding), and matching `geojson` and `gpx` CLI sub-commands. It also fixes broken URL templates for the Esri, USGS, ÖPNVKarte, and Mapy.cz tile providers.
