@@ -165,6 +165,13 @@ class TestCliHelp:
         assert "Y" in result.output
         assert "Z" in result.output
 
+    def test_gpx_help(self, runner: CliRunner) -> None:
+        result = runner.invoke(cli, ["gpx", "--help"])
+        assert result.exit_code == 0
+        assert "GPX_FILE" in result.output
+        assert "--auto-scale" in result.output
+        assert "--padding" in result.output
+
 
 class TestLatLonCommand:
     """Tests for the latlon command."""
@@ -966,3 +973,101 @@ class TestCliErrorHandling:
         )
 
         assert result.exit_code != 0
+
+
+GPX_FILE_CONTENT = """\
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="papermap-test" xmlns="http://www.topografix.com/GPX/1/1">
+  <wpt lat="40.7484" lon="-73.9857"><name>Empire State</name></wpt>
+  <wpt lat="40.7128" lon="-74.0060"><name>City Hall</name></wpt>
+  <trk><trkseg>
+    <trkpt lat="40.7484" lon="-73.9857"/>
+    <trkpt lat="40.7300" lon="-73.9960"/>
+    <trkpt lat="40.7128" lon="-74.0060"/>
+  </trkseg></trk>
+</gpx>
+"""
+
+
+class TestGpxCommand:
+    """Tests for the gpx command."""
+
+    def _write_gpx(self, tmp_path: Path) -> Path:
+        p = tmp_path / "test.gpx"
+        p.write_text(GPX_FILE_CONTENT, encoding="utf-8")
+        return p
+
+    def test_gpx_missing_file_argument(self, runner: CliRunner) -> None:
+        result = runner.invoke(cli, ["gpx"])
+        assert result.exit_code != 0
+
+    def test_gpx_nonexistent_input(self, runner: CliRunner, tmp_path: Path) -> None:
+        result = runner.invoke(
+            cli, ["gpx", str(tmp_path / "missing.gpx"), str(tmp_path / "out.pdf")]
+        )
+        assert result.exit_code != 0
+
+    def test_gpx_basic_execution(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        mock_class, _mock_instance = mock_papermap
+        gpx_in = self._write_gpx(tmp_path)
+        output_file = tmp_path / "out.pdf"
+
+        result = runner.invoke(cli, ["gpx", str(gpx_in), str(output_file)])
+
+        assert result.exit_code == 0
+        mock_class.from_gpx.assert_called_once()
+        call_kwargs = mock_class.from_gpx.call_args.kwargs
+        assert call_kwargs["auto_scale"] is False
+        # When auto_scale is False, the CLI's default scale must be forwarded.
+        assert call_kwargs["scale"] == DEFAULT_SCALE
+
+    def test_gpx_auto_scale_drops_default_scale(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        mock_class, _mock_instance = mock_papermap
+        gpx_in = self._write_gpx(tmp_path)
+        output_file = tmp_path / "out.pdf"
+
+        result = runner.invoke(
+            cli, ["gpx", "--auto-scale", str(gpx_in), str(output_file)]
+        )
+
+        assert result.exit_code == 0
+        call_kwargs = mock_class.from_gpx.call_args.kwargs
+        assert call_kwargs["auto_scale"] is True
+        # When --auto-scale is set, the CLI must not forward the default scale.
+        assert "scale" not in call_kwargs
+
+    def test_gpx_padding_forwarded(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        mock_class, _mock_instance = mock_papermap
+        gpx_in = self._write_gpx(tmp_path)
+        output_file = tmp_path / "out.pdf"
+
+        result = runner.invoke(
+            cli,
+            [
+                "gpx",
+                "--auto-scale",
+                "--padding",
+                "12.5",
+                str(gpx_in),
+                str(output_file),
+            ],
+        )
+
+        assert result.exit_code == 0
+        call_kwargs = mock_class.from_gpx.call_args.kwargs
+        assert call_kwargs["padding"] == 12.5

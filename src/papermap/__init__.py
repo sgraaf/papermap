@@ -21,6 +21,7 @@ from .geodesy import (
     mgrs_to_latlon,
     utm_to_latlon,
 )
+from .gpx import gpx_to_features
 from .papermap import PaperMap
 
 __all__ = [
@@ -37,6 +38,7 @@ __all__ = [
     "format_mgrs",
     "format_utm",
     "geojson_to_features",
+    "gpx_to_features",
     "latlon_to_ecef",
     "latlon_to_mgrs",
     "latlon_to_utm",

@@ -27,7 +27,8 @@ if TYPE_CHECKING:
 class SupportsGeoInterface(Protocol):
     """Protocol for objects exposing the ``__geo_interface__`` attribute."""
 
-    __geo_interface__: dict[str, Any]
+    @property
+    def __geo_interface__(self) -> dict[str, Any]: ...
 
 
 @dataclass(slots=True)

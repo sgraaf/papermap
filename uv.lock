@@ -404,6 +404,15 @@ wheels = [
 ]
 
 [[package]]
+name = "gpx"
+version = "2026.2.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a1/93/07a8d947a7d565966668f4fd0a96d30948cd4df48d971ecdf314f8d5cc85/gpx-2026.2.0.tar.gz", hash = "sha256:2062ffaf355aaf4ec68a8696e8849b7e2d687da7662a61b7cda300fddcd5088a", size = 63969, upload-time = "2026-04-27T19:16:25.488Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ee/7c/448e976bbcec495a903fde81186d1adb7304e1ea032969bcb9d125fe0607/gpx-2026.2.0-py3-none-any.whl", hash = "sha256:8192773bfaf7524c99dd6dd2d2074f4cff46112706069fb71f14ea8b9bff0fbb", size = 59157, upload-time = "2026-04-27T19:16:24.173Z" },
+]
+
+[[package]]
 name = "h11"
 version = "0.16.0"
 source = { registry = "https://pypi.org/simple" }
@@ -756,10 +765,16 @@ dependencies = [
     { name = "pillow" },
 ]
 
+[package.optional-dependencies]
+gpx = [
+    { name = "gpx" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "cogapp" },
     { name = "furo" },
+    { name = "gpx" },
     { name = "mypy" },
     { name = "myst-parser" },
     { name = "prek" },
@@ -784,6 +799,7 @@ docs = [
     { name = "sphinxext-opengraph" },
 ]
 tests = [
+    { name = "gpx" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "pytest-httpx" },
@@ -800,14 +816,17 @@ requires-dist = [
     { name = "click" },
     { name = "click-default-group" },
     { name = "fpdf2" },
+    { name = "gpx", marker = "extra == 'gpx'" },
     { name = "httpx" },
     { name = "pillow" },
 ]
+provides-extras = ["gpx"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "cogapp" },
     { name = "furo" },
+    { name = "gpx" },
     { name = "mypy" },
     { name = "myst-parser" },
     { name = "prek" },
@@ -832,6 +851,7 @@ docs = [
     { name = "sphinxext-opengraph" },
 ]
 tests = [
+    { name = "gpx" },
     { name = "pytest" },
     { name = "pytest-cov" },
     { name = "pytest-httpx" },

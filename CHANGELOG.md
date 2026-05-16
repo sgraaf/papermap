@@ -27,6 +27,12 @@ The **third number** is for emergencies when we need to start branches for older
 
 - Added `PaperMap.from_features()` and `PaperMap.from_geojson()` classmethods to create a `PaperMap` centred on the geographic centre (bounding box midpoint) of one or more features (or geometries parsed from a GeoJSON object, or any object exposing `__geo_interface__`). The provided/parsed features are also added to the new map so they will be drawn when `render()` is called. Both classmethods accept `auto_scale` and `padding` keyword arguments: when `auto_scale=True`, the map scale is computed automatically so that the supplied features fit within the printable image area (paper size minus margins minus `padding`), then snapped up to the nearest common cartographic scale (1:1 000, 1:2 500, …, 1:50 000 000). Passing both `auto_scale=True` and an explicit `scale` raises `ValueError`.
 
+- Added new `papermap.gpx` module with a `gpx_to_features()` parser that turns a `.gpx` file path (or any `__geo_interface__` object, such as a `gpx.GPX` instance) into map features. Waypoints become circle markers, routes become lines, and each segment of each track becomes its own line. Reading GPX files from disk requires the optional `gpx` package; install it with `pip install papermap[gpx]`.
+
+- Added `PaperMap.from_gpx()` classmethod and `PaperMap.add_gpx()` instance method, mirroring the GeoJSON counterparts. `from_gpx()` accepts `auto_scale` and `padding` keyword arguments.
+
+- Added a `gpx` CLI sub-command: `papermap gpx hike.gpx Hike.pdf --auto-scale`. Supports `--auto-scale` and `--padding` options in addition to the common CLI options.
+
 ### Fixed
 
 - Fixed broken URL templates for the Esri, USGS, ÖPNVKarte, and Mapy.cz tile providers, where the upstream `server`/`MapServer` hostnames and paths had been incorrectly renamed to `provider`/`MapProvider`

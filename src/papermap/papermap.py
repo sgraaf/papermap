@@ -34,6 +34,7 @@ from .geodesy import (
     mgrs_to_latlon,
     utm_to_latlon,
 )
+from .gpx import gpx_to_features
 from .tile import TILE_SIZE, Tile
 from .tile_provider import TileProvider
 from .tile_providers import (
@@ -587,6 +588,72 @@ class PaperMap:
             *features, auto_scale=auto_scale, padding=padding, **kwargs
         )
 
+    @classmethod
+    def from_gpx(
+        cls,
+        gpx_source: str | Path | SupportsGeoInterface,
+        style: dict[str, Any] | None = None,
+        *,
+        auto_scale: bool = False,
+        padding: float = DEFAULT_AUTO_SCALE_PADDING,
+        **kwargs: Any,
+    ) -> Self:
+        """Create a paper map centred on the geographic centre of GPX geometries.
+
+        Parses ``gpx_source`` with :func:`papermap.gpx.gpx_to_features` and
+        then delegates to :meth:`from_features` to compute the centre (the
+        midpoint of the parsed features' bounding box) and to add the
+        parsed features to the new map.
+
+        When ``auto_scale`` is ``True``, the map ``scale`` is computed
+        automatically so that the parsed features fit within the printable
+        image area. See :meth:`from_features` for details.
+
+        Reading GPX files from disk requires the optional ``gpx`` package.
+        Install it with ``pip install papermap[gpx]``.
+
+        Args:
+            gpx_source: A path to a ``.gpx`` file, or any object exposing
+                ``__geo_interface__`` (e.g. a ``gpx.GPX`` instance).
+            style: Default styling applied to every parsed feature. See
+                :func:`papermap.features.geojson_to_features` for the
+                supported keys.
+            auto_scale: If ``True``, compute the scale automatically to fit
+                the parsed features. Defaults to ``False``.
+            padding: Padding between the features and the image edge, in mm
+                per side. Only consulted when ``auto_scale`` is ``True``.
+                Defaults to ``5.0``.
+            **kwargs: Additional keyword arguments to pass to PaperMap
+                constructor.
+
+        Returns:
+            A new PaperMap instance centred on the parsed features'
+            bounding box, with the parsed features added.
+
+        Raises:
+            ImportError: If ``gpx_source`` is a path and the optional ``gpx``
+                package is not installed.
+            TypeError: If ``gpx_source`` is neither a path-like nor exposes
+                ``__geo_interface__``.
+            ValueError: If ``gpx_source`` parses to no features.
+            ValueError: If both ``auto_scale=True`` and ``scale`` are given.
+            ValueError: If ``auto_scale=True`` and the parsed features have
+                zero geographic extent along at least one axis.
+
+        Examples:
+            >>> from papermap import PaperMap
+            >>> pm = PaperMap.from_gpx("hike.gpx", auto_scale=True, padding=10)
+            >>> pm.render()
+            >>> pm.save("Hike.pdf")
+        """
+        features = gpx_to_features(gpx_source, style)
+        if not features:
+            msg = "The provided GPX source parsed to no features"
+            raise ValueError(msg)
+        return cls.from_features(
+            *features, auto_scale=auto_scale, padding=padding, **kwargs
+        )
+
     def _validate_coordinates(self) -> None:
         """Validate ``self.lat`` and ``self.lon`` are within valid ranges.
 
@@ -879,6 +946,29 @@ class PaperMap:
             The list of features that were parsed and added to the map.
         """
         features = geojson_to_features(obj, style)
+        self.features.extend(features)
+        return features
+
+    def add_gpx(
+        self,
+        gpx_source: str | Path | SupportsGeoInterface,
+        style: dict[str, Any] | None = None,
+    ) -> list[MapFeature]:
+        """Add geometries from a GPX file or in-memory GPX object.
+
+        See :func:`papermap.gpx.gpx_to_features` for the parsing rules.
+        Reading GPX files from disk requires the optional ``gpx`` package;
+        install it with ``pip install papermap[gpx]``.
+
+        Args:
+            gpx_source: A path to a ``.gpx`` file, or any object exposing
+                ``__geo_interface__`` (e.g. a ``gpx.GPX`` instance).
+            style: Default styling applied to every parsed feature.
+
+        Returns:
+            The list of features that were parsed and added to the map.
+        """
+        features = gpx_to_features(gpx_source, style)
         self.features.extend(features)
         return features
 

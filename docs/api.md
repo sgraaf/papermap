@@ -21,6 +21,13 @@
    :members:
 ```
 
+## `papermap.gpx` Module
+
+```{eval-rst}
+.. automodule:: papermap.gpx
+   :members:
+```
+
 ## `papermap.tile` Module
 
 ```{eval-rst}

@@ -273,9 +273,22 @@ If you already have the features you want to draw and just want the map to fit a
 >>> pm.save("NYC_Region.pdf")
 ```
 
+#### Reading GPX Files
+
+`PaperMap.from_gpx()` parses a GPX file (or any in-memory object exposing `__geo_interface__`, such as a [`gpx.GPX`](https://pypi.org/project/gpx/) instance), centres the map on the geometries' bounding box, and adds them to the new map. Waypoints become circle markers, routes become lines, and each segment of each track becomes its own line. Use `pm.add_gpx()` to overlay GPX geometries on an existing map.
+
+Reading GPX files from disk requires the optional `gpx` package; install it via `pip install papermap[gpx]`.
+
+```python
+>>> from papermap import PaperMap
+>>> pm = PaperMap.from_gpx("hike.gpx", auto_scale=True, padding=10)
+>>> pm.render()
+>>> pm.save("Hike.pdf")
+```
+
 #### Auto-scaling to Features
 
-Pass `auto_scale=True` to `from_features()` or `from_geojson()` to skip picking a scale by hand. The scale is computed so the features fit within the printable area and then snapped up to the nearest common cartographic scale (1:1 000, 1:2 500, 1:5 000, 1:10 000, 1:25 000, 1:50 000, …). Use `padding` (mm per side, default `5.0`) to control how much breathing room is left around the features:
+Pass `auto_scale=True` to `from_features()`, `from_geojson()`, or `from_gpx()` to skip picking a scale by hand. The scale is computed so the features fit within the printable area and then snapped up to the nearest common cartographic scale (1:1 000, 1:2 500, 1:5 000, 1:10 000, 1:25 000, 1:50 000, …). Use `padding` (mm per side, default `5.0`) to control how much breathing room is left around the features:
 
 ```python
 >>> from papermap import PaperMap
@@ -373,6 +386,14 @@ $ papermap utm \
     --scale 25000 \
     --grid \
     -- 500000 4649776 30 N UTM_Map.pdf
+```
+
+#### From a GPX File
+
+Render a paper map from a `.gpx` file, auto-scaled to fit the waypoints, routes, and tracks (requires `pip install papermap[gpx]`):
+
+```shell
+$ papermap gpx --auto-scale --padding 10 -- hike.gpx Hike.pdf
 ```
 
 #### Custom Margins
