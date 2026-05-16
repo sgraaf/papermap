@@ -9,6 +9,7 @@ from click_default_group import DefaultGroup
 
 from .geodesy import ECEFCoordinate, MGRSCoordinate, UTMCoordinate
 from .papermap import (
+    DEFAULT_AUTO_SCALE_PADDING,
     DEFAULT_DPI,
     DEFAULT_GRID_SIZE,
     DEFAULT_MARGIN,
@@ -220,3 +221,82 @@ def ecef(
 ) -> None:
     """Generates a paper map for the given ECEF (Earth-Centered, Earth-Fixed) Cartesian coordinates and outputs it to file."""
     _render_and_save(PaperMap.from_ecef(ECEFCoordinate(x, y, z), **kwargs), file)
+
+
+@cli.command()
+@click.argument(
+    "geojson_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option(
+    "--auto-scale",
+    "auto_scale",
+    default=False,
+    is_flag=True,
+    help="Compute the scale automatically to fit the GeoJSON geometries.",
+)
+@click.option(
+    "--padding",
+    type=float,
+    default=DEFAULT_AUTO_SCALE_PADDING,
+    metavar="MILLIMETERS",
+    help="Padding between the GeoJSON geometries and the image edge (per side). Only used with --auto-scale.",
+)
+@common_parameters
+def geojson(
+    geojson_file: Path,
+    auto_scale: bool,  # noqa: FBT001
+    padding: float,
+    file: Path,
+    **kwargs: Unpack[CommonParameters],
+) -> None:
+    """Generates a paper map for the given GeoJSON file and outputs it to file."""
+    forwarded: dict[str, Any] = dict(**kwargs)
+    if auto_scale:
+        forwarded.pop("scale", None)
+    _render_and_save(
+        PaperMap.from_geojson(
+            geojson_file, auto_scale=auto_scale, padding=padding, **forwarded
+        ),
+        file,
+    )
+
+
+@cli.command()
+@click.argument(
+    "gpx_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option(
+    "--auto-scale",
+    "auto_scale",
+    default=False,
+    is_flag=True,
+    help="Compute the scale automatically to fit the GPX geometries.",
+)
+@click.option(
+    "--padding",
+    type=float,
+    default=DEFAULT_AUTO_SCALE_PADDING,
+    metavar="MILLIMETERS",
+    help="Padding between the GPX geometries and the image edge (per side). Only used with --auto-scale.",
+)
+@common_parameters
+def gpx(
+    gpx_file: Path,
+    auto_scale: bool,  # noqa: FBT001
+    padding: float,
+    file: Path,
+    **kwargs: Unpack[CommonParameters],
+) -> None:
+    """Generates a paper map for the given GPX file and outputs it to file.
+
+    Requires the optional 'gpx' package; install with 'pip install papermap[gpx]'.
+    """
+    forwarded: dict[str, Any] = dict(**kwargs)
+    if auto_scale:
+        forwarded.pop("scale", None)
+    _render_and_save(
+        PaperMap.from_gpx(
+            gpx_file, auto_scale=auto_scale, padding=padding, **forwarded
+        ),
+        file,
+    )

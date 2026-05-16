@@ -12,9 +12,10 @@ The **third number** is for emergencies when we need to start branches for older
 
 ### Added
 
-- `.github/CODE_OF_CONDUCT.md` referring to the Python Software Foundation (PSF) Code of Conduct
-- `.github/CONTRIBUTING.md` with contribution guidelines and development setup
-- `.github/SECURITY.md` with vulnerability reporting policy
+- Added `papermap.features`, `papermap.geojson` and `papermap.gpx` modules to overlay geometries on the map. `features` exposes `CircleMarker`, `IconMarker`, `Line` and `Polygon` dataclasses; `geojson.geojson_to_features()` parses GeoJSON files, dicts, or any object exposing `__geo_interface__` (honouring `simplestyle-spec` properties); `gpx.gpx_to_features()` does the same for GPX. Features render above the base map but below the grid, and are clipped to the map area.
+- Added builder/loader methods on `PaperMap`: `add_circle_marker()`, `add_icon_marker()`, `add_line()`, `add_polygon()`, `add_feature()`, `add_geojson()` and `add_gpx()`.
+- Added `PaperMap.from_features()`, `PaperMap.from_geojson()` and `PaperMap.from_gpx()` classmethods that build a `PaperMap` centred on the supplied geometries' bounding box and pre-populate them on the new map. All three accept `auto_scale` and `padding` keyword arguments: when `auto_scale=True`, the scale is computed to fit the geometries within the printable image area (paper size minus margins minus `padding`) and snapped up to the nearest common cartographic scale (1:1 000, 1:2 500, …, 1:50 000 000). Passing both `auto_scale=True` and an explicit `scale` raises `ValueError`.
+- Added `geojson` and `gpx` CLI sub-commands (e.g. `papermap gpx hike.gpx Hike.pdf --auto-scale`), with `--auto-scale` and `--padding` options in addition to the common CLI options. Reading GPX files from disk requires the optional `gpx` package; install it with `pip install papermap[gpx]`.
 
 ### Fixed
 

@@ -185,6 +185,75 @@ Some tile providers require API keys. Here's how to use them:
 >>> pm.save("SF_Outdoors.pdf")
 ```
 
+#### Adding Features (i.e., Markers, Lines and Polygons)
+
+Overlay GeoJSON-style geometries (points, lines, polygons) on top of the base map. Features are styled per call, rendered above the base map but below the grid, and clipped to the map area. You can also add a raw GeoJSON dict (or any object implementing the `__geo_interface__` protocol) via `add_geojson()`.
+
+```python
+>>> from papermap import PaperMap
+>>> pm = PaperMap(lat=40.7128, lon=-74.0060, scale=25_000)
+>>> # A red dot at the map centre.
+>>> pm.add_circle_marker(40.7128, -74.0060, radius=3, fill_color="#f00")
+>>> # A blue route.
+>>> pm.add_line(
+...     [(40.7100, -74.0100), (40.7150, -74.0050), (40.7200, -74.0000)],
+...     stroke_color="#00f",
+...     stroke_width=1.0
+... )
+>>> # A semi-transparent green region from a GeoJSON Polygon.
+>>> pm.add_geojson(
+...     {
+...         "type": "Polygon",
+...         "coordinates": [
+...             [
+...                 [-74.020, 40.710],
+...                 [-74.000, 40.710],
+...                 [-74.000, 40.720],
+...                 [-74.020, 40.720],
+...                 [-74.020, 40.710]
+...             ]
+...         ]
+...     },
+...     style={"fill_color": "#0f0", "opacity": 0.3}
+... )
+>>> pm.render()
+>>> pm.save("NYC_Annotated.pdf")
+```
+
+#### Creating a Map From Features
+
+To fit the map around features you already have, use `PaperMap.from_features()`. It centres the map on the features' bounding box and pre-populates them so they will be drawn on `render()`. `PaperMap.from_geojson()` and `PaperMap.from_gpx()` do the same for a GeoJSON file/dict or a GPX file (or any object exposing `__geo_interface__`, such as a [`gpx.GPX`](https://pypi.org/project/gpx/) instance). GeoJSON `Point`/`MultiPoint` become `CircleMarker`, `LineString`/`MultiLineString` become `Line`, and `Polygon`/`MultiPolygon` become `Polygon`; GPX waypoints become circle markers, routes become lines, and each segment of each track becomes its own line. An optional `style` dict provides default styling for every parsed feature, overridden by per-feature `simplestyle-spec` properties.
+
+Reading GPX files from disk requires the optional `gpx` package; install it via `pip install papermap[gpx]`.
+
+```python
+>>> from papermap import PaperMap
+>>> from papermap.features import CircleMarker, Line
+>>> pm = PaperMap.from_features(
+...     CircleMarker(40.7484, -73.9857, fill_color="#f00"),  # Empire State Building
+...     CircleMarker(40.7128, -74.0060, fill_color="#f00"),  # NYC City Hall
+...     Line(
+...         [(40.7484, -73.9857), (40.7128, -74.0060)],
+...         stroke_color="#00f",
+...         stroke_width=1.0,
+...     ),
+...     scale=25_000,
+... )
+>>> pm.render()
+>>> pm.save("NYC_Landmarks.pdf")
+```
+
+#### Auto-scaling to Features
+
+Pass `auto_scale=True` to `from_features()`, `from_geojson()`, or `from_gpx()` to skip picking a scale by hand: the scale is computed so the features fit within the printable area, then snapped up to the nearest common cartographic scale (1:1 000, 1:2 500, 1:5 000, 1:10 000, 1:25 000, 1:50 000, …). Use `padding` (mm per side, default `5.0`) to control how much breathing room is left around the features:
+
+```python
+>>> from papermap import PaperMap
+>>> pm = PaperMap.from_gpx("hike.gpx", auto_scale=True, padding=10)
+>>> pm.render()
+>>> pm.save("Hike.pdf")
+```
+
 For more options and details, see the [API Reference](https://papermap.readthedocs.io/en/stable/api.html#papermap.papermap.PaperMap).
 
 ### As a CLI Tool
@@ -263,6 +332,14 @@ $ papermap utm \
     --scale 25000 \
     --grid \
     -- 500000 4649776 30 N UTM_Map.pdf
+```
+
+#### From a GPX File
+
+Render a paper map from a `.gpx` file, auto-scaled to fit the waypoints, routes, and tracks (requires `pip install papermap[gpx]`):
+
+```shell
+$ papermap gpx --auto-scale --padding 10 -- hike.gpx Hike.pdf
 ```
 
 #### Custom Margins

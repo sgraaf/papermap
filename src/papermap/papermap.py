@@ -1,12 +1,13 @@
 import time
 import warnings
+from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import KW_ONLY, InitVar, dataclass, field
 from decimal import Decimal
 from importlib import metadata
 from io import BytesIO
 from itertools import count
-from math import ceil, floor, radians
+from math import ceil, floor, log2, radians
 from pathlib import Path
 from typing import Any, Self
 
@@ -14,6 +15,14 @@ import httpx
 from fpdf import FPDF
 from PIL import Image
 
+from .features import (
+    CircleMarker,
+    IconMarker,
+    Line,
+    MapFeature,
+    Polygon,
+    iter_feature_coordinates,
+)
 from .geodesy import (
     ECEFCoordinate,
     MGRSCoordinate,
@@ -23,6 +32,8 @@ from .geodesy import (
     mgrs_to_latlon,
     utm_to_latlon,
 )
+from .geojson import SupportsGeoInterface, geojson_to_features
+from .gpx import gpx_to_features
 from .tile import TILE_SIZE, Tile
 from .tile_provider import TileProvider
 from .tile_providers import (
@@ -38,7 +49,9 @@ from .utils import (
     lon_to_x,
     mm_to_px,
     pt_to_mm,
+    px_to_mm,
     scale_to_zoom,
+    zoom_to_scale,
 )
 
 NAME: str = "papermap"
@@ -76,6 +89,131 @@ DEFAULT_BACKGROUND_COLOR: str = "#fff"
 DEFAULT_GRID_SIZE: int = 1_000
 """Default grid size in meters."""
 
+DEFAULT_AUTO_SCALE_PADDING: float = 5.0
+"""Default padding (in mm, per side) between features and the image edge when ``auto_scale`` is enabled."""
+
+
+class ScaleOutOfBoundsError(ValueError):
+    """Raised when the resolved zoom level is outside the tile provider's bounds."""
+
+
+COMMON_SCALES: tuple[int, ...] = (
+    500,
+    1_000,
+    2_500,
+    5_000,
+    10_000,
+    25_000,
+    50_000,
+    100_000,
+    250_000,
+    500_000,
+    1_000_000,
+    2_500_000,
+    5_000_000,
+    10_000_000,
+    25_000_000,
+    50_000_000,
+)
+"""Common cartographic scales that ``auto_scale`` snaps up to."""
+
+
+def _compute_auto_scale(  # noqa: PLR0913
+    lat_min: float,
+    lat_max: float,
+    lon_min: float,
+    lon_max: float,
+    *,
+    paper_size: str,
+    use_landscape: bool,
+    margin_top: int,
+    margin_right: int,
+    margin_bottom: int,
+    margin_left: int,
+    dpi: int,
+    padding: float,
+) -> int:
+    """Compute the smallest common-cartographic scale that fits a bbox on paper.
+
+    Given a geographic bounding box and the paper-area parameters, computes
+    the most zoomed-in scale at which the bounding box still fits within
+    the printable image area (paper size minus margins minus padding), then
+    snaps up to the nearest entry in :data:`COMMON_SCALES`.
+
+    Args:
+        lat_min: Minimum latitude of the bounding box.
+        lat_max: Maximum latitude of the bounding box.
+        lon_min: Minimum longitude of the bounding box.
+        lon_max: Maximum longitude of the bounding box.
+        paper_size: Paper size name (e.g. ``"a4"``).
+        use_landscape: Whether the paper is in landscape orientation.
+        margin_top: Top margin, in mm.
+        margin_right: Right margin, in mm.
+        margin_bottom: Bottom margin, in mm.
+        margin_left: Left margin, in mm.
+        dpi: Dots per inch.
+        padding: Padding between the features and the image edge, in mm per side.
+
+    Returns:
+        The auto-computed scale (e.g. ``25_000`` for 1:25 000), snapped up
+        to a common cartographic scale.
+
+    Raises:
+        ValueError: If the paper size is invalid.
+        ValueError: If padding/margins leave no printable area.
+        ValueError: If the bounding box has zero extent on either axis.
+    """
+    if paper_size not in PAPER_SIZE_TO_DIMENSIONS_MAP:
+        msg = f"Invalid paper size. Please choose one of {', '.join(PAPER_SIZES)}"
+        raise ValueError(msg)
+    width_mm, height_mm = PAPER_SIZE_TO_DIMENSIONS_MAP[paper_size]
+    if use_landscape:
+        width_mm, height_mm = height_mm, width_mm
+
+    image_w_mm = width_mm - margin_left - margin_right - 2 * padding
+    image_h_mm = height_mm - margin_top - margin_bottom - 2 * padding
+    if image_w_mm <= 0 or image_h_mm <= 0:
+        msg = "Padding and margins leave no printable area"
+        raise ValueError(msg)
+
+    image_w_px = mm_to_px(image_w_mm, dpi)
+    image_h_px = mm_to_px(image_h_mm, dpi)
+
+    # Longitude maps linearly to x, so the lon midpoint is also the x midpoint
+    # and the symmetric extent is simply (x_max - x_min).
+    ex0 = lon_to_x(lon_max, 0) - lon_to_x(lon_min, 0)
+
+    # Latitude maps non-linearly to y (Web Mercator), so the page-y position of
+    # the lat midpoint is NOT the midpoint of y_top/y_bottom. To guarantee the
+    # bbox fits when centred on the lat midpoint, use twice the larger of the
+    # two half-extents about that y-centre as the effective height extent.
+    center_lat = (lat_min + lat_max) / 2
+    y_top = lat_to_y(lat_max, 0)
+    y_bottom = lat_to_y(lat_min, 0)
+    y_center = lat_to_y(center_lat, 0)
+    ey0 = 2 * max(y_bottom - y_center, y_center - y_top)
+
+    if ex0 <= 0 or ey0 <= 0:
+        msg = (
+            "Cannot auto-scale: features have zero geographic extent along "
+            "at least one axis; provide an explicit 'scale' instead"
+        )
+        raise ValueError(msg)
+
+    zoom_x = log2(image_w_px / (ex0 * TILE_SIZE))
+    zoom_y = log2(image_h_px / (ey0 * TILE_SIZE))
+    zoom = min(zoom_x, zoom_y)
+
+    raw_scale = zoom_to_scale(zoom, center_lat, dpi)
+
+    # Snap up to the smallest common scale >= raw_scale.
+    for s in COMMON_SCALES:
+        if s >= raw_scale:
+            return s
+    # Bbox is so large no common scale fits; fall back to the next multiple
+    # of 1 000 000.
+    return ceil(raw_scale / 1_000_000) * 1_000_000
+
 
 @dataclass(slots=True)
 class PaperMap:
@@ -108,7 +246,8 @@ class PaperMap:
         ValueError: If the tile provider is invalid.
         ValueError: If no API key is specified (when applicable).
         ValueError: If the paper size is invalid.
-        ValueError: If the scale is "out of bounds".
+        ScaleOutOfBoundsError: If the scale is "out of bounds" for the chosen
+            tile provider.
     """
 
     lat: float
@@ -152,9 +291,10 @@ class PaperMap:
     y_max: int = field(init=False)
     tiles: list[Tile] = field(init=False)
     pdf: FPDF = field(init=False)
-    map_image_scaled: Image.Image = field(init=False)
-    map_image: Image.Image = field(init=False)
-    file: Path = field(init=False)
+    map_image_scaled: Image.Image = field(init=False, repr=False)
+    map_image: Image.Image = field(init=False, repr=False)
+    file: Path = field(init=False, repr=False)
+    features: list[MapFeature] = field(init=False)
 
     def __post_init__(self, tile_provider_key: str, paper_size: str) -> None:
         # Store basic parameters
@@ -177,6 +317,9 @@ class PaperMap:
 
         # Initialize PDF document
         self._initialize_pdf()
+
+        # Initialize the (empty) feature list
+        self.features = []
 
     @classmethod
     def from_utm(
@@ -262,6 +405,256 @@ class PaperMap:
         lat, lon, _ = ecef_to_latlon(ecef)
         return cls(lat, lon, **kwargs)
 
+    @classmethod
+    def from_features(
+        cls,
+        *features: MapFeature,
+        auto_scale: bool = False,
+        padding: float = DEFAULT_AUTO_SCALE_PADDING,
+        **kwargs: Any,
+    ) -> Self:
+        """Create a paper map centred on the geographic centre of the given feature(s).
+
+        The centre is the midpoint of the features' bounding box (the
+        midpoints of the min/max latitude and longitude across every
+        coordinate referenced by the features). The features are also added
+        to the new map and will be drawn when :meth:`render` is called.
+
+        When ``auto_scale`` is ``True``, the map ``scale`` is computed
+        automatically so that the bounding box fits within the printable
+        image area (paper size minus margins minus ``padding``), then
+        snapped up to the nearest common cartographic scale (see
+        :data:`COMMON_SCALES`). Passing ``auto_scale=True`` together with
+        an explicit ``scale`` raises a ``ValueError``.
+
+        Args:
+            features: One or more :data:`MapFeature` instances.
+            auto_scale: If ``True``, compute the scale automatically to fit
+                the features. Defaults to ``False``.
+            padding: Padding between the features and the image edge, in mm
+                per side. Only consulted when ``auto_scale`` is ``True``.
+                Defaults to ``5.0``.
+            **kwargs: Additional keyword arguments to pass to PaperMap
+                constructor.
+
+        Returns:
+            A new PaperMap instance centred on the features' bounding box,
+            with the features added.
+
+        Raises:
+            ValueError: If no features are given.
+            ValueError: If none of the features contain any coordinates.
+            ValueError: If both ``auto_scale=True`` and ``scale`` are given.
+            ValueError: If ``auto_scale=True`` and the features have zero
+                geographic extent along at least one axis.
+            ScaleOutOfBoundsError: If ``auto_scale=True`` and the computed
+                scale is out of the tile provider's zoom bounds.
+
+        Note:
+            Features spanning the ±180° anti-meridian are not handled
+            specially; the resulting centre may be on the opposite side of
+            the world from where you expect.
+
+        Examples:
+            >>> from papermap import PaperMap
+            >>> from papermap.features import CircleMarker, Line
+            >>> pm = PaperMap.from_features(
+            ...     CircleMarker(40.7128, -74.0060),
+            ...     Line([(40.71, -74.01), (40.72, -73.99)]),
+            ...     auto_scale=True,
+            ... )
+            >>> pm.render()
+            >>> pm.save("map_from_features.pdf")
+        """
+        if not features:
+            msg = "At least one feature must be provided"
+            raise ValueError(msg)
+
+        coords = [c for f in features for c in iter_feature_coordinates(f)]
+        if not coords:
+            msg = "The provided feature(s) contain no coordinates"
+            raise ValueError(msg)
+
+        lats = [lat for lat, _ in coords]
+        lons = [lon for _, lon in coords]
+        lat_min, lat_max = min(lats), max(lats)
+        lon_min, lon_max = min(lons), max(lons)
+        center_lat = (lat_min + lat_max) / 2
+        center_lon = (lon_min + lon_max) / 2
+
+        if auto_scale:
+            if "scale" in kwargs:
+                msg = "Cannot specify both 'scale' and 'auto_scale=True'"
+                raise ValueError(msg)
+            kwargs["scale"] = _compute_auto_scale(
+                lat_min,
+                lat_max,
+                lon_min,
+                lon_max,
+                paper_size=kwargs.get("paper_size", DEFAULT_PAPER_SIZE),
+                use_landscape=kwargs.get("use_landscape", False),
+                margin_top=kwargs.get("margin_top", DEFAULT_MARGIN),
+                margin_right=kwargs.get("margin_right", DEFAULT_MARGIN),
+                margin_bottom=kwargs.get("margin_bottom", DEFAULT_MARGIN),
+                margin_left=kwargs.get("margin_left", DEFAULT_MARGIN),
+                dpi=kwargs.get("dpi", DEFAULT_DPI),
+                padding=padding,
+            )
+
+        try:
+            pm = cls(center_lat, center_lon, **kwargs)
+        except ScaleOutOfBoundsError as e:
+            if auto_scale:
+                msg = f"{e} (auto-scaled to 1:{kwargs['scale']})"
+                raise ScaleOutOfBoundsError(msg) from e
+            raise
+        pm.features += list(features)
+        return pm
+
+    @classmethod
+    def from_geojson(
+        cls,
+        geojson_source: str | Path | dict[str, Any] | SupportsGeoInterface,
+        style: dict[str, Any] | None = None,
+        *,
+        auto_scale: bool = False,
+        padding: float = DEFAULT_AUTO_SCALE_PADDING,
+        **kwargs: Any,
+    ) -> Self:
+        """Create a paper map centred on the geographic centre of GeoJSON geometries.
+
+        Parses ``geojson_source`` with
+        :func:`papermap.features.geojson_to_features` and then delegates to
+        :meth:`from_features` to compute the centre (the midpoint of the
+        parsed features' bounding box) and to add the parsed features to the
+        new map.
+
+        When ``auto_scale`` is ``True``, the map ``scale`` is computed
+        automatically so that the parsed features fit within the printable
+        image area. See :meth:`from_features` for details.
+
+        Args:
+            geojson_source: A path to a ``.geojson`` file, or a GeoJSON dict
+                (or any object exposing ``__geo_interface__``).
+            style: Default styling applied to every parsed feature. See
+                :func:`papermap.features.geojson_to_features` for the
+                supported keys and the precedence rules with
+                ``simplestyle-spec`` properties.
+            auto_scale: If ``True``, compute the scale automatically to fit
+                the parsed features. Defaults to ``False``.
+            padding: Padding between the features and the image edge, in mm
+                per side. Only consulted when ``auto_scale`` is ``True``.
+                Defaults to ``5.0``.
+            **kwargs: Additional keyword arguments to pass to PaperMap
+                constructor.
+
+        Returns:
+            A new PaperMap instance centred on the parsed features'
+            bounding box, with the parsed features added.
+
+        Raises:
+            TypeError: If ``geojson_source`` is neither a path-like nor a dict
+                nor exposes ``__geo_interface__``.
+            ValueError: If ``geojson_source`` parses to no features (e.g. an empty
+                ``FeatureCollection``), or if the parsed features contain no
+                coordinates.
+            ValueError: If both ``auto_scale=True`` and ``scale`` are given.
+            ValueError: If ``auto_scale=True`` and the parsed features have
+                zero geographic extent along at least one axis.
+
+        Examples:
+            >>> from papermap import PaperMap
+            >>> geojson = {
+            ...     "type": "FeatureCollection",
+            ...     "features": [
+            ...         {
+            ...             "type": "Feature",
+            ...             "geometry": {
+            ...                 "type": "Point",
+            ...                 "coordinates": [-74.0060, 40.7128],
+            ...             },
+            ...             "properties": {},
+            ...         }
+            ...     ],
+            ... }
+            >>> pm = PaperMap.from_geojson(geojson)
+            >>> pm.render()
+            >>> pm.save("map_from_geojson.pdf")
+        """
+        features = geojson_to_features(geojson_source, style)
+        if not features:
+            msg = "The provided GeoJSON object parsed to no features"
+            raise ValueError(msg)
+        return cls.from_features(
+            *features, auto_scale=auto_scale, padding=padding, **kwargs
+        )
+
+    @classmethod
+    def from_gpx(
+        cls,
+        gpx_source: str | Path | SupportsGeoInterface,
+        style: dict[str, Any] | None = None,
+        *,
+        auto_scale: bool = False,
+        padding: float = DEFAULT_AUTO_SCALE_PADDING,
+        **kwargs: Any,
+    ) -> Self:
+        """Create a paper map centred on the geographic centre of GPX geometries.
+
+        Parses ``gpx_source`` with :func:`papermap.gpx.gpx_to_features` and
+        then delegates to :meth:`from_features` to compute the centre (the
+        midpoint of the parsed features' bounding box) and to add the
+        parsed features to the new map.
+
+        When ``auto_scale`` is ``True``, the map ``scale`` is computed
+        automatically so that the parsed features fit within the printable
+        image area. See :meth:`from_features` for details.
+
+        Reading GPX files from disk requires the optional ``gpx`` package.
+        Install it with ``pip install papermap[gpx]``.
+
+        Args:
+            gpx_source: A path to a ``.gpx`` file, or any object exposing
+                ``__geo_interface__`` (e.g. a ``gpx.GPX`` instance).
+            style: Default styling applied to every parsed feature. See
+                :func:`papermap.features.geojson_to_features` for the
+                supported keys.
+            auto_scale: If ``True``, compute the scale automatically to fit
+                the parsed features. Defaults to ``False``.
+            padding: Padding between the features and the image edge, in mm
+                per side. Only consulted when ``auto_scale`` is ``True``.
+                Defaults to ``5.0``.
+            **kwargs: Additional keyword arguments to pass to PaperMap
+                constructor.
+
+        Returns:
+            A new PaperMap instance centred on the parsed features'
+            bounding box, with the parsed features added.
+
+        Raises:
+            ImportError: If ``gpx_source`` is a path and the optional ``gpx``
+                package is not installed.
+            TypeError: If ``gpx_source`` is neither a path-like nor exposes
+                ``__geo_interface__``.
+            ValueError: If ``gpx_source`` parses to no features.
+            ValueError: If both ``auto_scale=True`` and ``scale`` are given.
+            ValueError: If ``auto_scale=True`` and the parsed features have
+                zero geographic extent along at least one axis.
+
+        Examples:
+            >>> from papermap import PaperMap
+            >>> pm = PaperMap.from_gpx("hike.gpx", auto_scale=True, padding=10)
+            >>> pm.render()
+            >>> pm.save("Hike.pdf")
+        """
+        features = gpx_to_features(gpx_source, style)
+        if not features:
+            msg = "The provided GPX source parsed to no features"
+            raise ValueError(msg)
+        return cls.from_features(
+            *features, auto_scale=auto_scale, padding=padding, **kwargs
+        )
+
     def _validate_coordinates(self) -> None:
         """Validate ``self.lat`` and ``self.lon`` are within valid ranges.
 
@@ -325,7 +718,8 @@ class PaperMap:
             tile_provider_key: The tile provider key for error messages.
 
         Raises:
-            ValueError: If computed zoom is out of bounds for the tile provider.
+            ScaleOutOfBoundsError: If computed zoom is out of bounds for the
+                tile provider.
         """
         self.zoom = scale_to_zoom(self.scale, self.lat, self.dpi)
         self.zoom_scaled = floor(self.zoom)
@@ -337,7 +731,7 @@ class PaperMap:
             or self.zoom_scaled > self.tile_provider.zoom_max
         ):
             msg = f"Scale out of bounds for {tile_provider_key} tile provider."
-            raise ValueError(msg)
+            raise ScaleOutOfBoundsError(msg)
 
     def _compute_image_dimensions(self) -> None:
         """Compute all image-related dimensions and perform coordinate conversions."""
@@ -420,6 +814,165 @@ class PaperMap:
         self.pdf.set_left_margin(self.margin_left)
         self.pdf.set_right_margin(self.margin_right)
         self.pdf.add_page()
+
+    def latlon_to_pdf_mm(self, lat: float, lon: float) -> tuple[float, float]:
+        """Convert a geographic position to absolute PDF coordinates in mm.
+
+        Args:
+            lat: Latitude.
+            lon: Longitude.
+
+        Returns:
+            ``(x_mm, y_mm)`` measured from the page origin (top-left).
+        """
+        x_tile = lon_to_x(lon, self.zoom_scaled)
+        y_tile = lat_to_y(lat, self.zoom_scaled)
+        dx_px = (x_tile - self.x_center) * TILE_SIZE / self.resize_factor
+        dy_px = (y_tile - self.y_center) * TILE_SIZE / self.resize_factor
+        x_mm = self.margin_left + self.image_width / 2 + px_to_mm(dx_px, self.dpi)
+        y_mm = self.margin_top + self.image_height / 2 + px_to_mm(dy_px, self.dpi)
+        return x_mm, y_mm
+
+    def add_circle_marker(
+        self,
+        lat: float,
+        lon: float,
+        **kwargs: Any,
+    ) -> CircleMarker:
+        """Add a :class:`CircleMarker` at the given position to the map.
+
+        Args:
+            lat: Latitude of the marker centre.
+            lon: Longitude of the marker centre.
+            **kwargs: Additional keyword arguments forwarded to
+                :class:`CircleMarker`.
+
+        Returns:
+            The newly added marker.
+        """
+        marker = CircleMarker(lat, lon, **kwargs)
+        self.features.append(marker)
+        return marker
+
+    def add_icon_marker(
+        self,
+        lat: float,
+        lon: float,
+        icon: str | Path | Image.Image,
+        **kwargs: Any,
+    ) -> IconMarker:
+        """Add an :class:`IconMarker` at the given position to the map.
+
+        Args:
+            lat: Latitude of the anchor point.
+            lon: Longitude of the anchor point.
+            icon: Path to an image file or a :class:`PIL.Image.Image` instance.
+            **kwargs: Additional keyword arguments forwarded to
+                :class:`IconMarker`.
+
+        Returns:
+            The newly added marker.
+        """
+        marker = IconMarker(lat, lon, icon, **kwargs)
+        self.features.append(marker)
+        return marker
+
+    def add_line(
+        self,
+        coordinates: Sequence[tuple[float, float]],
+        **kwargs: Any,
+    ) -> Line:
+        """Add a :class:`Line` (polyline) to the map.
+
+        Args:
+            coordinates: Sequence of ``(lat, lon)`` pairs.
+            **kwargs: Additional keyword arguments forwarded to :class:`Line`.
+
+        Returns:
+            The newly added line.
+        """
+        line = Line(coordinates, **kwargs)
+        self.features.append(line)
+        return line
+
+    def add_polygon(
+        self,
+        coordinates: Sequence[Sequence[tuple[float, float]]],
+        **kwargs: Any,
+    ) -> Polygon:
+        """Add a :class:`Polygon` to the map.
+
+        Args:
+            coordinates: Sequence of rings, where each ring is a sequence of
+                ``(lat, lon)`` pairs. The first ring is the outer boundary;
+                any subsequent rings are interior holes.
+            **kwargs: Additional keyword arguments forwarded to
+                :class:`Polygon`.
+
+        Returns:
+            The newly added polygon.
+        """
+        polygon = Polygon(coordinates, **kwargs)
+        self.features.append(polygon)
+        return polygon
+
+    def add_feature(self, feature: MapFeature) -> MapFeature:
+        """Add a pre-constructed feature to the map.
+
+        Args:
+            feature: A :class:`CircleMarker`, :class:`IconMarker`,
+                :class:`Line`, or :class:`Polygon`.
+
+        Returns:
+            The same feature, for chaining.
+        """
+        self.features.append(feature)
+        return feature
+
+    def add_geojson(
+        self,
+        geojson_source: str | Path | dict[str, Any] | SupportsGeoInterface,
+        style: dict[str, Any] | None = None,
+    ) -> list[MapFeature]:
+        """Add geometries from a GeoJSON file or GeoJSON object (or any object implementing the ``__geo_interface__`` protocol).
+
+        See :func:`papermap.features.geojson_to_features` for the supported
+        GeoJSON types and the precedence rules for styling.
+
+        Args:
+            geojson_source: A path to a ``.geojson`` file, or a GeoJSON dict
+                (or any object exposing ``__geo_interface__``).
+            style: Default styling applied to every parsed feature.
+
+        Returns:
+            The list of features that were parsed and added to the map.
+        """
+        features = geojson_to_features(geojson_source, style)
+        self.features.extend(features)
+        return features
+
+    def add_gpx(
+        self,
+        gpx_source: str | Path | SupportsGeoInterface,
+        style: dict[str, Any] | None = None,
+    ) -> list[MapFeature]:
+        """Add geometries from a GPX file or GPX object.
+
+        See :func:`papermap.gpx.gpx_to_features` for the parsing rules.
+        Reading GPX files from disk requires the optional ``gpx`` package;
+        install it with ``pip install papermap[gpx]``.
+
+        Args:
+            gpx_source: A path to a ``.gpx`` file, or any object exposing
+                ``__geo_interface__`` (e.g. a ``gpx.GPX`` instance).
+            style: Default styling applied to every parsed feature.
+
+        Returns:
+            The list of features that were parsed and added to the map.
+        """
+        features = gpx_to_features(gpx_source, style)
+        self.features.extend(features)
+        return features
 
     def compute_grid_coordinates(
         self,
@@ -549,6 +1102,181 @@ class PaperMap:
 
             self.pdf.set_font_size(12)
 
+    @staticmethod
+    def _draw_style(stroke_color: str | None, fill_color: str | None) -> str:
+        """Return the FPDF style flag for a stroke/fill combination."""
+        if stroke_color is not None and fill_color is not None:
+            return "DF"
+        if fill_color is not None:
+            return "F"
+        return "D"
+
+    @staticmethod
+    def _local_context_kwargs(  # noqa: PLR0913
+        stroke_color: str | None,
+        stroke_width: float,
+        fill_color: str | None,
+        opacity: float,
+        stroke_opacity: float | None,
+        fill_opacity: float | None,
+    ) -> dict[str, Any]:
+        """Build ``local_context`` kwargs from a feature's stroke/fill style."""
+        ctx_kwargs: dict[str, Any] = {"line_width": stroke_width}
+        if stroke_color is not None:
+            ctx_kwargs["draw_color"] = stroke_color
+        if fill_color is not None:
+            ctx_kwargs["fill_color"] = fill_color
+        ctx_kwargs["stroke_opacity"] = (
+            stroke_opacity if stroke_opacity is not None else opacity
+        )
+        ctx_kwargs["fill_opacity"] = (
+            fill_opacity if fill_opacity is not None else opacity
+        )
+        return ctx_kwargs
+
+    def _render_circle_marker(self, marker: CircleMarker) -> None:
+        """Render a single :class:`CircleMarker` to the PDF."""
+        if marker.stroke_color is None and marker.fill_color is None:
+            return
+        cx, cy = self.latlon_to_pdf_mm(marker.lat, marker.lon)
+        ctx_kwargs = self._local_context_kwargs(
+            marker.stroke_color,
+            marker.stroke_width,
+            marker.fill_color,
+            marker.opacity,
+            marker.stroke_opacity,
+            marker.fill_opacity,
+        )
+        style = self._draw_style(marker.stroke_color, marker.fill_color)
+        with self.pdf.local_context(**ctx_kwargs):
+            self.pdf.circle(cx, cy, marker.radius, style=style)
+
+    def _render_icon_marker(self, marker: IconMarker) -> None:
+        """Render a single :class:`IconMarker` to the PDF."""
+        if marker._loaded_icon is None:  # noqa: SLF001
+            if isinstance(marker.icon, Image.Image):
+                marker._loaded_icon = marker.icon  # noqa: SLF001
+            else:
+                marker._loaded_icon = Image.open(marker.icon)  # noqa: SLF001
+        img = marker._loaded_icon  # noqa: SLF001
+        width = marker.width
+        if marker.height is None:
+            height = width * img.height / img.width
+        else:
+            height = marker.height
+        ax, ay = marker.anchor
+        cx, cy = self.latlon_to_pdf_mm(marker.lat, marker.lon)
+        tlx = cx - ax * width
+        tly = cy - ay * height
+        if marker.opacity < 1.0:
+            with self.pdf.local_context(
+                fill_opacity=marker.opacity, stroke_opacity=marker.opacity
+            ):
+                self.pdf.image(img, x=tlx, y=tly, w=width, h=height)
+        else:
+            self.pdf.image(img, x=tlx, y=tly, w=width, h=height)
+
+    def _render_line(self, line: Line) -> None:
+        """Render a single :class:`Line` to the PDF."""
+        points = [self.latlon_to_pdf_mm(lat, lon) for lat, lon in line.coordinates]
+        if len(points) < 2:  # noqa: PLR2004
+            return
+        ctx_kwargs = self._local_context_kwargs(
+            line.stroke_color,
+            line.stroke_width,
+            None,
+            line.opacity,
+            line.stroke_opacity,
+            None,
+        )
+        with self.pdf.local_context(**ctx_kwargs):
+            self.pdf.polyline(points, style="D")
+
+    @staticmethod
+    def _polygon_paint_rule(polygon: Polygon) -> str:
+        """Return the FPDF ``paint_rule`` for a polygon's stroke/fill combo."""
+        if polygon.stroke_color is not None and polygon.fill_color is not None:
+            return "stroke_fill_evenodd"
+        if polygon.fill_color is not None:
+            return "fill_evenodd"
+        return "stroke"
+
+    @staticmethod
+    def _strip_closing_vertex(
+        ring: list[tuple[float, float]],
+    ) -> list[tuple[float, float]]:
+        """Drop a GeoJSON ring's closing duplicate vertex if present."""
+        return ring[:-1] if ring and ring[0] == ring[-1] else ring
+
+    def _render_polygon_path(
+        self, rings: list[list[tuple[float, float]]], paint_rule: str
+    ) -> None:
+        """Render a multi-ring polygon (with holes) via the FPDF path API."""
+        first_x, first_y = rings[0][0]
+        with self.pdf.new_path(first_x, first_y) as path:
+            path.style.paint_rule = paint_rule
+            for i, ring in enumerate(rings):
+                trimmed = self._strip_closing_vertex(ring)
+                # new_path already positions the cursor at rings[0][0]; only
+                # subsequent rings need an explicit move_to.
+                if i > 0:
+                    path.move_to(*trimmed[0])
+                for pt in trimmed[1:]:
+                    path.line_to(*pt)
+                path.close()
+
+    def _render_polygon(self, polygon: Polygon) -> None:
+        """Render a single :class:`Polygon` to the PDF, with optional holes."""
+        if polygon.stroke_color is None and polygon.fill_color is None:
+            return
+        rings = [
+            [self.latlon_to_pdf_mm(lat, lon) for lat, lon in ring]
+            for ring in polygon.coordinates
+        ]
+        # Drop any ring (outer or hole) that doesn't have enough vertices to
+        # form a triangle once the GeoJSON closing duplicate is removed.
+        rings = [r for r in rings if len(self._strip_closing_vertex(r)) >= 3]  # noqa: PLR2004
+        if not rings:
+            return
+
+        ctx_kwargs = self._local_context_kwargs(
+            polygon.stroke_color,
+            polygon.stroke_width,
+            polygon.fill_color,
+            polygon.opacity,
+            polygon.stroke_opacity,
+            polygon.fill_opacity,
+        )
+        with self.pdf.local_context(**ctx_kwargs):
+            if len(rings) == 1:
+                ring = self._strip_closing_vertex(rings[0])
+                style = self._draw_style(polygon.stroke_color, polygon.fill_color)
+                self.pdf.polygon(ring, style=style)
+            else:
+                self._render_polygon_path(rings, self._polygon_paint_rule(polygon))
+
+    def render_features(self) -> None:
+        """Draw all added geometries onto the PDF, clipped to the map area.
+
+        Features are rendered in the order they were added. Anything that
+        falls outside the map's image rectangle is clipped via
+        :meth:`fpdf.FPDF.rect_clip` so it cannot bleed into the page margins.
+        """
+        if not self.features:
+            return
+        with self.pdf.rect_clip(
+            self.margin_left, self.margin_top, self.image_width, self.image_height
+        ):
+            for feature in self.features:
+                if isinstance(feature, CircleMarker):
+                    self._render_circle_marker(feature)
+                elif isinstance(feature, IconMarker):
+                    self._render_icon_marker(feature)
+                elif isinstance(feature, Line):
+                    self._render_line(feature)
+                elif isinstance(feature, Polygon):
+                    self._render_polygon(feature)
+
     def render_attribution_and_scale(self) -> None:
         """Draw the tile provider attribution and map scale on the PDF.
 
@@ -662,14 +1390,17 @@ class PaperMap:
         )
 
     def render(self) -> None:
-        """Render the paper map, consisting of the map image, grid (if applicable), attribution and scale."""
+        """Render the paper map, consisting of the map image, features (if any), grid (if applicable), attribution and scale."""
         # render the base layer
         self.render_base_layer()
 
         # paste the map image onto the paper map
         self.pdf.image(self.map_image, w=self.image_width, h=self.image_height)
 
-        # possibly render a coordinate grid
+        # render any added GeoJSON-style features above the base map
+        self.render_features()
+
+        # possibly render a coordinate grid (drawn above features)
         self.render_grid()
 
         # render the attribution and scale to the map

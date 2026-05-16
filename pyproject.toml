@@ -32,6 +32,9 @@ dependencies = [
     "Pillow",
 ]
 
+[project.optional-dependencies]
+gpx = ["gpx"]
+
 [dependency-groups]
 docs = [
     "cogapp",
@@ -43,6 +46,7 @@ docs = [
     "sphinxext-opengraph",
 ]
 tests = [
+    "gpx",
     "pytest",
     "pytest-cov",
     "pytest-httpx",

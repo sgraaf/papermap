@@ -14,6 +14,27 @@
    :members:
 ```
 
+## `papermap.features` Module
+
+```{eval-rst}
+.. automodule:: papermap.features
+   :members:
+```
+
+## `papermap.geojson` Module
+
+```{eval-rst}
+.. automodule:: papermap.geojson
+   :members:
+```
+
+## `papermap.gpx` Module
+
+```{eval-rst}
+.. automodule:: papermap.gpx
+   :members:
+```
+
 ## `papermap.tile` Module
 
 ```{eval-rst}
