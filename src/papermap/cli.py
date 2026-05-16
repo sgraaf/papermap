@@ -250,7 +250,7 @@ def geojson(
     **kwargs: Unpack[CommonParameters],
 ) -> None:
     """Generates a paper map for the given GeoJSON file and outputs it to file."""
-    forwarded: dict[str, Any] = dict(kwargs)
+    forwarded: dict[str, Any] = dict(**kwargs)
     if auto_scale:
         forwarded.pop("scale", None)
     _render_and_save(
@@ -291,7 +291,7 @@ def gpx(
 
     Requires the optional 'gpx' package; install with 'pip install papermap[gpx]'.
     """
-    forwarded: dict[str, Any] = dict(kwargs)
+    forwarded: dict[str, Any] = dict(**kwargs)
     if auto_scale:
         forwarded.pop("scale", None)
     _render_and_save(
