@@ -934,7 +934,7 @@ class PaperMap:
         geojson_source: str | Path | dict[str, Any] | SupportsGeoInterface,
         style: dict[str, Any] | None = None,
     ) -> list[MapFeature]:
-        """Add geometries from a GeoJSON file or GeoJSON object (or any object implementoing the ``__geo_interface__`` protocol).
+        """Add geometries from a GeoJSON file or GeoJSON object (or any object implementing the ``__geo_interface__`` protocol).
 
         See :func:`papermap.features.geojson_to_features` for the supported
         GeoJSON types and the precedence rules for styling.
@@ -1215,9 +1215,12 @@ class PaperMap:
         first_x, first_y = rings[0][0]
         with self.pdf.new_path(first_x, first_y) as path:
             path.style.paint_rule = paint_rule
-            for ring in rings:
+            for i, ring in enumerate(rings):
                 trimmed = self._strip_closing_vertex(ring)
-                path.move_to(*trimmed[0])
+                # new_path already positions the cursor at rings[0][0]; only
+                # subsequent rings need an explicit move_to.
+                if i > 0:
+                    path.move_to(*trimmed[0])
                 for pt in trimmed[1:]:
                     path.line_to(*pt)
                 path.close()

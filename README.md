@@ -220,9 +220,11 @@ Overlay GeoJSON-style geometries (points, lines, polygons) on top of the base ma
 >>> pm.save("NYC_Annotated.pdf")
 ```
 
-#### Centering on Features
+#### Creating a Map From Features
 
-If you already have the features you want to draw and just want the map to fit around them, use `PaperMap.from_features()`. It computes the centre as the midpoint of the features' bounding box, and adds the features to the new map automatically:
+To fit the map around features you already have, use `PaperMap.from_features()`. It centres the map on the features' bounding box and pre-populates them so they will be drawn on `render()`. `PaperMap.from_geojson()` and `PaperMap.from_gpx()` do the same for a GeoJSON file/dict or a GPX file (or any object exposing `__geo_interface__`, such as a [`gpx.GPX`](https://pypi.org/project/gpx/) instance). GeoJSON `Point`/`MultiPoint` become `CircleMarker`, `LineString`/`MultiLineString` become `Line`, and `Polygon`/`MultiPolygon` become `Polygon`; GPX waypoints become circle markers, routes become lines, and each segment of each track becomes its own line. An optional `style` dict provides default styling for every parsed feature, overridden by per-feature `simplestyle-spec` properties.
+
+Reading GPX files from disk requires the optional `gpx` package; install it via `pip install papermap[gpx]`.
 
 ```python
 >>> from papermap import PaperMap
@@ -241,82 +243,15 @@ If you already have the features you want to draw and just want the map to fit a
 >>> pm.save("NYC_Landmarks.pdf")
 ```
 
-#### Centering on GeoJSON
+#### Auto-scaling to Features
 
-`PaperMap.from_geojson()` does the same thing for a raw GeoJSON dict (or any object exposing the `__geo_interface__` protocol). It parses the geometries, computes the centre of their bounding box, and adds the parsed features to the new map. An optional `style` dict provides default styling for every parsed feature (overridden by per-feature `simplestyle-spec` properties):
-
-```python
->>> from papermap import PaperMap
->>> geojson = {
-...     "type": "FeatureCollection",
-...     "features": [
-...         {
-...             "type": "Feature",
-...             "geometry": {
-...                 "type": "Polygon",
-...                 "coordinates": [
-...                     [
-...                         [-74.020, 40.710],
-...                         [-74.000, 40.710],
-...                         [-74.000, 40.720],
-...                         [-74.020, 40.720],
-...                         [-74.020, 40.710],
-...                     ]
-...                 ],
-...             },
-...             "properties": {"fill": "#0f0", "fill-opacity": 0.3},
-...         }
-...     ],
-... }
->>> pm = PaperMap.from_geojson(geojson, scale=25_000)
->>> pm.render()
->>> pm.save("NYC_Region.pdf")
-```
-
-#### Reading GeoJSON Files
-
-`PaperMap.from_geojson()` parses a GeoJSON file or a GeoJSON object (or any object exposing `__geo_interface__`), centres the map on the geometries' bounding box, and adds them to the new map. Waypoints become circle markers, routes become lines, and each segment of each track becomes its own line. Use `pm.add_geojson()` to overlay GeoJSON geometries on an existing map.
-
-```python
->>> from papermap import PaperMap
->>> pm = PaperMap.from_geojson("hike.geojson", auto_scale=True, padding=10)
->>> pm.render()
->>> pm.save("Hike.pdf")
-```
-
-#### Reading GPX Files
-
-`PaperMap.from_gpx()` parses a GPX file (or any object exposing `__geo_interface__`, such as a [`gpx.GPX`](https://pypi.org/project/gpx/) instance), centres the map on the geometries' bounding box, and adds them to the new map. Waypoints become circle markers, routes become lines, and each segment of each track becomes its own line. Use `pm.add_gpx()` to overlay GPX geometries on an existing map.
-
-Reading GPX files from disk requires the optional `gpx` package; install it via `pip install papermap[gpx]`.
+Pass `auto_scale=True` to `from_features()`, `from_geojson()`, or `from_gpx()` to skip picking a scale by hand: the scale is computed so the features fit within the printable area, then snapped up to the nearest common cartographic scale (1:1 000, 1:2 500, 1:5 000, 1:10 000, 1:25 000, 1:50 000, …). Use `padding` (mm per side, default `5.0`) to control how much breathing room is left around the features:
 
 ```python
 >>> from papermap import PaperMap
 >>> pm = PaperMap.from_gpx("hike.gpx", auto_scale=True, padding=10)
 >>> pm.render()
 >>> pm.save("Hike.pdf")
-```
-
-#### Auto-scaling to Features
-
-Pass `auto_scale=True` to `from_features()`, `from_geojson()`, or `from_gpx()` to skip picking a scale by hand. The scale is computed so the features fit within the printable area and then snapped up to the nearest common cartographic scale (1:1 000, 1:2 500, 1:5 000, 1:10 000, 1:25 000, 1:50 000, …). Use `padding` (mm per side, default `5.0`) to control how much breathing room is left around the features:
-
-```python
->>> from papermap import PaperMap
->>> from papermap.features import CircleMarker, Line
->>> pm = PaperMap.from_features(
-...     CircleMarker(40.7484, -73.9857, fill_color="#f00"),  # Empire State Building
-...     CircleMarker(40.7128, -74.0060, fill_color="#f00"),  # NYC City Hall
-...     Line(
-...         [(40.7484, -73.9857), (40.7128, -74.0060)],
-...         stroke_color="#00f",
-...         stroke_width=1.0,
-...     ),
-...     auto_scale=True,
-...     padding=10,
-... )
->>> pm.render()
->>> pm.save("NYC_Landmarks_Autoscale.pdf")
 ```
 
 For more options and details, see the [API Reference](https://papermap.readthedocs.io/en/stable/api.html#papermap.papermap.PaperMap).

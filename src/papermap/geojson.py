@@ -112,7 +112,7 @@ def geojson_to_features(  # noqa: C901, PLR0911, PLR0912
 
     Raises:
         TypeError: If the input is neither a path-like, nor a dict nor an
-            object exposing n``__geo_interface__``.
+            object exposing ``__geo_interface__``.
         ValueError: If the object's ``type`` field is missing or
             unrecognised.
     """

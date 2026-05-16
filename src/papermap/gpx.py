@@ -51,9 +51,9 @@ def gpx_to_features(
         becomes its own :class:`~papermap.features.Line`.
 
     Raises:
-        ImportError: If ``source`` is a path and the optional ``gpx``
+        ImportError: If ``gpx_source`` is a path and the optional ``gpx``
             package is not installed.
-        TypeError: If ``source`` is neither a path-like nor an object
+        TypeError: If ``gpx_source`` is neither a path-like nor an object
             exposing ``__geo_interface__``.
     """
     if isinstance(gpx_source, SupportsGeoInterface):
