@@ -1,7 +1,7 @@
 """GPX parsing — turn ``.gpx`` files (or ``gpx.GPX`` objects) into map features.
 
 The :func:`gpx_to_features` function accepts either a path to a GPX file
-or any in-memory object exposing the ``__geo_interface__`` protocol (e.g.
+or any object exposing the ``__geo_interface__`` protocol (e.g.
 an instance from the `gpx <https://pypi.org/project/gpx/>`_ library) and
 returns a flat list of :data:`~papermap.features.MapFeature` instances by
 delegating to :func:`~papermap.features.geojson_to_features`.
@@ -24,7 +24,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from .features import SupportsGeoInterface, geojson_to_features
+from .geojson import SupportsGeoInterface, geojson_to_features
 
 if TYPE_CHECKING:
     from .features import MapFeature
@@ -34,7 +34,7 @@ def gpx_to_features(
     gpx_source: str | Path | SupportsGeoInterface,
     style: dict[str, Any] | None = None,
 ) -> list[MapFeature]:
-    """Convert a GPX file path or in-memory GPX object to map features.
+    """Convert a GPX file path or GPX object to map features.
 
     Args:
         gpx_source: A path to a ``.gpx`` file (``str`` or

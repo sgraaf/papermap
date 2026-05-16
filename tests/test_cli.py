@@ -165,6 +165,13 @@ class TestCliHelp:
         assert "Y" in result.output
         assert "Z" in result.output
 
+    def test_geojson_help(self, runner: CliRunner) -> None:
+        result = runner.invoke(cli, ["geojson", "--help"])
+        assert result.exit_code == 0
+        assert "GEOJSON_FILE" in result.output
+        assert "--auto-scale" in result.output
+        assert "--padding" in result.output
+
     def test_gpx_help(self, runner: CliRunner) -> None:
         result = runner.invoke(cli, ["gpx", "--help"])
         assert result.exit_code == 0
@@ -975,7 +982,135 @@ class TestCliErrorHandling:
         assert result.exit_code != 0
 
 
-GPX_FILE_CONTENT = """\
+GEOJSON_STRING = """\
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-73.9857, 40.7484]
+      },
+      "properties": {
+        "name": "Empire State"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-74.006, 40.7128]
+      },
+      "properties": {
+        "name": "City Hall"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "MultiLineString",
+        "coordinates": [
+          [
+            [-73.9857, 40.7484],
+            [-73.996, 40.73],
+            [-74.006, 40.7128]
+          ]
+        ],
+        "bbox": [-74.006, 40.7128, -73.9857, 40.7484]
+      }
+    }
+  ]
+}
+"""
+
+
+class TestGeoJSONCommand:
+    """Tests for the geojson command."""
+
+    def _write_geojson(self, tmp_path: Path) -> Path:
+        p = tmp_path / "test.geojson"
+        p.write_text(GEOJSON_STRING, encoding="utf-8")
+        return p
+
+    def test_geojson_missing_file_argument(self, runner: CliRunner) -> None:
+        result = runner.invoke(cli, ["geojson"])
+        assert result.exit_code != 0
+
+    def test_geojson_nonexistent_input(self, runner: CliRunner, tmp_path: Path) -> None:
+        result = runner.invoke(
+            cli,
+            ["geojson", str(tmp_path / "missing.geojson"), str(tmp_path / "out.pdf")],
+        )
+        assert result.exit_code != 0
+
+    def test_geojson_basic_execution(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        mock_class, _mock_instance = mock_papermap
+        geojson_in = self._write_geojson(tmp_path)
+        output_file = tmp_path / "out.pdf"
+
+        result = runner.invoke(cli, ["geojson", str(geojson_in), str(output_file)])
+
+        assert result.exit_code == 0
+        mock_class.from_geojson.assert_called_once()
+        call_kwargs = mock_class.from_geojson.call_args.kwargs
+        assert call_kwargs["auto_scale"] is False
+        # When auto_scale is False, the CLI's default scale must be forwarded.
+        assert call_kwargs["scale"] == DEFAULT_SCALE
+
+    def test_geojson_auto_scale_drops_default_scale(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        mock_class, _mock_instance = mock_papermap
+        geojson_in = self._write_geojson(tmp_path)
+        output_file = tmp_path / "out.pdf"
+
+        result = runner.invoke(
+            cli, ["geojson", "--auto-scale", str(geojson_in), str(output_file)]
+        )
+
+        assert result.exit_code == 0
+        call_kwargs = mock_class.from_geojson.call_args.kwargs
+        assert call_kwargs["auto_scale"] is True
+        # When --auto-scale is set, the CLI must not forward the default scale.
+        assert "scale" not in call_kwargs
+
+    def test_geojson_padding_forwarded(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        mock_class, _mock_instance = mock_papermap
+        geojson_in = self._write_geojson(tmp_path)
+        output_file = tmp_path / "out.pdf"
+
+        result = runner.invoke(
+            cli,
+            [
+                "geojson",
+                "--auto-scale",
+                "--padding",
+                "12.5",
+                str(geojson_in),
+                str(output_file),
+            ],
+        )
+
+        assert result.exit_code == 0
+        call_kwargs = mock_class.from_geojson.call_args.kwargs
+        assert call_kwargs["padding"] == 12.5
+
+
+GPX_STRING = """\
 <?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="papermap-test" xmlns="http://www.topografix.com/GPX/1/1">
   <wpt lat="40.7484" lon="-73.9857"><name>Empire State</name></wpt>
@@ -994,7 +1129,7 @@ class TestGpxCommand:
 
     def _write_gpx(self, tmp_path: Path) -> Path:
         p = tmp_path / "test.gpx"
-        p.write_text(GPX_FILE_CONTENT, encoding="utf-8")
+        p.write_text(GPX_STRING, encoding="utf-8")
         return p
 
     def test_gpx_missing_file_argument(self, runner: CliRunner) -> None:

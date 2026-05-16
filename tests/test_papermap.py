@@ -1319,7 +1319,7 @@ class TestPaperMapFromGeoJSON:
 
     def test_from_geojson_invalid_type_raises(self) -> None:
         with pytest.raises(TypeError, match="GeoJSON dict or __geo_interface__"):
-            PaperMap.from_geojson("not a geojson object")  # type: ignore[arg-type, ty:invalid-argument-type]  # pyrefly: ignore[invalid-argument-type]
+            PaperMap.from_geojson([])  # type: ignore[arg-type, ty:invalid-argument-type]  # pyrefly: ignore[invalid-argument-type]
 
 
 class TestAutoScale:

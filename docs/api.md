@@ -21,6 +21,13 @@
    :members:
 ```
 
+## `papermap.geojson` Module
+
+```{eval-rst}
+.. automodule:: papermap.geojson
+   :members:
+```
+
 ## `papermap.gpx` Module
 
 ```{eval-rst}

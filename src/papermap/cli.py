@@ -225,6 +225,44 @@ def ecef(
 
 @cli.command()
 @click.argument(
+    "geojson_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
+)
+@click.option(
+    "--auto-scale",
+    "auto_scale",
+    default=False,
+    is_flag=True,
+    help="Compute the scale automatically to fit the GeoJSON geometries.",
+)
+@click.option(
+    "--padding",
+    type=float,
+    default=DEFAULT_AUTO_SCALE_PADDING,
+    metavar="MILLIMETERS",
+    help="Padding between the GeoJSON geometries and the image edge (per side). Only used with --auto-scale.",
+)
+@common_parameters
+def geojson(
+    geojson_file: Path,
+    auto_scale: bool,  # noqa: FBT001
+    padding: float,
+    file: Path,
+    **kwargs: Unpack[CommonParameters],
+) -> None:
+    """Generates a paper map for the given GeoJSON file and outputs it to file."""
+    forwarded: dict[str, Any] = dict(kwargs)
+    if auto_scale:
+        forwarded.pop("scale", None)
+    _render_and_save(
+        PaperMap.from_geojson(
+            geojson_file, auto_scale=auto_scale, padding=padding, **forwarded
+        ),
+        file,
+    )
+
+
+@cli.command()
+@click.argument(
     "gpx_file", type=click.Path(exists=True, dir_okay=False, path_type=Path)
 )
 @click.option(

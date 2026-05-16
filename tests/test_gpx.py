@@ -54,7 +54,7 @@ def sample_gpx_file(tmp_path: Path, sample_gpx_string: str) -> Path:
 
 @pytest.fixture
 def sample_gpx_object(sample_gpx_string: str) -> GPX:
-    """An in-memory GPX object with waypoints, a route, and a multi-segment track."""
+    """A GPX object with waypoints, a route, and a multi-segment track."""
     return from_string(sample_gpx_string)
 
 
@@ -145,8 +145,7 @@ class TestGpxParsing:
                 assert f.stroke_width == 1.5
 
     def test_empty_gpx_returns_empty_list(self) -> None:
-        empty = GPX()
-        assert gpx_to_features(empty) == []
+        assert gpx_to_features(GPX()) == []
 
     def test_nonexistent_file_raises(self, tmp_path: Path) -> None:
         with pytest.raises((FileNotFoundError, OSError)):

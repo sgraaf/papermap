@@ -273,9 +273,20 @@ If you already have the features you want to draw and just want the map to fit a
 >>> pm.save("NYC_Region.pdf")
 ```
 
+#### Reading GeoJSON Files
+
+`PaperMap.from_geojson()` parses a GeoJSON file or a GeoJSON object (or any object exposing `__geo_interface__`), centres the map on the geometries' bounding box, and adds them to the new map. Waypoints become circle markers, routes become lines, and each segment of each track becomes its own line. Use `pm.add_geojson()` to overlay GeoJSON geometries on an existing map.
+
+```python
+>>> from papermap import PaperMap
+>>> pm = PaperMap.from_geojson("hike.geojson", auto_scale=True, padding=10)
+>>> pm.render()
+>>> pm.save("Hike.pdf")
+```
+
 #### Reading GPX Files
 
-`PaperMap.from_gpx()` parses a GPX file (or any in-memory object exposing `__geo_interface__`, such as a [`gpx.GPX`](https://pypi.org/project/gpx/) instance), centres the map on the geometries' bounding box, and adds them to the new map. Waypoints become circle markers, routes become lines, and each segment of each track becomes its own line. Use `pm.add_gpx()` to overlay GPX geometries on an existing map.
+`PaperMap.from_gpx()` parses a GPX file (or any object exposing `__geo_interface__`, such as a [`gpx.GPX`](https://pypi.org/project/gpx/) instance), centres the map on the geometries' bounding box, and adds them to the new map. Waypoints become circle markers, routes become lines, and each segment of each track becomes its own line. Use `pm.add_gpx()` to overlay GPX geometries on an existing map.
 
 Reading GPX files from disk requires the optional `gpx` package; install it via `pip install papermap[gpx]`.
 

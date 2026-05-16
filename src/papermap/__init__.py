@@ -6,8 +6,6 @@ from .features import (
     Line,
     MapFeature,
     Polygon,
-    SupportsGeoInterface,
-    geojson_to_features,
 )
 from .geodesy import (
     ecef_to_latlon,
@@ -21,6 +19,7 @@ from .geodesy import (
     mgrs_to_latlon,
     utm_to_latlon,
 )
+from .geojson import SupportsGeoInterface, geojson_to_features
 from .gpx import gpx_to_features
 from .papermap import PaperMap
 

@@ -21,8 +21,6 @@ from .features import (
     Line,
     MapFeature,
     Polygon,
-    SupportsGeoInterface,
-    geojson_to_features,
     iter_feature_coordinates,
 )
 from .geodesy import (
@@ -34,6 +32,7 @@ from .geodesy import (
     mgrs_to_latlon,
     utm_to_latlon,
 )
+from .geojson import SupportsGeoInterface, geojson_to_features
 from .gpx import gpx_to_features
 from .tile import TILE_SIZE, Tile
 from .tile_provider import TileProvider
@@ -515,7 +514,7 @@ class PaperMap:
     @classmethod
     def from_geojson(
         cls,
-        obj: dict[str, Any] | SupportsGeoInterface,
+        geojson_source: str | Path | dict[str, Any] | SupportsGeoInterface,
         style: dict[str, Any] | None = None,
         *,
         auto_scale: bool = False,
@@ -524,17 +523,19 @@ class PaperMap:
     ) -> Self:
         """Create a paper map centred on the geographic centre of GeoJSON geometries.
 
-        Parses the input with :func:`papermap.features.geojson_to_features`
-        and then delegates to :meth:`from_features` to compute the centre
-        (the midpoint of the parsed features' bounding box) and to add the
-        parsed features to the new map.
+        Parses ``geojson_source`` with
+        :func:`papermap.features.geojson_to_features` and then delegates to
+        :meth:`from_features` to compute the centre (the midpoint of the
+        parsed features' bounding box) and to add the parsed features to the
+        new map.
 
         When ``auto_scale`` is ``True``, the map ``scale`` is computed
         automatically so that the parsed features fit within the printable
         image area. See :meth:`from_features` for details.
 
         Args:
-            obj: A GeoJSON dict or an object exposing ``__geo_interface__``.
+            geojson_source: A path to a ``.geojson`` file, or a GeoJSON dict
+                (or any object exposing ``__geo_interface__``).
             style: Default styling applied to every parsed feature. See
                 :func:`papermap.features.geojson_to_features` for the
                 supported keys and the precedence rules with
@@ -552,9 +553,9 @@ class PaperMap:
             bounding box, with the parsed features added.
 
         Raises:
-            TypeError: If ``obj`` is neither a dict nor exposes
-                ``__geo_interface__``.
-            ValueError: If ``obj`` parses to no features (e.g. an empty
+            TypeError: If ``geojson_source`` is neither a path-like nor a dict
+                nor exposes ``__geo_interface__``.
+            ValueError: If ``geojson_source`` parses to no features (e.g. an empty
                 ``FeatureCollection``), or if the parsed features contain no
                 coordinates.
             ValueError: If both ``auto_scale=True`` and ``scale`` are given.
@@ -580,7 +581,7 @@ class PaperMap:
             >>> pm.render()
             >>> pm.save("map_from_geojson.pdf")
         """
-        features = geojson_to_features(obj, style)
+        features = geojson_to_features(geojson_source, style)
         if not features:
             msg = "The provided GeoJSON object parsed to no features"
             raise ValueError(msg)
@@ -930,22 +931,23 @@ class PaperMap:
 
     def add_geojson(
         self,
-        obj: dict[str, Any] | SupportsGeoInterface,
+        geojson_source: str | Path | dict[str, Any] | SupportsGeoInterface,
         style: dict[str, Any] | None = None,
     ) -> list[MapFeature]:
-        """Add geometries from a GeoJSON object or ``__geo_interface__`` object.
+        """Add geometries from a GeoJSON file or GeoJSON object (or any object implementoing the ``__geo_interface__`` protocol).
 
         See :func:`papermap.features.geojson_to_features` for the supported
         GeoJSON types and the precedence rules for styling.
 
         Args:
-            obj: A GeoJSON dict or an object exposing ``__geo_interface__``.
+            geojson_source: A path to a ``.geojson`` file, or a GeoJSON dict
+                (or any object exposing ``__geo_interface__``).
             style: Default styling applied to every parsed feature.
 
         Returns:
             The list of features that were parsed and added to the map.
         """
-        features = geojson_to_features(obj, style)
+        features = geojson_to_features(geojson_source, style)
         self.features.extend(features)
         return features
 
@@ -954,7 +956,7 @@ class PaperMap:
         gpx_source: str | Path | SupportsGeoInterface,
         style: dict[str, Any] | None = None,
     ) -> list[MapFeature]:
-        """Add geometries from a GPX file or in-memory GPX object.
+        """Add geometries from a GPX file or GPX object.
 
         See :func:`papermap.gpx.gpx_to_features` for the parsing rules.
         Reading GPX files from disk requires the optional ``gpx`` package;
