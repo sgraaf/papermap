@@ -794,7 +794,7 @@ wheels = [
 
 [[package]]
 name = "papermap"
-version = "2026.1.0"
+version = "2026.2.0"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
