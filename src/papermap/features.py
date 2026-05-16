@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Protocol, TypeAlias, runtime_checkable
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import Iterator, Sequence
     from pathlib import Path
 
     from PIL import Image
@@ -151,6 +151,29 @@ class Polygon:
 
 MapFeature: TypeAlias = CircleMarker | IconMarker | Line | Polygon
 """Union type alias for any feature that can be rendered on the map."""
+
+
+def iter_feature_coordinates(feature: MapFeature) -> Iterator[tuple[float, float]]:
+    """Yield every ``(lat, lon)`` coordinate referenced by a feature.
+
+    For :class:`CircleMarker` and :class:`IconMarker`, the marker's single
+    anchor position is yielded. For :class:`Line`, every vertex is yielded.
+    For :class:`Polygon`, every vertex of every ring (outer boundary and
+    holes) is yielded.
+
+    Args:
+        feature: The feature to iterate over.
+
+    Yields:
+        ``(lat, lon)`` pairs, in the order they appear on the feature.
+    """
+    if isinstance(feature, (CircleMarker, IconMarker)):
+        yield (feature.lat, feature.lon)
+    elif isinstance(feature, Line):
+        yield from feature.coordinates
+    elif isinstance(feature, Polygon):
+        for ring in feature.coordinates:
+            yield from ring
 
 
 _SIMPLESTYLE_KEYS: dict[str, str] = {

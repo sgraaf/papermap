@@ -220,6 +220,81 @@ Overlay GeoJSON-style geometries (points, lines, polygons) on top of the base ma
 >>> pm.save("NYC_Annotated.pdf")
 ```
 
+#### Centering on Features
+
+If you already have the features you want to draw and just want the map to fit around them, use `PaperMap.from_features()`. It computes the centre as the midpoint of the features' bounding box, and adds the features to the new map automatically:
+
+```python
+>>> from papermap import PaperMap
+>>> from papermap.features import CircleMarker, Line
+>>> pm = PaperMap.from_features(
+...     CircleMarker(40.7484, -73.9857, fill_color="#f00"),  # Empire State Building
+...     CircleMarker(40.7128, -74.0060, fill_color="#f00"),  # NYC City Hall
+...     Line(
+...         [(40.7484, -73.9857), (40.7128, -74.0060)],
+...         stroke_color="#00f",
+...         stroke_width=1.0,
+...     ),
+...     scale=25_000,
+... )
+>>> pm.render()
+>>> pm.save("NYC_Landmarks.pdf")
+```
+
+#### Centering on GeoJSON
+
+`PaperMap.from_geojson()` does the same thing for a raw GeoJSON dict (or any object exposing the `__geo_interface__` protocol). It parses the geometries, computes the centre of their bounding box, and adds the parsed features to the new map. An optional `style` dict provides default styling for every parsed feature (overridden by per-feature `simplestyle-spec` properties):
+
+```python
+>>> from papermap import PaperMap
+>>> geojson = {
+...     "type": "FeatureCollection",
+...     "features": [
+...         {
+...             "type": "Feature",
+...             "geometry": {
+...                 "type": "Polygon",
+...                 "coordinates": [
+...                     [
+...                         [-74.020, 40.710],
+...                         [-74.000, 40.710],
+...                         [-74.000, 40.720],
+...                         [-74.020, 40.720],
+...                         [-74.020, 40.710],
+...                     ]
+...                 ],
+...             },
+...             "properties": {"fill": "#0f0", "fill-opacity": 0.3},
+...         }
+...     ],
+... }
+>>> pm = PaperMap.from_geojson(geojson, scale=25_000)
+>>> pm.render()
+>>> pm.save("NYC_Region.pdf")
+```
+
+#### Auto-scaling to Features
+
+Pass `auto_scale=True` to `from_features()` or `from_geojson()` to skip picking a scale by hand. The scale is computed so the features fit within the printable area and then snapped up to the nearest common cartographic scale (1:1 000, 1:2 500, 1:5 000, 1:10 000, 1:25 000, 1:50 000, …). Use `padding` (mm per side, default `5.0`) to control how much breathing room is left around the features:
+
+```python
+>>> from papermap import PaperMap
+>>> from papermap.features import CircleMarker, Line
+>>> pm = PaperMap.from_features(
+...     CircleMarker(40.7484, -73.9857, fill_color="#f00"),  # Empire State Building
+...     CircleMarker(40.7128, -74.0060, fill_color="#f00"),  # NYC City Hall
+...     Line(
+...         [(40.7484, -73.9857), (40.7128, -74.0060)],
+...         stroke_color="#00f",
+...         stroke_width=1.0,
+...     ),
+...     auto_scale=True,
+...     padding=10,
+... )
+>>> pm.render()
+>>> pm.save("NYC_Landmarks_Autoscale.pdf")
+```
+
 For more options and details, see the [API Reference](https://papermap.readthedocs.io/en/stable/api.html#papermap.papermap.PaperMap).
 
 ### As a CLI Tool

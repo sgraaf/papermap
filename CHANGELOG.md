@@ -25,6 +25,8 @@ The **third number** is for emergencies when we need to start branches for older
 
   Features render above the base map but below the grid, and are clipped to the map area.
 
+- Added `PaperMap.from_features()` and `PaperMap.from_geojson()` classmethods to create a `PaperMap` centred on the geographic centre (bounding box midpoint) of one or more features (or geometries parsed from a GeoJSON object, or any object exposing `__geo_interface__`). The provided/parsed features are also added to the new map so they will be drawn when `render()` is called. Both classmethods accept `auto_scale` and `padding` keyword arguments: when `auto_scale=True`, the map scale is computed automatically so that the supplied features fit within the printable image area (paper size minus margins minus `padding`), then snapped up to the nearest common cartographic scale (1:1 000, 1:2 500, …, 1:50 000 000). Passing both `auto_scale=True` and an explicit `scale` raises `ValueError`.
+
 ### Fixed
 
 - Fixed broken URL templates for the Esri, USGS, ÖPNVKarte, and Mapy.cz tile providers, where the upstream `server`/`MapServer` hostnames and paths had been incorrectly renamed to `provider`/`MapProvider`

@@ -13,6 +13,7 @@ from papermap.features import (
     Polygon,
     SupportsGeoInterface,
     geojson_to_features,
+    iter_feature_coordinates,
 )
 
 
@@ -390,6 +391,38 @@ class TestIconMarkerEquality:
         # Simulate a render populating the cache on one of the markers.
         a._loaded_icon = Image.new("RGBA", (1, 1))  # noqa: SLF001
         assert a == b
+
+
+class TestIterFeatureCoordinates:
+    """Tests for the iter_feature_coordinates helper."""
+
+    def test_circle_marker_yields_single_coordinate(self) -> None:
+        marker = CircleMarker(40.7128, -74.0060)
+        assert list(iter_feature_coordinates(marker)) == [(40.7128, -74.0060)]
+
+    def test_icon_marker_yields_single_coordinate(self) -> None:
+        marker = IconMarker(40.7128, -74.0060, icon="path/to/icon.png")
+        assert list(iter_feature_coordinates(marker)) == [(40.7128, -74.0060)]
+
+    def test_line_yields_every_vertex_in_order(self) -> None:
+        line = Line([(40.0, -75.0), (41.0, -74.0), (42.0, -73.0)])
+        assert list(iter_feature_coordinates(line)) == [
+            (40.0, -75.0),
+            (41.0, -74.0),
+            (42.0, -73.0),
+        ]
+
+    def test_polygon_yields_outer_then_holes(self) -> None:
+        outer = [(40.0, -75.0), (42.0, -75.0), (42.0, -73.0), (40.0, -75.0)]
+        hole = [(40.5, -74.5), (41.5, -74.5), (41.5, -73.5), (40.5, -74.5)]
+        polygon = Polygon([outer, hole])
+        assert list(iter_feature_coordinates(polygon)) == [*outer, *hole]
+
+    def test_empty_polygon_yields_nothing(self) -> None:
+        assert list(iter_feature_coordinates(Polygon([]))) == []
+
+    def test_empty_line_yields_nothing(self) -> None:
+        assert list(iter_feature_coordinates(Line([]))) == []
 
 
 class TestPolygonDegenerateRings:

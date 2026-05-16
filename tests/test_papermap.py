@@ -13,11 +13,13 @@ from pytest_httpx import HTTPXMock
 from papermap.features import CircleMarker, IconMarker, Line, Polygon
 from papermap.geodesy import ECEFCoordinate, MGRSCoordinate, UTMCoordinate
 from papermap.papermap import (
+    COMMON_SCALES,
     DEFAULT_DPI,
     DEFAULT_SCALE,
     PAPER_SIZE_TO_DIMENSIONS_MAP,
     PAPER_SIZES,
     PaperMap,
+    _compute_auto_scale,
 )
 
 
@@ -1108,6 +1110,387 @@ class TestFeatureBuilders:
         )
         assert len(added) == 2
         assert len(pm.features) == 3  # 1 pre-existing + 2 added
+
+
+class TestPaperMapFromFeatures:
+    """Tests for PaperMap.from_features() classmethod."""
+
+    def test_from_features_single_circle_marker(self) -> None:
+        marker = CircleMarker(40.7128, -74.0060)
+        pm = PaperMap.from_features(marker)
+
+        assert isinstance(pm, PaperMap)
+        assert isclose(pm.lat, 40.7128, abs_tol=1e-9)
+        assert isclose(pm.lon, -74.0060, abs_tol=1e-9)
+        assert pm.features == [marker]
+
+    def test_from_features_multiple_markers_uses_bbox_center(self) -> None:
+        m1 = CircleMarker(40.0, -75.0)
+        m2 = CircleMarker(41.0, -73.0)
+        pm = PaperMap.from_features(m1, m2)
+
+        assert isclose(pm.lat, 40.5, abs_tol=1e-9)
+        assert isclose(pm.lon, -74.0, abs_tol=1e-9)
+        assert pm.features == [m1, m2]
+
+    def test_from_features_line(self) -> None:
+        line = Line([(40.0, -75.0), (41.0, -73.0), (40.5, -74.5)])
+        pm = PaperMap.from_features(line)
+
+        # bbox center of the three vertices
+        assert isclose(pm.lat, 40.5, abs_tol=1e-9)
+        assert isclose(pm.lon, -74.0, abs_tol=1e-9)
+        assert pm.features == [line]
+
+    def test_from_features_polygon_with_hole(self) -> None:
+        # Outer ring spans lat [40, 42], lon [-75, -73].
+        # Inner ring (hole) is contained within the outer ring's bbox.
+        outer = [
+            (40.0, -75.0),
+            (42.0, -75.0),
+            (42.0, -73.0),
+            (40.0, -73.0),
+            (40.0, -75.0),
+        ]
+        inner = [
+            (40.5, -74.5),
+            (41.5, -74.5),
+            (41.5, -73.5),
+            (40.5, -73.5),
+            (40.5, -74.5),
+        ]
+        poly = Polygon([outer, inner])
+        pm = PaperMap.from_features(poly)
+
+        assert isclose(pm.lat, 41.0, abs_tol=1e-9)
+        assert isclose(pm.lon, -74.0, abs_tol=1e-9)
+
+    def test_from_features_icon_marker(self) -> None:
+        marker = IconMarker(40.0, -75.0, icon="path/to/icon.png")
+        pm = PaperMap.from_features(marker)
+
+        assert isclose(pm.lat, 40.0, abs_tol=1e-9)
+        assert isclose(pm.lon, -75.0, abs_tol=1e-9)
+        assert pm.features == [marker]
+
+    def test_from_features_mixed_types(self) -> None:
+        marker = CircleMarker(40.0, -75.0)
+        line = Line([(42.0, -73.0), (41.0, -74.0)])
+        pm = PaperMap.from_features(marker, line)
+
+        # bbox: lat [40, 42], lon [-75, -73]
+        assert isclose(pm.lat, 41.0, abs_tol=1e-9)
+        assert isclose(pm.lon, -74.0, abs_tol=1e-9)
+        assert pm.features == [marker, line]
+
+    def test_from_features_passes_kwargs(self) -> None:
+        marker = CircleMarker(40.7128, -74.0060)
+        pm = PaperMap.from_features(
+            marker, paper_size="a3", scale=10000, use_landscape=True, add_grid=True
+        )
+
+        assert pm.width == 420  # A3 landscape width
+        assert pm.scale == 10000
+        assert pm.use_landscape
+        assert pm.add_grid
+
+    def test_from_features_empty_sequence_raises(self) -> None:
+        with pytest.raises(ValueError, match="At least one feature"):
+            PaperMap.from_features()
+
+    def test_from_features_no_coordinates_raises(self) -> None:
+        # A Polygon with empty rings has no coordinates.
+        empty_polygon = Polygon([])
+        with pytest.raises(ValueError, match="no coordinates"):
+            PaperMap.from_features(empty_polygon)
+
+
+class TestPaperMapFromGeoJSON:
+    """Tests for PaperMap.from_geojson() classmethod."""
+
+    def test_from_geojson_point(self) -> None:
+        pm = PaperMap.from_geojson(
+            {"type": "Point", "coordinates": [-74.0060, 40.7128]}
+        )
+
+        assert isinstance(pm, PaperMap)
+        assert isclose(pm.lat, 40.7128, abs_tol=1e-9)
+        assert isclose(pm.lon, -74.0060, abs_tol=1e-9)
+        assert len(pm.features) == 1
+        assert isinstance(pm.features[0], CircleMarker)
+
+    def test_from_geojson_feature_collection_bbox_center(self) -> None:
+        pm = PaperMap.from_geojson(
+            {
+                "type": "FeatureCollection",
+                "features": [
+                    {
+                        "type": "Feature",
+                        "geometry": {"type": "Point", "coordinates": [-75.0, 40.0]},
+                        "properties": {},
+                    },
+                    {
+                        "type": "Feature",
+                        "geometry": {"type": "Point", "coordinates": [-73.0, 42.0]},
+                        "properties": {},
+                    },
+                ],
+            }
+        )
+
+        # bbox: lat [40, 42], lon [-75, -73]
+        assert isclose(pm.lat, 41.0, abs_tol=1e-9)
+        assert isclose(pm.lon, -74.0, abs_tol=1e-9)
+        assert len(pm.features) == 2
+
+    def test_from_geojson_linestring(self) -> None:
+        pm = PaperMap.from_geojson(
+            {
+                "type": "LineString",
+                "coordinates": [[-75.0, 40.0], [-73.0, 42.0]],
+            }
+        )
+
+        assert isclose(pm.lat, 41.0, abs_tol=1e-9)
+        assert isclose(pm.lon, -74.0, abs_tol=1e-9)
+        assert len(pm.features) == 1
+        assert isinstance(pm.features[0], Line)
+
+    def test_from_geojson_polygon(self) -> None:
+        pm = PaperMap.from_geojson(
+            {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [-75.0, 40.0],
+                        [-73.0, 40.0],
+                        [-73.0, 42.0],
+                        [-75.0, 42.0],
+                        [-75.0, 40.0],
+                    ]
+                ],
+            }
+        )
+
+        assert isclose(pm.lat, 41.0, abs_tol=1e-9)
+        assert isclose(pm.lon, -74.0, abs_tol=1e-9)
+        assert len(pm.features) == 1
+        assert isinstance(pm.features[0], Polygon)
+
+    def test_from_geojson_applies_default_style(self) -> None:
+        pm = PaperMap.from_geojson(
+            {"type": "Point", "coordinates": [-74.0060, 40.7128]},
+            style={"fill_color": "#f00", "radius": 4.0},
+        )
+
+        marker = pm.features[0]
+        assert isinstance(marker, CircleMarker)
+        assert marker.fill_color == "#f00"
+        assert marker.radius == 4.0
+
+    def test_from_geojson_passes_kwargs(self) -> None:
+        pm = PaperMap.from_geojson(
+            {"type": "Point", "coordinates": [-74.0060, 40.7128]},
+            paper_size="a3",
+            scale=10000,
+            use_landscape=True,
+        )
+
+        assert pm.width == 420  # A3 landscape width
+        assert pm.scale == 10000
+        assert pm.use_landscape
+
+    def test_from_geojson_geo_interface_object(self) -> None:
+        class FakeGeo:
+            def __init__(self) -> None:
+                self.__geo_interface__ = {
+                    "type": "Point",
+                    "coordinates": [-74.0060, 40.7128],
+                }
+
+        pm = PaperMap.from_geojson(FakeGeo())
+
+        assert isclose(pm.lat, 40.7128, abs_tol=1e-9)
+        assert isclose(pm.lon, -74.0060, abs_tol=1e-9)
+
+    def test_from_geojson_empty_feature_collection_raises(self) -> None:
+        with pytest.raises(ValueError, match="parsed to no features"):
+            PaperMap.from_geojson({"type": "FeatureCollection", "features": []})
+
+    def test_from_geojson_invalid_type_raises(self) -> None:
+        with pytest.raises(TypeError, match="GeoJSON dict or __geo_interface__"):
+            PaperMap.from_geojson("not a geojson object")  # type: ignore[arg-type, ty:invalid-argument-type]  # pyrefly: ignore[invalid-argument-type]
+
+
+class TestAutoScale:
+    """Tests for the ``auto_scale`` flag on from_features / from_geojson."""
+
+    # A reusable two-marker bbox spanning roughly 0.05° lat and 0.05° lon.
+    _NW = (40.7484, -74.0260)
+    _SE = (40.7000, -73.9760)
+
+    def _two_markers(self) -> tuple[CircleMarker, CircleMarker]:
+        return CircleMarker(*self._NW), CircleMarker(*self._SE)
+
+    def test_auto_scale_fits_bbox(self) -> None:
+        nw, se = self._two_markers()
+        pm = PaperMap.from_features(nw, se, auto_scale=True)
+        for marker in (nw, se):
+            x, y = pm.latlon_to_pdf_mm(marker.lat, marker.lon)
+            assert pm.margin_left <= x <= pm.margin_left + pm.image_width
+            assert pm.margin_top <= y <= pm.margin_top + pm.image_height
+
+    def test_auto_scale_snaps_to_common_scale(self) -> None:
+        pm = PaperMap.from_features(*self._two_markers(), auto_scale=True)
+        assert pm.scale in COMMON_SCALES
+
+    def test_auto_scale_larger_paper_yields_smaller_scale_denominator(self) -> None:
+        pm_a4 = PaperMap.from_features(
+            *self._two_markers(), auto_scale=True, paper_size="a4"
+        )
+        pm_a3 = PaperMap.from_features(
+            *self._two_markers(), auto_scale=True, paper_size="a3"
+        )
+        # A3 (larger paper) fits the same bbox at a more zoomed-in scale
+        # (smaller denominator).
+        assert pm_a3.scale <= pm_a4.scale
+
+    def test_auto_scale_landscape_changes_scale(self) -> None:
+        portrait = PaperMap.from_features(
+            *self._two_markers(), auto_scale=True, use_landscape=False
+        )
+        landscape = PaperMap.from_features(
+            *self._two_markers(), auto_scale=True, use_landscape=True
+        )
+        # Different orientation may or may not change the snapped scale,
+        # but in both cases the bbox should fit.
+        assert portrait.scale in COMMON_SCALES
+        assert landscape.scale in COMMON_SCALES
+
+    def test_auto_scale_respects_custom_margins(self) -> None:
+        pm_small = PaperMap.from_features(*self._two_markers(), auto_scale=True)
+        pm_large = PaperMap.from_features(
+            *self._two_markers(),
+            auto_scale=True,
+            margin_top=40,
+            margin_right=40,
+            margin_bottom=40,
+            margin_left=40,
+        )
+        # Less printable area => same-or-larger scale denominator.
+        assert pm_large.scale >= pm_small.scale
+
+    def test_auto_scale_respects_custom_padding(self) -> None:
+        pm_zero = PaperMap.from_features(
+            *self._two_markers(), auto_scale=True, padding=0
+        )
+        pm_padded = PaperMap.from_features(
+            *self._two_markers(), auto_scale=True, padding=20
+        )
+        assert pm_padded.scale >= pm_zero.scale
+
+    def test_auto_scale_conflicts_with_explicit_scale(self) -> None:
+        with pytest.raises(ValueError, match="Cannot specify both 'scale'"):
+            PaperMap.from_features(*self._two_markers(), auto_scale=True, scale=10_000)
+
+    def test_auto_scale_single_point_raises(self) -> None:
+        with pytest.raises(ValueError, match="zero geographic extent"):
+            PaperMap.from_features(CircleMarker(40.7128, -74.0060), auto_scale=True)
+
+    def test_auto_scale_collinear_features_raises(self) -> None:
+        # All features on the same meridian: zero lon extent.
+        with pytest.raises(ValueError, match="zero geographic extent"):
+            PaperMap.from_features(
+                CircleMarker(40.70, -74.00),
+                CircleMarker(40.72, -74.00),
+                CircleMarker(40.74, -74.00),
+                auto_scale=True,
+            )
+
+    def test_auto_scale_padding_too_large_raises(self) -> None:
+        # A4 is 210x297mm; with default 10mm margins, padding=200 makes
+        # 2*padding alone (400mm) exceed both dimensions.
+        with pytest.raises(ValueError, match="no printable area"):
+            PaperMap.from_features(*self._two_markers(), auto_scale=True, padding=200)
+
+    def test_auto_scale_zoom_out_of_provider_bounds(self) -> None:
+        # The default OSM provider has zoom_max=19; force a tiny bbox that
+        # demands a higher zoom (smaller scale), then enrich the error message.
+        with pytest.raises(ValueError, match=r"auto-scaled to 1:\d+"):
+            PaperMap.from_features(
+                CircleMarker(40.71280, -74.00600),
+                CircleMarker(40.71281, -74.00601),
+                auto_scale=True,
+            )
+
+    def test_from_geojson_auto_scale_passthrough(self) -> None:
+        geojson = {
+            "type": "FeatureCollection",
+            "features": [
+                {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [self._NW[1], self._NW[0]],
+                    },
+                    "properties": {},
+                },
+                {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "Point",
+                        "coordinates": [self._SE[1], self._SE[0]],
+                    },
+                    "properties": {},
+                },
+            ],
+        }
+        pm_geojson = PaperMap.from_geojson(geojson, auto_scale=True)
+        pm_features = PaperMap.from_features(*self._two_markers(), auto_scale=True)
+        assert pm_geojson.scale == pm_features.scale
+
+    def test_from_geojson_auto_scale_conflicts_with_explicit_scale(self) -> None:
+        geojson = {"type": "Point", "coordinates": [-74.0060, 40.7128]}
+        with pytest.raises(ValueError, match="Cannot specify both 'scale'"):
+            PaperMap.from_geojson(geojson, auto_scale=True, scale=10_000)
+
+    def test_compute_auto_scale_unit(self) -> None:
+        # Direct unit test of the helper: a 0.01° lat/lon bbox around NYC
+        # on A4 portrait, default margins, default padding, default DPI.
+        scale = _compute_auto_scale(
+            lat_min=40.700,
+            lat_max=40.710,
+            lon_min=-74.010,
+            lon_max=-74.000,
+            paper_size="a4",
+            use_landscape=False,
+            margin_top=10,
+            margin_right=10,
+            margin_bottom=10,
+            margin_left=10,
+            dpi=DEFAULT_DPI,
+            padding=5.0,
+        )
+        # Result should be a positive common scale.
+        assert scale in COMMON_SCALES
+        assert scale > 0
+
+    def test_compute_auto_scale_invalid_paper_size_raises(self) -> None:
+        with pytest.raises(ValueError, match="Invalid paper size"):
+            _compute_auto_scale(
+                lat_min=40.70,
+                lat_max=40.71,
+                lon_min=-74.01,
+                lon_max=-74.00,
+                paper_size="nonexistent",
+                use_landscape=False,
+                margin_top=10,
+                margin_right=10,
+                margin_bottom=10,
+                margin_left=10,
+                dpi=DEFAULT_DPI,
+                padding=5.0,
+            )
 
 
 class TestLatLonToPdfMm:

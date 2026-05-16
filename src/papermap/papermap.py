@@ -7,7 +7,7 @@ from decimal import Decimal
 from importlib import metadata
 from io import BytesIO
 from itertools import count
-from math import ceil, floor, radians
+from math import ceil, floor, log2, radians
 from pathlib import Path
 from typing import Any, Self
 
@@ -23,6 +23,7 @@ from .features import (
     Polygon,
     SupportsGeoInterface,
     geojson_to_features,
+    iter_feature_coordinates,
 )
 from .geodesy import (
     ECEFCoordinate,
@@ -50,6 +51,7 @@ from .utils import (
     pt_to_mm,
     px_to_mm,
     scale_to_zoom,
+    zoom_to_scale,
 )
 
 NAME: str = "papermap"
@@ -87,6 +89,131 @@ DEFAULT_BACKGROUND_COLOR: str = "#fff"
 DEFAULT_GRID_SIZE: int = 1_000
 """Default grid size in meters."""
 
+DEFAULT_AUTO_SCALE_PADDING: float = 5.0
+"""Default padding (in mm, per side) between features and the image edge when ``auto_scale`` is enabled."""
+
+
+class ScaleOutOfBoundsError(ValueError):
+    """Raised when the resolved zoom level is outside the tile provider's bounds."""
+
+
+COMMON_SCALES: tuple[int, ...] = (
+    500,
+    1_000,
+    2_500,
+    5_000,
+    10_000,
+    25_000,
+    50_000,
+    100_000,
+    250_000,
+    500_000,
+    1_000_000,
+    2_500_000,
+    5_000_000,
+    10_000_000,
+    25_000_000,
+    50_000_000,
+)
+"""Common cartographic scales that ``auto_scale`` snaps up to."""
+
+
+def _compute_auto_scale(  # noqa: PLR0913
+    lat_min: float,
+    lat_max: float,
+    lon_min: float,
+    lon_max: float,
+    *,
+    paper_size: str,
+    use_landscape: bool,
+    margin_top: int,
+    margin_right: int,
+    margin_bottom: int,
+    margin_left: int,
+    dpi: int,
+    padding: float,
+) -> int:
+    """Compute the smallest common-cartographic scale that fits a bbox on paper.
+
+    Given a geographic bounding box and the paper-area parameters, computes
+    the most zoomed-in scale at which the bounding box still fits within
+    the printable image area (paper size minus margins minus padding), then
+    snaps up to the nearest entry in :data:`COMMON_SCALES`.
+
+    Args:
+        lat_min: Minimum latitude of the bounding box.
+        lat_max: Maximum latitude of the bounding box.
+        lon_min: Minimum longitude of the bounding box.
+        lon_max: Maximum longitude of the bounding box.
+        paper_size: Paper size name (e.g. ``"a4"``).
+        use_landscape: Whether the paper is in landscape orientation.
+        margin_top: Top margin, in mm.
+        margin_right: Right margin, in mm.
+        margin_bottom: Bottom margin, in mm.
+        margin_left: Left margin, in mm.
+        dpi: Dots per inch.
+        padding: Padding between the features and the image edge, in mm per side.
+
+    Returns:
+        The auto-computed scale (e.g. ``25_000`` for 1:25 000), snapped up
+        to a common cartographic scale.
+
+    Raises:
+        ValueError: If the paper size is invalid.
+        ValueError: If padding/margins leave no printable area.
+        ValueError: If the bounding box has zero extent on either axis.
+    """
+    if paper_size not in PAPER_SIZE_TO_DIMENSIONS_MAP:
+        msg = f"Invalid paper size. Please choose one of {', '.join(PAPER_SIZES)}"
+        raise ValueError(msg)
+    width_mm, height_mm = PAPER_SIZE_TO_DIMENSIONS_MAP[paper_size]
+    if use_landscape:
+        width_mm, height_mm = height_mm, width_mm
+
+    image_w_mm = width_mm - margin_left - margin_right - 2 * padding
+    image_h_mm = height_mm - margin_top - margin_bottom - 2 * padding
+    if image_w_mm <= 0 or image_h_mm <= 0:
+        msg = "Padding and margins leave no printable area"
+        raise ValueError(msg)
+
+    image_w_px = mm_to_px(image_w_mm, dpi)
+    image_h_px = mm_to_px(image_h_mm, dpi)
+
+    # Longitude maps linearly to x, so the lon midpoint is also the x midpoint
+    # and the symmetric extent is simply (x_max - x_min).
+    ex0 = lon_to_x(lon_max, 0) - lon_to_x(lon_min, 0)
+
+    # Latitude maps non-linearly to y (Web Mercator), so the page-y position of
+    # the lat midpoint is NOT the midpoint of y_top/y_bottom. To guarantee the
+    # bbox fits when centred on the lat midpoint, use twice the larger of the
+    # two half-extents about that y-centre as the effective height extent.
+    center_lat = (lat_min + lat_max) / 2
+    y_top = lat_to_y(lat_max, 0)
+    y_bottom = lat_to_y(lat_min, 0)
+    y_center = lat_to_y(center_lat, 0)
+    ey0 = 2 * max(y_bottom - y_center, y_center - y_top)
+
+    if ex0 <= 0 or ey0 <= 0:
+        msg = (
+            "Cannot auto-scale: features have zero geographic extent along "
+            "at least one axis; provide an explicit 'scale' instead"
+        )
+        raise ValueError(msg)
+
+    zoom_x = log2(image_w_px / (ex0 * TILE_SIZE))
+    zoom_y = log2(image_h_px / (ey0 * TILE_SIZE))
+    zoom = min(zoom_x, zoom_y)
+
+    raw_scale = zoom_to_scale(zoom, center_lat, dpi)
+
+    # Snap up to the smallest common scale >= raw_scale.
+    for s in COMMON_SCALES:
+        if s >= raw_scale:
+            return s
+    # Bbox is so large no common scale fits; fall back to the next multiple
+    # of 1 000 000.
+    return ceil(raw_scale / 1_000_000) * 1_000_000
+
 
 @dataclass(slots=True)
 class PaperMap:
@@ -119,7 +246,8 @@ class PaperMap:
         ValueError: If the tile provider is invalid.
         ValueError: If no API key is specified (when applicable).
         ValueError: If the paper size is invalid.
-        ValueError: If the scale is "out of bounds".
+        ScaleOutOfBoundsError: If the scale is "out of bounds" for the chosen
+            tile provider.
     """
 
     lat: float
@@ -277,6 +405,188 @@ class PaperMap:
         lat, lon, _ = ecef_to_latlon(ecef)
         return cls(lat, lon, **kwargs)
 
+    @classmethod
+    def from_features(
+        cls,
+        *features: MapFeature,
+        auto_scale: bool = False,
+        padding: float = DEFAULT_AUTO_SCALE_PADDING,
+        **kwargs: Any,
+    ) -> Self:
+        """Create a paper map centred on the geographic centre of the given feature(s).
+
+        The centre is the midpoint of the features' bounding box (the
+        midpoints of the min/max latitude and longitude across every
+        coordinate referenced by the features). The features are also added
+        to the new map and will be drawn when :meth:`render` is called.
+
+        When ``auto_scale`` is ``True``, the map ``scale`` is computed
+        automatically so that the bounding box fits within the printable
+        image area (paper size minus margins minus ``padding``), then
+        snapped up to the nearest common cartographic scale (see
+        :data:`COMMON_SCALES`). Passing ``auto_scale=True`` together with
+        an explicit ``scale`` raises a ``ValueError``.
+
+        Args:
+            features: One or more :data:`MapFeature` instances.
+            auto_scale: If ``True``, compute the scale automatically to fit
+                the features. Defaults to ``False``.
+            padding: Padding between the features and the image edge, in mm
+                per side. Only consulted when ``auto_scale`` is ``True``.
+                Defaults to ``5.0``.
+            **kwargs: Additional keyword arguments to pass to PaperMap
+                constructor.
+
+        Returns:
+            A new PaperMap instance centred on the features' bounding box,
+            with the features added.
+
+        Raises:
+            ValueError: If no features are given.
+            ValueError: If none of the features contain any coordinates.
+            ValueError: If both ``auto_scale=True`` and ``scale`` are given.
+            ValueError: If ``auto_scale=True`` and the features have zero
+                geographic extent along at least one axis.
+            ScaleOutOfBoundsError: If ``auto_scale=True`` and the computed
+                scale is out of the tile provider's zoom bounds.
+
+        Note:
+            Features spanning the ±180° anti-meridian are not handled
+            specially; the resulting centre may be on the opposite side of
+            the world from where you expect.
+
+        Examples:
+            >>> from papermap import PaperMap
+            >>> from papermap.features import CircleMarker, Line
+            >>> pm = PaperMap.from_features(
+            ...     CircleMarker(40.7128, -74.0060),
+            ...     Line([(40.71, -74.01), (40.72, -73.99)]),
+            ...     auto_scale=True,
+            ... )
+            >>> pm.render()
+            >>> pm.save("map_from_features.pdf")
+        """
+        if not features:
+            msg = "At least one feature must be provided"
+            raise ValueError(msg)
+
+        coords = [c for f in features for c in iter_feature_coordinates(f)]
+        if not coords:
+            msg = "The provided feature(s) contain no coordinates"
+            raise ValueError(msg)
+
+        lats = [lat for lat, _ in coords]
+        lons = [lon for _, lon in coords]
+        lat_min, lat_max = min(lats), max(lats)
+        lon_min, lon_max = min(lons), max(lons)
+        center_lat = (lat_min + lat_max) / 2
+        center_lon = (lon_min + lon_max) / 2
+
+        if auto_scale:
+            if "scale" in kwargs:
+                msg = "Cannot specify both 'scale' and 'auto_scale=True'"
+                raise ValueError(msg)
+            kwargs["scale"] = _compute_auto_scale(
+                lat_min,
+                lat_max,
+                lon_min,
+                lon_max,
+                paper_size=kwargs.get("paper_size", DEFAULT_PAPER_SIZE),
+                use_landscape=kwargs.get("use_landscape", False),
+                margin_top=kwargs.get("margin_top", DEFAULT_MARGIN),
+                margin_right=kwargs.get("margin_right", DEFAULT_MARGIN),
+                margin_bottom=kwargs.get("margin_bottom", DEFAULT_MARGIN),
+                margin_left=kwargs.get("margin_left", DEFAULT_MARGIN),
+                dpi=kwargs.get("dpi", DEFAULT_DPI),
+                padding=padding,
+            )
+
+        try:
+            pm = cls(center_lat, center_lon, **kwargs)
+        except ScaleOutOfBoundsError as e:
+            if auto_scale:
+                msg = f"{e} (auto-scaled to 1:{kwargs['scale']})"
+                raise ScaleOutOfBoundsError(msg) from e
+            raise
+        pm.features += list(features)
+        return pm
+
+    @classmethod
+    def from_geojson(
+        cls,
+        obj: dict[str, Any] | SupportsGeoInterface,
+        style: dict[str, Any] | None = None,
+        *,
+        auto_scale: bool = False,
+        padding: float = DEFAULT_AUTO_SCALE_PADDING,
+        **kwargs: Any,
+    ) -> Self:
+        """Create a paper map centred on the geographic centre of GeoJSON geometries.
+
+        Parses the input with :func:`papermap.features.geojson_to_features`
+        and then delegates to :meth:`from_features` to compute the centre
+        (the midpoint of the parsed features' bounding box) and to add the
+        parsed features to the new map.
+
+        When ``auto_scale`` is ``True``, the map ``scale`` is computed
+        automatically so that the parsed features fit within the printable
+        image area. See :meth:`from_features` for details.
+
+        Args:
+            obj: A GeoJSON dict or an object exposing ``__geo_interface__``.
+            style: Default styling applied to every parsed feature. See
+                :func:`papermap.features.geojson_to_features` for the
+                supported keys and the precedence rules with
+                ``simplestyle-spec`` properties.
+            auto_scale: If ``True``, compute the scale automatically to fit
+                the parsed features. Defaults to ``False``.
+            padding: Padding between the features and the image edge, in mm
+                per side. Only consulted when ``auto_scale`` is ``True``.
+                Defaults to ``5.0``.
+            **kwargs: Additional keyword arguments to pass to PaperMap
+                constructor.
+
+        Returns:
+            A new PaperMap instance centred on the parsed features'
+            bounding box, with the parsed features added.
+
+        Raises:
+            TypeError: If ``obj`` is neither a dict nor exposes
+                ``__geo_interface__``.
+            ValueError: If ``obj`` parses to no features (e.g. an empty
+                ``FeatureCollection``), or if the parsed features contain no
+                coordinates.
+            ValueError: If both ``auto_scale=True`` and ``scale`` are given.
+            ValueError: If ``auto_scale=True`` and the parsed features have
+                zero geographic extent along at least one axis.
+
+        Examples:
+            >>> from papermap import PaperMap
+            >>> geojson = {
+            ...     "type": "FeatureCollection",
+            ...     "features": [
+            ...         {
+            ...             "type": "Feature",
+            ...             "geometry": {
+            ...                 "type": "Point",
+            ...                 "coordinates": [-74.0060, 40.7128],
+            ...             },
+            ...             "properties": {},
+            ...         }
+            ...     ],
+            ... }
+            >>> pm = PaperMap.from_geojson(geojson)
+            >>> pm.render()
+            >>> pm.save("map_from_geojson.pdf")
+        """
+        features = geojson_to_features(obj, style)
+        if not features:
+            msg = "The provided GeoJSON object parsed to no features"
+            raise ValueError(msg)
+        return cls.from_features(
+            *features, auto_scale=auto_scale, padding=padding, **kwargs
+        )
+
     def _validate_coordinates(self) -> None:
         """Validate ``self.lat`` and ``self.lon`` are within valid ranges.
 
@@ -340,7 +650,8 @@ class PaperMap:
             tile_provider_key: The tile provider key for error messages.
 
         Raises:
-            ValueError: If computed zoom is out of bounds for the tile provider.
+            ScaleOutOfBoundsError: If computed zoom is out of bounds for the
+                tile provider.
         """
         self.zoom = scale_to_zoom(self.scale, self.lat, self.dpi)
         self.zoom_scaled = floor(self.zoom)
@@ -352,7 +663,7 @@ class PaperMap:
             or self.zoom_scaled > self.tile_provider.zoom_max
         ):
             msg = f"Scale out of bounds for {tile_provider_key} tile provider."
-            raise ValueError(msg)
+            raise ScaleOutOfBoundsError(msg)
 
     def _compute_image_dimensions(self) -> None:
         """Compute all image-related dimensions and perform coordinate conversions."""

@@ -230,11 +230,11 @@ def scale_to_zoom(scale: int, lat: float, dpi: int = DEFAULT_DPI) -> float:
     return log2(C * cos(φ) / scale_px) - 8
 
 
-def zoom_to_scale(zoom: int, lat: float, dpi: int = DEFAULT_DPI) -> float:
+def zoom_to_scale(zoom: float, lat: float, dpi: int = DEFAULT_DPI) -> float:
     """Compute the scale, given the latitude, zoom level and dpi.
 
     Args:
-        zoom: The zoom level.
+        zoom: The zoom level (integer or fractional).
         lat: The latitude.
         dpi: Dots per inch. Defaults to `300`.
 
