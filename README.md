@@ -224,7 +224,7 @@ Overlay GeoJSON-style geometries (points, lines, polygons) on top of the base ma
 
 To fit the map around features you already have, use `PaperMap.from_features()`. It centres the map on the features' bounding box and pre-populates them so they will be drawn on `render()`. `PaperMap.from_geojson()` and `PaperMap.from_gpx()` do the same for a GeoJSON file/dict or a GPX file (or any object exposing `__geo_interface__`, such as a [`gpx.GPX`](https://pypi.org/project/gpx/) instance). GeoJSON `Point`/`MultiPoint` become `CircleMarker`, `LineString`/`MultiLineString` become `Line`, and `Polygon`/`MultiPolygon` become `Polygon`; GPX waypoints become circle markers, routes become lines, and each segment of each track becomes its own line. An optional `style` dict provides default styling for every parsed feature, overridden by per-feature [`simplestyle-spec`](https://github.com/mapbox/simplestyle-spec) properties.
 
-Reading GPX files from disk requires the optional `gpx` package; install it via `pip install papermap[gpx]`.
+Reading GPX files and/or parsing GPX objects requires the optional `gpx` package. Install it with `uv add --extra gpx papermap`.
 
 ```python
 >>> from papermap import PaperMap
@@ -336,7 +336,7 @@ $ papermap utm \
 
 #### From a GPX File
 
-Render a paper map from a `.gpx` file, auto-scaled to fit the waypoints, routes, and tracks (requires `pip install papermap[gpx]`):
+Render a paper map from a `.gpx` file, auto-scaled to fit the waypoints, routes, and tracks (requires `uv add --extra gpx papermap`):
 
 ```shell
 $ papermap gpx --auto-scale --padding 10 -- hike.gpx Hike.pdf

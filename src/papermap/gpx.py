@@ -14,9 +14,8 @@ GPX objects from the upstream ``gpx`` library expose a
 - Tracks become ``MultiLineString`` features → one :class:`~papermap.features.Line`
   per track segment.
 
-Reading GPX files from disk requires the optional ``gpx`` package. Install
-it with ``pip install papermap[gpx]``. Parsing an already-loaded object
-that exposes ``__geo_interface__`` does not require the optional package.
+Reading GPX files and/or parsing GPX objects requires the optional ``gpx``
+package. Install it with ``uv add --extra gpx papermap``.
 """
 
 from __future__ import annotations
@@ -24,22 +23,23 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from .geojson import SupportsGeoInterface, geojson_to_features
+from .geojson import geojson_to_features
 
 if TYPE_CHECKING:
+    from gpx import GeoGPXModel
+
     from .features import MapFeature
 
 
 def gpx_to_features(
-    gpx_source: str | Path | SupportsGeoInterface,
+    gpx_source: str | Path | GeoGPXModel,
     style: dict[str, Any] | None = None,
 ) -> list[MapFeature]:
     """Convert a GPX file path or GPX object to map features.
 
     Args:
         gpx_source: A path to a ``.gpx`` file (``str`` or
-            :class:`pathlib.Path`), or any object exposing the
-            ``__geo_interface__`` protocol (e.g. a ``gpx.GPX`` instance).
+            :class:`pathlib.Path`), or a GPX object with geometric data.
         style: Default styling forwarded to
             :func:`~papermap.features.geojson_to_features`. See that
             function for the supported keys.
@@ -51,28 +51,29 @@ def gpx_to_features(
         becomes its own :class:`~papermap.features.Line`.
 
     Raises:
-        ImportError: If ``gpx_source`` is a path and the optional ``gpx``
-            package is not installed.
-        TypeError: If ``gpx_source`` is neither a path-like nor an object
-            exposing ``__geo_interface__``.
+        ImportError: If the optional ``gpx`` package is not installed.
+        TypeError: If ``gpx_source`` is neither a path-like nor a GPX object
+            with geometric data.
     """
-    if isinstance(gpx_source, SupportsGeoInterface):
-        return geojson_to_features(gpx_source, style)
+    try:
+        from gpx import GeoGPXModel, read_gpx  # noqa: PLC0415
+    except ImportError as e:
+        msg = (
+            "Reading GPX files and/or parsing GPX objects requires the "
+            "optional 'gpx' package. Install it with `pip install "
+            "papermap[gpx]`."
+        )
+        raise ImportError(msg) from e
 
-    if isinstance(gpx_source, (str, Path)):
-        try:
-            from gpx import read_gpx  # noqa: PLC0415
-        except ImportError as e:
-            msg = (
-                "Reading GPX files requires the optional 'gpx' package. "
-                "Install it with `pip install papermap[gpx]`."
-            )
-            raise ImportError(msg) from e
+    if isinstance(gpx_source, GeoGPXModel):  # implements `__geo_interface__`
+        gpx_obj = gpx_source
+    elif isinstance(gpx_source, (str, Path)):
         gpx_obj = read_gpx(gpx_source)
-        return geojson_to_features(gpx_obj, style)
+    else:
+        msg = (
+            "Expected a GPX file path or a GPX object with geometric data, "
+            f"got {type(gpx_source).__name__}"
+        )
+        raise TypeError(msg)
 
-    msg = (
-        "Expected a GPX file path or an object exposing __geo_interface__, "
-        f"got {type(gpx_source).__name__}"
-    )
-    raise TypeError(msg)
+    return geojson_to_features(gpx_obj, style)
