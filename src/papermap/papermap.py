@@ -13,6 +13,7 @@ from typing import Any, Self
 
 import httpx
 from fpdf import FPDF
+from gpx import GeoGPXModel
 from PIL import Image
 
 from .features import (
@@ -592,7 +593,7 @@ class PaperMap:
     @classmethod
     def from_gpx(
         cls,
-        gpx_source: str | Path | SupportsGeoInterface,
+        gpx_source: str | Path | GeoGPXModel,
         style: dict[str, Any] | None = None,
         *,
         auto_scale: bool = False,
@@ -610,12 +611,12 @@ class PaperMap:
         automatically so that the parsed features fit within the printable
         image area. See :meth:`from_features` for details.
 
-        Reading GPX files from disk requires the optional ``gpx`` package.
-        Install it with ``pip install papermap[gpx]``.
+        Reading GPX files and/or parsing GPX objects requires the optional
+        ``gpx`` package. Install it with ``uv add --extra gpx papermap``.
 
         Args:
-            gpx_source: A path to a ``.gpx`` file, or any object exposing
-                ``__geo_interface__`` (e.g. a ``gpx.GPX`` instance).
+            gpx_source: A path to a ``.gpx`` file (``str`` or
+            :class:`pathlib.Path`), or a GPX object with geometric data.
             style: Default styling applied to every parsed feature. See
                 :func:`papermap.features.geojson_to_features` for the
                 supported keys.
@@ -632,10 +633,9 @@ class PaperMap:
             bounding box, with the parsed features added.
 
         Raises:
-            ImportError: If ``gpx_source`` is a path and the optional ``gpx``
-                package is not installed.
-            TypeError: If ``gpx_source`` is neither a path-like nor exposes
-                ``__geo_interface__``.
+            ImportError: If the optional ``gpx`` package is not installed.
+            TypeError: If ``gpx_source`` is neither a path-like nor a GPX
+                object with geometric data.
             ValueError: If ``gpx_source`` parses to no features.
             ValueError: If both ``auto_scale=True`` and ``scale`` are given.
             ValueError: If ``auto_scale=True`` and the parsed features have
@@ -953,18 +953,19 @@ class PaperMap:
 
     def add_gpx(
         self,
-        gpx_source: str | Path | SupportsGeoInterface,
+        gpx_source: str | Path | GeoGPXModel,
         style: dict[str, Any] | None = None,
     ) -> list[MapFeature]:
         """Add geometries from a GPX file or GPX object.
 
         See :func:`papermap.gpx.gpx_to_features` for the parsing rules.
-        Reading GPX files from disk requires the optional ``gpx`` package;
-        install it with ``pip install papermap[gpx]``.
+
+        Reading GPX files and/or parsing GPX objects requires the optional
+        ``gpx`` package. Install it with ``uv add --extra gpx papermap``.
 
         Args:
-            gpx_source: A path to a ``.gpx`` file, or any object exposing
-                ``__geo_interface__`` (e.g. a ``gpx.GPX`` instance).
+            gpx_source: A path to a ``.gpx`` file (``str`` or
+            :class:`pathlib.Path`), or a GPX object with geometric data.
             style: Default styling applied to every parsed feature.
 
         Returns:

@@ -14,6 +14,10 @@ The **third number** is for emergencies when we need to start branches for older
 
 - Added shared styling options to the `geojson` and `gpx` CLI sub-commands: `--stroke`, `--stroke-width`, `--stroke-opacity`, `--fill`, `--fill-opacity`, `--opacity` and `--marker-radius`. These apply as defaults to every parsed feature; per-feature GeoJSON `simplestyle-spec` properties still take precedence.
 
+### Changed
+
+- Bumped the minimum version of the optional `gpx` dependency to `2026.3.0`, and narrowed the accepted `gpx_source` type on `PaperMap.from_gpx()`, `PaperMap.add_gpx()` and `gpx_to_features()` from any object exposing `__geo_interface__` to a path-like or a `gpx.GeoGPXModel` instance. As a consequence, parsing an already-loaded GPX object now also requires the optional `gpx` package (previously only reading from disk did); install it with `uv add --extra gpx papermap`.
+
 ## [2026.2.0](https://github.com/sgraaf/papermap/compare/2026.1.0...2026.2.0) (2026-05-17)
 
 This second major release in the year 2026 adds the ability to overlay your own geometries on maps — drop in circle or icon markers, lines, and polygons directly, or load them from GeoJSON and GPX files via new `add_*` methods, the `from_features/from_geojson/from_gpx` classmethods (which can auto-fit the scale to your data with optional padding), and matching `geojson` and `gpx` CLI sub-commands. It also fixes broken URL templates for the Esri, USGS, ÖPNVKarte, and Mapy.cz tile providers.
@@ -23,7 +27,7 @@ This second major release in the year 2026 adds the ability to overlay your own 
 - Added `papermap.features`, `papermap.geojson` and `papermap.gpx` modules to overlay geometries on the map. `features` exposes `CircleMarker`, `IconMarker`, `Line` and `Polygon` dataclasses; `geojson.geojson_to_features()` parses GeoJSON files, dicts, or any object exposing `__geo_interface__` (honouring `simplestyle-spec` properties); `gpx.gpx_to_features()` does the same for GPX. Features render above the base map but below the grid, and are clipped to the map area.
 - Added builder/loader methods on `PaperMap`: `add_circle_marker()`, `add_icon_marker()`, `add_line()`, `add_polygon()`, `add_feature()`, `add_geojson()` and `add_gpx()`.
 - Added `PaperMap.from_features()`, `PaperMap.from_geojson()` and `PaperMap.from_gpx()` classmethods that build a `PaperMap` centred on the supplied geometries' bounding box and pre-populate them on the new map. All three accept `auto_scale` and `padding` keyword arguments: when `auto_scale=True`, the scale is computed to fit the geometries within the printable image area (paper size minus margins minus `padding`) and snapped up to the nearest common cartographic scale (1:1 000, 1:2 500, …, 1:50 000 000). Passing both `auto_scale=True` and an explicit `scale` raises `ValueError`.
-- Added `geojson` and `gpx` CLI sub-commands (e.g. `papermap gpx hike.gpx Hike.pdf --auto-scale`), with `--auto-scale` and `--padding` options in addition to the common CLI options. Reading GPX files from disk requires the optional `gpx` package; install it with `pip install papermap[gpx]`.
+- Added `geojson` and `gpx` CLI sub-commands (e.g. `papermap gpx hike.gpx Hike.pdf --auto-scale`), with `--auto-scale` and `--padding` options in addition to the common CLI options. Reading GPX files from disk requires the optional `gpx` package; install it with `uv add --extra gpx papermap`.
 
 ### Fixed
 

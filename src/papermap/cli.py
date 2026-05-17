@@ -392,7 +392,7 @@ def gpx(
 ) -> None:
     """Generates a paper map for the given GPX file and outputs it to file.
 
-    Requires the optional 'gpx' package; install with 'pip install papermap[gpx]'.
+    Requires the optional 'gpx' package; install with 'uv add --extra gpx papermap'.
     """
     forwarded: dict[str, Any] = dict(**kwargs)
     style = _pop_style(forwarded)

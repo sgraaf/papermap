@@ -33,7 +33,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-gpx = ["gpx"]
+gpx = ["gpx>=2026.3.0"]
 
 [dependency-groups]
 docs = [

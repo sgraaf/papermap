@@ -443,11 +443,11 @@ wheels = [
 
 [[package]]
 name = "gpx"
-version = "2026.2.0"
+version = "2026.3.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/a1/93/07a8d947a7d565966668f4fd0a96d30948cd4df48d971ecdf314f8d5cc85/gpx-2026.2.0.tar.gz", hash = "sha256:2062ffaf355aaf4ec68a8696e8849b7e2d687da7662a61b7cda300fddcd5088a", size = 63969, upload-time = "2026-04-27T19:16:25.488Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/bf/70/39be5bc00dc56473b37c53ec380921e9049981cb702559781e60cdf3e23c/gpx-2026.3.0.tar.gz", hash = "sha256:f27d5d3029a80a8ac9cb353a0dd007b1c2fe12a30138e3ccec0612fef7ba7d20", size = 64091, upload-time = "2026-05-17T08:49:20.157Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ee/7c/448e976bbcec495a903fde81186d1adb7304e1ea032969bcb9d125fe0607/gpx-2026.2.0-py3-none-any.whl", hash = "sha256:8192773bfaf7524c99dd6dd2d2074f4cff46112706069fb71f14ea8b9bff0fbb", size = 59157, upload-time = "2026-04-27T19:16:24.173Z" },
+    { url = "https://files.pythonhosted.org/packages/0a/1e/1ef9906980ec869a47f32f64cdd2c3015a02926cfe3f81d228cc2fb44b57/gpx-2026.3.0-py3-none-any.whl", hash = "sha256:b289c0688e872252c74a47cf0ea83610033eddaa55a8924261239d983dfe64cf", size = 59366, upload-time = "2026-05-17T08:49:19.13Z" },
 ]
 
 [[package]]
@@ -855,7 +855,7 @@ requires-dist = [
     { name = "click" },
     { name = "click-default-group" },
     { name = "fpdf2" },
-    { name = "gpx", marker = "extra == 'gpx'" },
+    { name = "gpx", marker = "extra == 'gpx'", specifier = ">=2026.3.0" },
     { name = "httpx" },
     { name = "pillow" },
 ]

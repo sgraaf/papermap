@@ -283,7 +283,8 @@ Usage: papermap gpx [OPTIONS] GPX_FILE FILE
 
   Generates a paper map for the given GPX file and outputs it to file.
 
-  Requires the optional 'gpx' package; install with 'pip install papermap[gpx]'.
+  Requires the optional 'gpx' package; install with 'uv add --extra gpx
+  papermap'.
 
 Options:
   --auto-scale                    Compute the scale automatically to fit the GPX
