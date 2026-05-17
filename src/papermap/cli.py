@@ -57,6 +57,102 @@ def margin_option(side: str) -> Callable:
     )
 
 
+_STYLE_KEYS: tuple[str, ...] = (
+    "stroke_color",
+    "stroke_width",
+    "stroke_opacity",
+    "fill_color",
+    "fill_opacity",
+    "opacity",
+    "radius",
+)
+
+
+def _pop_style(kwargs: dict[str, Any]) -> dict[str, Any] | None:
+    """Extract style-related keys from ``kwargs`` into a style dict.
+
+    Removes every key in :data:`_STYLE_KEYS` from ``kwargs`` and returns a
+    dict of the non-``None`` values, or ``None`` if the user supplied no
+    style flags.
+    """
+    style: dict[str, Any] = {}
+    for key in _STYLE_KEYS:
+        value = kwargs.pop(key, None)
+        if value is not None:
+            style[key] = value
+    return style or None
+
+
+def style_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
+    """Decorator to add shared feature styling options to a click command.
+
+    Mirrors the `simplestyle-spec <https://github.com/mapbox/simplestyle-spec>`_
+    keys (plus ``--opacity`` and ``--marker-radius``) and forwards the values
+    as the ``style`` dict accepted by
+    :meth:`papermap.PaperMap.from_geojson` and
+    :meth:`papermap.PaperMap.from_gpx`. Per-feature GeoJSON ``properties``
+    still take precedence over these CLI defaults.
+    """
+
+    @click.option(
+        "--stroke",
+        "stroke_color",
+        type=str,
+        default=None,
+        metavar="COLOR",
+        help="Outline colour (CSS-style hex) for markers, lines and polygons.",
+    )
+    @click.option(
+        "--stroke-width",
+        type=float,
+        default=None,
+        metavar="MILLIMETERS",
+        help="Outline width on paper for markers, lines and polygons.",
+    )
+    @click.option(
+        "--stroke-opacity",
+        type=click.FloatRange(0.0, 1.0),
+        default=None,
+        metavar="FLOAT",
+        help="Outline opacity, in [0, 1], for markers, lines and polygons.",
+    )
+    @click.option(
+        "--fill",
+        "fill_color",
+        type=str,
+        default=None,
+        metavar="COLOR",
+        help="Fill colour (CSS-style hex) for markers and polygons.",
+    )
+    @click.option(
+        "--fill-opacity",
+        type=click.FloatRange(0.0, 1.0),
+        default=None,
+        metavar="FLOAT",
+        help="Fill opacity, in [0, 1], for markers and polygons.",
+    )
+    @click.option(
+        "--opacity",
+        type=click.FloatRange(0.0, 1.0),
+        default=None,
+        metavar="FLOAT",
+        help="Overall opacity, in [0, 1], for all features.",
+    )
+    @click.option(
+        "--marker-radius",
+        "radius",
+        type=float,
+        default=None,
+        metavar="MILLIMETERS",
+        help="Circle marker radius on paper.",
+    )
+    @wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        return func(*args, **kwargs)
+
+    return wrapper
+
+
 def common_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
     """Decorator to add common parameters (arguments and options) to a click command.
 
@@ -241,6 +337,7 @@ def ecef(
     metavar="MILLIMETERS",
     help="Padding between the GeoJSON geometries and the image edge (per side). Only used with --auto-scale.",
 )
+@style_parameters
 @common_parameters
 def geojson(
     geojson_file: Path,
@@ -251,11 +348,16 @@ def geojson(
 ) -> None:
     """Generates a paper map for the given GeoJSON file and outputs it to file."""
     forwarded: dict[str, Any] = dict(**kwargs)
+    style = _pop_style(forwarded)
     if auto_scale:
         forwarded.pop("scale", None)
     _render_and_save(
         PaperMap.from_geojson(
-            geojson_file, auto_scale=auto_scale, padding=padding, **forwarded
+            geojson_file,
+            style=style,
+            auto_scale=auto_scale,
+            padding=padding,
+            **forwarded,
         ),
         file,
     )
@@ -279,6 +381,7 @@ def geojson(
     metavar="MILLIMETERS",
     help="Padding between the GPX geometries and the image edge (per side). Only used with --auto-scale.",
 )
+@style_parameters
 @common_parameters
 def gpx(
     gpx_file: Path,
@@ -292,11 +395,16 @@ def gpx(
     Requires the optional 'gpx' package; install with 'pip install papermap[gpx]'.
     """
     forwarded: dict[str, Any] = dict(**kwargs)
+    style = _pop_style(forwarded)
     if auto_scale:
         forwarded.pop("scale", None)
     _render_and_save(
         PaperMap.from_gpx(
-            gpx_file, auto_scale=auto_scale, padding=padding, **forwarded
+            gpx_file,
+            style=style,
+            auto_scale=auto_scale,
+            padding=padding,
+            **forwarded,
         ),
         file,
     )

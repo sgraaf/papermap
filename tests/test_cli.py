@@ -171,6 +171,16 @@ class TestCliHelp:
         assert "GEOJSON_FILE" in result.output
         assert "--auto-scale" in result.output
         assert "--padding" in result.output
+        for flag in (
+            "--stroke ",
+            "--stroke-width",
+            "--stroke-opacity",
+            "--fill ",
+            "--fill-opacity",
+            "--opacity",
+            "--marker-radius",
+        ):
+            assert flag in result.output
 
     def test_gpx_help(self, runner: CliRunner) -> None:
         result = runner.invoke(cli, ["gpx", "--help"])
@@ -178,6 +188,16 @@ class TestCliHelp:
         assert "GPX_FILE" in result.output
         assert "--auto-scale" in result.output
         assert "--padding" in result.output
+        for flag in (
+            "--stroke ",
+            "--stroke-width",
+            "--stroke-opacity",
+            "--fill ",
+            "--fill-opacity",
+            "--opacity",
+            "--marker-radius",
+        ):
+            assert flag in result.output
 
 
 class TestLatLonCommand:
@@ -1109,6 +1129,127 @@ class TestGeoJSONCommand:
         call_kwargs = mock_class.from_geojson.call_args.kwargs
         assert call_kwargs["padding"] == 12.5
 
+    def test_geojson_no_style_flags_forwards_none(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        mock_class, _mock_instance = mock_papermap
+        geojson_in = self._write_geojson(tmp_path)
+        output_file = tmp_path / "out.pdf"
+
+        result = runner.invoke(cli, ["geojson", str(geojson_in), str(output_file)])
+
+        assert result.exit_code == 0
+        call_kwargs = mock_class.from_geojson.call_args.kwargs
+        assert call_kwargs["style"] is None
+
+    def test_geojson_style_flags_forwarded(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        mock_class, _mock_instance = mock_papermap
+        geojson_in = self._write_geojson(tmp_path)
+        output_file = tmp_path / "out.pdf"
+
+        result = runner.invoke(
+            cli,
+            [
+                "geojson",
+                "--stroke",
+                "#c00",
+                "--stroke-width",
+                "1.0",
+                "--stroke-opacity",
+                "0.9",
+                "--fill",
+                "#fcc",
+                "--fill-opacity",
+                "0.3",
+                "--opacity",
+                "0.8",
+                "--marker-radius",
+                "3",
+                str(geojson_in),
+                str(output_file),
+            ],
+        )
+
+        assert result.exit_code == 0
+        call_kwargs = mock_class.from_geojson.call_args.kwargs
+        assert call_kwargs["style"] == {
+            "stroke_color": "#c00",
+            "stroke_width": 1.0,
+            "stroke_opacity": 0.9,
+            "fill_color": "#fcc",
+            "fill_opacity": 0.3,
+            "opacity": 0.8,
+            "radius": 3.0,
+        }
+        # The style-related kwargs must not also be forwarded as top-level kwargs.
+        for key in (
+            "stroke_color",
+            "stroke_width",
+            "stroke_opacity",
+            "fill_color",
+            "fill_opacity",
+            "opacity",
+            "radius",
+        ):
+            assert key not in call_kwargs
+
+    def test_geojson_partial_style_flags_forwarded(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        mock_class, _mock_instance = mock_papermap
+        geojson_in = self._write_geojson(tmp_path)
+        output_file = tmp_path / "out.pdf"
+
+        result = runner.invoke(
+            cli,
+            [
+                "geojson",
+                "--stroke",
+                "#0c0",
+                str(geojson_in),
+                str(output_file),
+            ],
+        )
+
+        assert result.exit_code == 0
+        call_kwargs = mock_class.from_geojson.call_args.kwargs
+        assert call_kwargs["style"] == {"stroke_color": "#0c0"}
+
+    def test_geojson_opacity_out_of_range_rejected(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        mock_class, _mock_instance = mock_papermap
+        geojson_in = self._write_geojson(tmp_path)
+        output_file = tmp_path / "out.pdf"
+
+        result = runner.invoke(
+            cli,
+            [
+                "geojson",
+                "--opacity",
+                "1.5",
+                str(geojson_in),
+                str(output_file),
+            ],
+        )
+
+        assert result.exit_code != 0
+        mock_class.from_geojson.assert_not_called()
+
 
 GPX_STRING = """\
 <?xml version="1.0" encoding="UTF-8"?>
@@ -1206,3 +1347,123 @@ class TestGpxCommand:
         assert result.exit_code == 0
         call_kwargs = mock_class.from_gpx.call_args.kwargs
         assert call_kwargs["padding"] == 12.5
+
+    def test_gpx_no_style_flags_forwards_none(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        mock_class, _mock_instance = mock_papermap
+        gpx_in = self._write_gpx(tmp_path)
+        output_file = tmp_path / "out.pdf"
+
+        result = runner.invoke(cli, ["gpx", str(gpx_in), str(output_file)])
+
+        assert result.exit_code == 0
+        call_kwargs = mock_class.from_gpx.call_args.kwargs
+        assert call_kwargs["style"] is None
+
+    def test_gpx_style_flags_forwarded(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        mock_class, _mock_instance = mock_papermap
+        gpx_in = self._write_gpx(tmp_path)
+        output_file = tmp_path / "out.pdf"
+
+        result = runner.invoke(
+            cli,
+            [
+                "gpx",
+                "--stroke",
+                "#c00",
+                "--stroke-width",
+                "1.0",
+                "--stroke-opacity",
+                "0.9",
+                "--fill",
+                "#fcc",
+                "--fill-opacity",
+                "0.3",
+                "--opacity",
+                "0.8",
+                "--marker-radius",
+                "3",
+                str(gpx_in),
+                str(output_file),
+            ],
+        )
+
+        assert result.exit_code == 0
+        call_kwargs = mock_class.from_gpx.call_args.kwargs
+        assert call_kwargs["style"] == {
+            "stroke_color": "#c00",
+            "stroke_width": 1.0,
+            "stroke_opacity": 0.9,
+            "fill_color": "#fcc",
+            "fill_opacity": 0.3,
+            "opacity": 0.8,
+            "radius": 3.0,
+        }
+        for key in (
+            "stroke_color",
+            "stroke_width",
+            "stroke_opacity",
+            "fill_color",
+            "fill_opacity",
+            "opacity",
+            "radius",
+        ):
+            assert key not in call_kwargs
+
+    def test_gpx_partial_style_flags_forwarded(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        mock_class, _mock_instance = mock_papermap
+        gpx_in = self._write_gpx(tmp_path)
+        output_file = tmp_path / "out.pdf"
+
+        result = runner.invoke(
+            cli,
+            [
+                "gpx",
+                "--stroke",
+                "#0c0",
+                str(gpx_in),
+                str(output_file),
+            ],
+        )
+
+        assert result.exit_code == 0
+        call_kwargs = mock_class.from_gpx.call_args.kwargs
+        assert call_kwargs["style"] == {"stroke_color": "#0c0"}
+
+    def test_gpx_opacity_out_of_range_rejected(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        mock_class, _mock_instance = mock_papermap
+        gpx_in = self._write_gpx(tmp_path)
+        output_file = tmp_path / "out.pdf"
+
+        result = runner.invoke(
+            cli,
+            [
+                "gpx",
+                "--opacity",
+                "1.5",
+                str(gpx_in),
+                str(output_file),
+            ],
+        )
+
+        assert result.exit_code != 0
+        mock_class.from_gpx.assert_not_called()
