@@ -1,3 +1,4 @@
+import os
 import time
 import warnings
 from collections import Counter
@@ -59,6 +60,9 @@ if TYPE_CHECKING:
 
 NAME: str = "papermap"
 """Name of the application."""
+
+URL: str = "https://github.com/sgraaf/papermap"
+"""URL of the application."""
 
 PAPER_SIZE_TO_DIMENSIONS_MAP: dict[str, tuple[int, int]] = {
     "a0": (841, 1189),
@@ -1392,18 +1396,19 @@ class PaperMap:
         failures: dict[int, _TileDownloadError] = {}
         pending = [i for i, tile in enumerate(self.tiles) if not tile.success]
 
-        # download the tile images
+        # download the tile images, with (at most) one connection per worker
+        max_workers = min(32, (os.cpu_count() or 1) + 4)
         with (
-            ThreadPoolExecutor() as executor,
+            ThreadPoolExecutor(max_workers) as executor,
             httpx.Client(
                 headers={
-                    "User-Agent": f"{NAME}v{metadata.version('papermap')}",
+                    "User-Agent": f"{NAME}/{metadata.version('papermap')} (+{URL})",
                     "Accept": "image/png,image/*;q=0.9,*/*;q=0.8",
                 },
                 timeout=30.0,
                 limits=httpx.Limits(
-                    max_connections=executor._max_workers,  # noqa: SLF001
-                    max_keepalive_connections=executor._max_workers,  # noqa: SLF001
+                    max_connections=max_workers,
+                    max_keepalive_connections=max_workers,
                 ),
             ) as client,
         ):

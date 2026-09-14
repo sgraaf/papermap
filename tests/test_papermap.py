@@ -627,6 +627,22 @@ class TestPaperMapDownloadTiles:
         for tile in pm.tiles:
             assert tile.success
 
+    def test_download_tiles_user_agent(
+        self, httpx_mock: HTTPXMock, tile_image_content: bytes
+    ) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        for _ in pm.tiles:
+            httpx_mock.add_response(content=tile_image_content)
+
+        pm.download_tiles()
+
+        user_agents = {r.headers["User-Agent"] for r in httpx_mock.get_requests()}
+        assert len(user_agents) == 1
+        assert re.fullmatch(
+            r"papermap/\S+ \(\+https://github\.com/sgraaf/papermap\)",
+            user_agents.pop(),
+        )
+
     def test_download_tiles_retry_on_failure(
         self,
         httpx_mock: HTTPXMock,

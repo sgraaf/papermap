@@ -19,6 +19,7 @@ The **third number** is for emergencies when we need to start branches for older
 - Bumped the minimum version of the optional `gpx` dependency to `2026.3.0`, and narrowed the accepted `gpx_source` type on `PaperMap.from_gpx()`, `PaperMap.add_gpx()` and `gpx_to_features()` from any object exposing `__geo_interface__` to a path-like or a `gpx.GeoGPXModel` instance. As a consequence, parsing an already-loaded GPX object now also requires the optional `gpx` package (previously only reading from disk did); install it with `uv add --extra gpx papermap`.
 - `PaperMap.render()` and `PaperMap.download_tiles()` now raise a `RuntimeError` when no tile at all can be downloaded (e.g. due to an invalid API key), even with `strict_download=False`, instead of producing a blank map with only a warning. Tiles failing with a client error that will not succeed on retry (HTTP 4xx other than 408 and 429) are no longer retried.
 - `PaperMap` now raises a `ValueError` on construction when a grid is added outside the UTM coverage area (80°S to 84°N), or when the background color is invalid. Previously, these errors were only raised by `render()`, after all tiles had been downloaded.
+- Tile requests now identify themselves with a well-formed `User-Agent` header (`papermap/<version> (+https://github.com/sgraaf/papermap)`), as requested by the usage policies of tile providers such as OpenStreetMap.
 
 ### Fixed
 
