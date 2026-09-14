@@ -8,6 +8,8 @@ The **first number** of the version is the year.
 The **second number** is incremented with each release, starting at 1 for each year.
 The **third number** is for emergencies when we need to start branches for older releases.
 
+## [Unreleased](https://github.com/sgraaf/papermap/compare/2026.3.1...HEAD)
+
 ## [2026.3.1](https://github.com/sgraaf/papermap/compare/2026.3.0...2026.3.1) (2026-09-14)
 
 This patch release focuses on the tile providers, a number of which no longer worked. The `here-*` tile providers have been migrated to the HERE Raster Tile API v3, as the Map Tile API v2 has been retired, gaining four new styles and losing four that have no equivalent. The `cartodb-*`, `stadia-*` and `openaip` tile providers now require an API key, as their providers now watermark or reject requests without one. The `nasagibs-*`, `maptiler-satellite` and `basemapat-*` tile providers, for which tile requests failed, have been fixed, while tile providers whose tile servers no longer exist (`hikebike`, `alltrails` and `esri-delorme`) or whose terms of use do not permit printed maps (`wikimedia` and `mapy-cz`) have been removed. Rendering is also more robust: the `esri-*` tile providers no longer fail on the em dash in their attribution, attribution and scale text wider than the map is wrapped instead of running off the page, and tiles larger than 256x256 pixels no longer fail to render. Finally, the usage examples in the README work again.
