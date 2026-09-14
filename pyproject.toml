@@ -28,7 +28,7 @@ dependencies = [
     "click",
     "click_default_group",
     "fpdf2",
-    "httpx",
+    "httpx2",
     "Pillow",
 ]
 
@@ -47,9 +47,9 @@ docs = [
 ]
 tests = [
     "gpx",
+    "httpx2-pytest",
     "pytest",
     "pytest-cov",
-    "pytest-httpx",
 ]
 typing = [
     "mypy",

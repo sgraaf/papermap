@@ -8,9 +8,9 @@ from math import isclose
 from pathlib import Path
 from typing import Any
 
-import httpx
+import httpx2
 import pytest
-from pytest_httpx import HTTPXMock
+from pytest_httpx2 import HTTPXMock
 
 from papermap.features import CircleMarker, IconMarker, Line, Polygon
 from papermap.geodesy import (
@@ -612,14 +612,14 @@ class TestPaperMapDownloadTiles:
 
     def test_download_tiles_with_mocked_client(
         self,
-        httpx_mock: HTTPXMock,
+        httpx2_mock: HTTPXMock,
         tile_image_content: bytes,
     ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         # Mock all tile download requests (add one response per tile)
         for _ in pm.tiles:
-            httpx_mock.add_response(content=tile_image_content)
+            httpx2_mock.add_response(content=tile_image_content)
 
         pm.download_tiles()
 
@@ -628,15 +628,15 @@ class TestPaperMapDownloadTiles:
             assert tile.success
 
     def test_download_tiles_user_agent(
-        self, httpx_mock: HTTPXMock, tile_image_content: bytes
+        self, httpx2_mock: HTTPXMock, tile_image_content: bytes
     ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
         for _ in pm.tiles:
-            httpx_mock.add_response(content=tile_image_content)
+            httpx2_mock.add_response(content=tile_image_content)
 
         pm.download_tiles()
 
-        user_agents = {r.headers["User-Agent"] for r in httpx_mock.get_requests()}
+        user_agents = {r.headers["User-Agent"] for r in httpx2_mock.get_requests()}
         assert len(user_agents) == 1
         assert re.fullmatch(
             r"papermap/\S+ \(\+https://github\.com/sgraaf/papermap\)",
@@ -645,7 +645,7 @@ class TestPaperMapDownloadTiles:
 
     def test_download_tiles_retry_on_failure(
         self,
-        httpx_mock: HTTPXMock,
+        httpx2_mock: HTTPXMock,
         tile_image_content: bytes,
     ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
@@ -654,11 +654,11 @@ class TestPaperMapDownloadTiles:
 
         # First attempt: all tiles fail (503 error)
         for _ in range(num_tiles):
-            httpx_mock.add_response(status_code=503)
+            httpx2_mock.add_response(status_code=503)
 
         # Second attempt: all tiles succeed
         for _ in range(num_tiles):
-            httpx_mock.add_response(content=tile_image_content)
+            httpx2_mock.add_response(content=tile_image_content)
 
         pm.download_tiles(num_retries=3)
 
@@ -666,9 +666,9 @@ class TestPaperMapDownloadTiles:
         for tile in pm.tiles:
             assert tile.success
 
-    @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
+    @pytest.mark.httpx2_mock(assert_all_responses_were_requested=False)
     def test_download_tiles_raises_after_max_retries(
-        self, httpx_mock: HTTPXMock
+        self, httpx2_mock: HTTPXMock
     ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
@@ -677,14 +677,14 @@ class TestPaperMapDownloadTiles:
 
         # All attempts fail
         for _ in range(num_tiles * (num_retries + 1)):
-            httpx_mock.add_response(status_code=500)
+            httpx2_mock.add_response(status_code=500)
 
         with pytest.raises(RuntimeError, match="Could not download"):
             pm.download_tiles(num_retries=num_retries, strict=True)
 
     def test_download_tiles_retry_with_sleep(
         self,
-        httpx_mock: HTTPXMock,
+        httpx2_mock: HTTPXMock,
         tile_image_content: bytes,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -703,11 +703,11 @@ class TestPaperMapDownloadTiles:
 
         # First attempt: all tiles fail
         for _ in range(num_tiles):
-            httpx_mock.add_response(status_code=500)
+            httpx2_mock.add_response(status_code=500)
 
         # Second attempt: all tiles succeed
         for _ in range(num_tiles):
-            httpx_mock.add_response(content=tile_image_content)
+            httpx2_mock.add_response(content=tile_image_content)
 
         pm.download_tiles(num_retries=3, sleep_between_retries=1)
 
@@ -716,7 +716,7 @@ class TestPaperMapDownloadTiles:
         assert all(duration == 1 for duration in sleep_calls)
 
     def test_download_tiles_graceful_failure(
-        self, httpx_mock: HTTPXMock, tile_image_content: bytes
+        self, httpx2_mock: HTTPXMock, tile_image_content: bytes
     ) -> None:
         """Test that partial tile failure with strict=False logs warning but completes."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
@@ -725,11 +725,11 @@ class TestPaperMapDownloadTiles:
         num_retries = 2
 
         # One tile fails on every attempt, the others succeed
-        httpx_mock.add_response(status_code=500)
+        httpx2_mock.add_response(status_code=500)
         for _ in range(num_tiles - 1):
-            httpx_mock.add_response(content=tile_image_content)
+            httpx2_mock.add_response(content=tile_image_content)
         for _ in range(num_retries):
-            httpx_mock.add_response(status_code=500)
+            httpx2_mock.add_response(status_code=500)
 
         # Should not raise, but should warn
         with pytest.warns(UserWarning, match=r"Could not download 1/\d+ tiles"):
@@ -737,46 +737,46 @@ class TestPaperMapDownloadTiles:
         assert sum(tile.success for tile in pm.tiles) == num_tiles - 1
 
     def test_download_tiles_total_failure_raises_when_not_strict(
-        self, httpx_mock: HTTPXMock
+        self, httpx2_mock: HTTPXMock
     ) -> None:
         """A map without any downloaded tile is never returned, even when not strict."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         for _ in range(len(pm.tiles) * 2):
-            httpx_mock.add_response(status_code=500)
+            httpx2_mock.add_response(status_code=500)
 
         with pytest.raises(RuntimeError, match="Could not download"):
             pm.download_tiles(num_retries=1, strict=False)
 
     def test_download_tiles_does_not_retry_client_errors(
-        self, httpx_mock: HTTPXMock
+        self, httpx2_mock: HTTPXMock
     ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         for _ in pm.tiles:
-            httpx_mock.add_response(status_code=401)
+            httpx2_mock.add_response(status_code=401)
 
         with pytest.raises(RuntimeError, match="HTTP 401"):
             pm.download_tiles(num_retries=3)
-        assert len(httpx_mock.get_requests()) == len(pm.tiles)
+        assert len(httpx2_mock.get_requests()) == len(pm.tiles)
 
     @pytest.mark.parametrize("status_code", [408, 429])
     def test_download_tiles_retries_timeouts_and_rate_limiting(
-        self, httpx_mock: HTTPXMock, tile_image_content: bytes, status_code: int
+        self, httpx2_mock: HTTPXMock, tile_image_content: bytes, status_code: int
     ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         for _ in pm.tiles:
-            httpx_mock.add_response(status_code=status_code)
+            httpx2_mock.add_response(status_code=status_code)
         for _ in pm.tiles:
-            httpx_mock.add_response(content=tile_image_content)
+            httpx2_mock.add_response(content=tile_image_content)
 
         pm.download_tiles(num_retries=1)
 
         assert all(tile.success for tile in pm.tiles)
 
-    @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
-    def test_download_tiles_strict_failure(self, httpx_mock: HTTPXMock) -> None:
+    @pytest.mark.httpx2_mock(assert_all_responses_were_requested=False)
+    def test_download_tiles_strict_failure(self, httpx2_mock: HTTPXMock) -> None:
         """Test that partial tile failure with strict=True raises RuntimeError."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
@@ -785,7 +785,7 @@ class TestPaperMapDownloadTiles:
 
         # All attempts fail
         for _ in range(num_tiles * (num_retries + 1)):
-            httpx_mock.add_response(status_code=500)
+            httpx2_mock.add_response(status_code=500)
 
         # Should raise RuntimeError when strict=True
         with pytest.raises(RuntimeError, match="Could not download"):
@@ -795,8 +795,8 @@ class TestPaperMapDownloadTiles:
 class TestPaperMapHttpErrors:
     """Tests for HTTP error handling in tile downloads."""
 
-    @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
-    def test_download_tiles_404_error(self, httpx_mock: HTTPXMock) -> None:
+    @pytest.mark.httpx2_mock(assert_all_responses_were_requested=False)
+    def test_download_tiles_404_error(self, httpx2_mock: HTTPXMock) -> None:
         """Test handling of HTTP 404 Not Found errors."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
@@ -804,13 +804,13 @@ class TestPaperMapHttpErrors:
 
         # All attempts return 404
         for _ in range(num_tiles * 2):
-            httpx_mock.add_response(status_code=404)
+            httpx2_mock.add_response(status_code=404)
 
         with pytest.raises(RuntimeError, match="Could not download"):
             pm.download_tiles(num_retries=1, strict=True)
 
-    @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
-    def test_download_tiles_500_error(self, httpx_mock: HTTPXMock) -> None:
+    @pytest.mark.httpx2_mock(assert_all_responses_were_requested=False)
+    def test_download_tiles_500_error(self, httpx2_mock: HTTPXMock) -> None:
         """Test handling of HTTP 500 Provider Error."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
@@ -818,13 +818,13 @@ class TestPaperMapHttpErrors:
 
         # All attempts return 500
         for _ in range(num_tiles * 2):
-            httpx_mock.add_response(status_code=500)
+            httpx2_mock.add_response(status_code=500)
 
         with pytest.raises(RuntimeError, match="Could not download"):
             pm.download_tiles(num_retries=1, strict=True)
 
-    @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
-    def test_download_tiles_403_forbidden(self, httpx_mock: HTTPXMock) -> None:
+    @pytest.mark.httpx2_mock(assert_all_responses_were_requested=False)
+    def test_download_tiles_403_forbidden(self, httpx2_mock: HTTPXMock) -> None:
         """Test handling of HTTP 403 Forbidden errors (invalid API key)."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
@@ -832,7 +832,7 @@ class TestPaperMapHttpErrors:
 
         # All attempts return 403
         for _ in range(num_tiles * 2):
-            httpx_mock.add_response(status_code=403)
+            httpx2_mock.add_response(status_code=403)
 
         with pytest.raises(RuntimeError, match="Could not download"):
             pm.download_tiles(num_retries=1, strict=True)
@@ -841,60 +841,60 @@ class TestPaperMapHttpErrors:
         "content", [b"", b"This is not a valid PNG image"], ids=["empty", "invalid"]
     )
     def test_download_tiles_invalid_image_data_warns(
-        self, httpx_mock: HTTPXMock, tile_image_content: bytes, content: bytes
+        self, httpx2_mock: HTTPXMock, tile_image_content: bytes, content: bytes
     ) -> None:
         """Undecodable bodies fail the tile instead of aborting the download."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         # One tile is undecodable on both attempts, the others succeed
-        httpx_mock.add_response(content=content)
+        httpx2_mock.add_response(content=content)
         for _ in range(len(pm.tiles) - 1):
-            httpx_mock.add_response(content=tile_image_content)
-        httpx_mock.add_response(content=content)
+            httpx2_mock.add_response(content=tile_image_content)
+        httpx2_mock.add_response(content=content)
 
         with pytest.warns(UserWarning, match="invalid image data: 1"):
             pm.download_tiles(num_retries=1)
         assert sum(tile.success for tile in pm.tiles) == len(pm.tiles) - 1
 
     def test_download_tiles_invalid_image_data_strict(
-        self, httpx_mock: HTTPXMock
+        self, httpx2_mock: HTTPXMock
     ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         for _ in range(len(pm.tiles) * 2):
-            httpx_mock.add_response(content=b"<html>rate limited</html>")
+            httpx2_mock.add_response(content=b"<html>rate limited</html>")
 
         with pytest.raises(RuntimeError, match="invalid image data"):
             pm.download_tiles(num_retries=1, strict=True)
 
     def test_download_tiles_retries_transport_errors(
-        self, httpx_mock: HTTPXMock, tile_image_content: bytes
+        self, httpx2_mock: HTTPXMock, tile_image_content: bytes
     ) -> None:
         """Timeouts and connection errors are retried rather than propagated."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
-        httpx_mock.add_exception(httpx.ConnectTimeout("timed out"))
+        httpx2_mock.add_exception(httpx2.ConnectTimeout("timed out"))
         for _ in pm.tiles:
-            httpx_mock.add_response(content=tile_image_content)
+            httpx2_mock.add_response(content=tile_image_content)
 
         pm.download_tiles(num_retries=1)
 
         assert all(tile.success for tile in pm.tiles)
 
     def test_download_tiles_transport_errors_strict(
-        self, httpx_mock: HTTPXMock
+        self, httpx2_mock: HTTPXMock
     ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         for _ in range(len(pm.tiles) * 2):
-            httpx_mock.add_exception(httpx.ConnectError("connection refused"))
+            httpx2_mock.add_exception(httpx2.ConnectError("connection refused"))
 
         with pytest.raises(RuntimeError, match="ConnectError"):
             pm.download_tiles(num_retries=1, strict=True)
 
     def test_download_tiles_partial_success(
         self,
-        httpx_mock: HTTPXMock,
+        httpx2_mock: HTTPXMock,
         tile_image_content: bytes,
     ) -> None:
         """Test when some tiles succeed and some fail."""
@@ -906,14 +906,14 @@ class TestPaperMapHttpErrors:
         for i in range(num_tiles):
             if i < num_tiles // 2:
                 # First half succeeds
-                httpx_mock.add_response(content=tile_image_content)
+                httpx2_mock.add_response(content=tile_image_content)
             else:
                 # Second half fails
-                httpx_mock.add_response(status_code=500)
+                httpx2_mock.add_response(status_code=500)
 
         # Second attempt: previously failed tiles now succeed
         for _ in range(num_tiles - num_tiles // 2):
-            httpx_mock.add_response(content=tile_image_content)
+            httpx2_mock.add_response(content=tile_image_content)
 
         pm.download_tiles(num_retries=2)
 
@@ -927,24 +927,24 @@ class TestPaperMapRenderBaseLayer:
 
     def test_render_base_layer_creates_map_image(
         self,
-        httpx_mock: HTTPXMock,
+        httpx2_mock: HTTPXMock,
         tile_image_content: bytes,
     ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         # Mock tile downloads (add one response per tile)
         for _ in pm.tiles:
-            httpx_mock.add_response(content=tile_image_content)
+            httpx2_mock.add_response(content=tile_image_content)
 
         pm.render_base_layer()
 
         assert hasattr(pm, "map_image")
         assert pm.map_image.size == (pm.image_width_px, pm.image_height_px)
 
-    @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
+    @pytest.mark.httpx2_mock(assert_all_responses_were_requested=False)
     def test_render_base_layer_with_strict_download_failure(
         self,
-        httpx_mock: HTTPXMock,
+        httpx2_mock: HTTPXMock,
     ) -> None:
         """Test that render_base_layer respects strict_download flag."""
         pm = PaperMap(lat=40.7128, lon=-74.0060, strict_download=True)
@@ -953,7 +953,7 @@ class TestPaperMapRenderBaseLayer:
 
         # All attempts fail
         for _ in range(num_tiles * 4):
-            httpx_mock.add_response(status_code=500)
+            httpx2_mock.add_response(status_code=500)
 
         # Should raise RuntimeError when strict_download=True
         with pytest.raises(RuntimeError, match="Could not download"):
@@ -961,7 +961,7 @@ class TestPaperMapRenderBaseLayer:
 
     def test_render_base_layer_with_graceful_download_failure(
         self,
-        httpx_mock: HTTPXMock,
+        httpx2_mock: HTTPXMock,
         tile_image_content: bytes,
     ) -> None:
         """Test that render_base_layer allows graceful degradation with strict_download=False."""
@@ -970,11 +970,11 @@ class TestPaperMapRenderBaseLayer:
         num_tiles = len(pm.tiles)
 
         # One tile fails on every attempt (1 + 3 retries), the others succeed
-        httpx_mock.add_response(status_code=500)
+        httpx2_mock.add_response(status_code=500)
         for _ in range(num_tiles - 1):
-            httpx_mock.add_response(content=tile_image_content)
+            httpx2_mock.add_response(content=tile_image_content)
         for _ in range(3):
-            httpx_mock.add_response(status_code=500)
+            httpx2_mock.add_response(status_code=500)
 
         # Should warn but not raise
         with pytest.warns(UserWarning, match="Could not download"):
@@ -991,14 +991,14 @@ class TestPaperMapSave:
     def test_save_creates_file(
         self,
         tmp_path: Path,
-        httpx_mock: HTTPXMock,
+        httpx2_mock: HTTPXMock,
         tile_image_content: bytes,
     ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         # Mock tile downloads (add one response per tile)
         for _ in pm.tiles:
-            httpx_mock.add_response(content=tile_image_content)
+            httpx2_mock.add_response(content=tile_image_content)
 
         pm.render()
 
@@ -1011,14 +1011,14 @@ class TestPaperMapSave:
     def test_save_with_custom_metadata(
         self,
         tmp_path: Path,
-        httpx_mock: HTTPXMock,
+        httpx2_mock: HTTPXMock,
         tile_image_content: bytes,
     ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         # Mock tile downloads (add one response per tile)
         for _ in pm.tiles:
-            httpx_mock.add_response(content=tile_image_content)
+            httpx2_mock.add_response(content=tile_image_content)
 
         pm.render()
 

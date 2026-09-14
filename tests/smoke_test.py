@@ -7,7 +7,7 @@ They should be fast and catch major breakages without extensive coverage.
 from pathlib import Path
 
 from click.testing import CliRunner
-from pytest_httpx import HTTPXMock
+from pytest_httpx2 import HTTPXMock
 
 import papermap
 from papermap.cli import cli
@@ -21,14 +21,14 @@ class TestSmokeTests:
         assert hasattr(papermap, "PaperMap")
 
     def test_basic_workflow(
-        self, tmp_path: Path, httpx_mock: HTTPXMock, tile_image_content: bytes
+        self, tmp_path: Path, httpx2_mock: HTTPXMock, tile_image_content: bytes
     ) -> None:
         """Test the basic create -> render -> save workflow."""
         # Create a PaperMap instance
         pm = papermap.PaperMap(lat=40.7128, lon=-74.0060)
 
         for _ in range(len(pm.tiles)):
-            httpx_mock.add_response(content=tile_image_content)
+            httpx2_mock.add_response(content=tile_image_content)
 
         # Render the map
         pm.render()
@@ -42,14 +42,14 @@ class TestSmokeTests:
         assert output_file.stat().st_size > 0
 
     def test_cli_latlon_command(
-        self, tmp_path: Path, httpx_mock: HTTPXMock, tile_image_content: bytes
+        self, tmp_path: Path, httpx2_mock: HTTPXMock, tile_image_content: bytes
     ) -> None:
         """Test the CLI latlon command works."""
         runner = CliRunner()
         output_file = tmp_path / "cli_test.pdf"
 
         for _ in range(70):
-            httpx_mock.add_response(content=tile_image_content)
+            httpx2_mock.add_response(content=tile_image_content)
 
         # Use London coordinates (positive values) to avoid Click
         # interpreting negative longitude as an option
@@ -62,13 +62,13 @@ class TestSmokeTests:
         assert output_file.exists()
 
     def test_map_with_grid(
-        self, tmp_path: Path, httpx_mock: HTTPXMock, tile_image_content: bytes
+        self, tmp_path: Path, httpx2_mock: HTTPXMock, tile_image_content: bytes
     ) -> None:
         """Test that grid overlay functionality works."""
         pm = papermap.PaperMap(lat=40.7128, lon=-74.0060, add_grid=True)
 
         for _ in range(len(pm.tiles)):
-            httpx_mock.add_response(content=tile_image_content)
+            httpx2_mock.add_response(content=tile_image_content)
 
         pm.render()
 
@@ -79,14 +79,14 @@ class TestSmokeTests:
         assert output_file.stat().st_size > 0
 
     def test_different_paper_sizes(
-        self, tmp_path: Path, httpx_mock: HTTPXMock, tile_image_content: bytes
+        self, tmp_path: Path, httpx2_mock: HTTPXMock, tile_image_content: bytes
     ) -> None:
         """Test that different paper sizes work."""
         for size in ["a4", "letter"]:
             pm = papermap.PaperMap(lat=40.7128, lon=-74.0060, paper_size=size)
 
             for _ in range(len(pm.tiles)):
-                httpx_mock.add_response(content=tile_image_content)
+                httpx2_mock.add_response(content=tile_image_content)
 
             pm.render()
 

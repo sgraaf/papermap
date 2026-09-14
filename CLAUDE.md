@@ -72,7 +72,7 @@ papermap/
 
 1. **HTTP Client Migration:** Migrated from `requests` to `httpx` for modern async-capable HTTP client
 
-   - Test mocking now uses `pytest-httpx` instead of manual response mocking
+   - Test mocking now uses `httpx2-pytest` instead of manual response mocking
    - Connection pooling and timeout handling improved
 
 1. **Package Restructuring:**
@@ -402,7 +402,7 @@ The `conftest.py` provides common fixtures:
 - `sample_tile_provider_with_subdomains` - TileProvider with subdomain support
 - `sample_tile_provider_with_api_key` - TileProvider requiring API key
 - `mock_tile_image` - A mock PIL Image
-- HTTP mocking via `pytest-httpx` (use `httpx_mock` fixture)
+- HTTP mocking via `httpx2-pytest` (use `httpx2_mock` fixture)
 - `coordinate_test_cases` - Well-known coordinate test cases (NYC, London, Tokyo, etc.)
 
 ### Writing Tests
@@ -415,10 +415,10 @@ Follow these conventions:
 1. Use `@pytest.mark.parametrize` for testing multiple inputs
 1. Use `math.isclose()` for floating-point comparisons
 1. Test edge cases and boundary conditions
-1. For HTTP mocking, use `pytest-httpx`:
+1. For HTTP mocking, use `httpx2-pytest`:
    ```python
-   def test_tile_download(httpx_mock):
-       httpx_mock.add_response(content=b"fake_image_data")
+   def test_tile_download(httpx2_mock):
+       httpx2_mock.add_response(content=b"fake_image_data")
        # test code that makes HTTP requests
    ```
 

@@ -12,7 +12,7 @@ from math import ceil, floor, log2, radians
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Self
 
-import httpx
+import httpx2
 from fpdf import FPDF
 from PIL import Image, ImageColor
 
@@ -1334,7 +1334,7 @@ class PaperMap:
         self.pdf.cell(w=0, text=text, align="R", fill=True)
 
     @staticmethod
-    def _fetch_tile_image(client: httpx.Client, url: str) -> Image.Image:
+    def _fetch_tile_image(client: httpx2.Client, url: str) -> Image.Image:
         """Download and decode a single tile image.
 
         Args:
@@ -1352,7 +1352,7 @@ class PaperMap:
         """
         try:
             response = client.get(url)
-        except httpx.TransportError as e:
+        except httpx2.TransportError as e:
             raise _TileDownloadError(type(e).__name__) from e
         if not response.is_success:
             msg = f"HTTP {response.status_code}"
@@ -1360,8 +1360,8 @@ class PaperMap:
             # provider's coverage) persist on retry, unless the provider timed
             # out or is rate limiting.
             retryable = not response.is_client_error or response.status_code in {
-                httpx.codes.REQUEST_TIMEOUT,
-                httpx.codes.TOO_MANY_REQUESTS,
+                httpx2.codes.REQUEST_TIMEOUT,
+                httpx2.codes.TOO_MANY_REQUESTS,
             }
             raise _TileDownloadError(msg, retryable=retryable)
         try:
@@ -1406,13 +1406,13 @@ class PaperMap:
         max_workers = min(32, (os.cpu_count() or 1) + 4)
         with (
             ThreadPoolExecutor(max_workers) as executor,
-            httpx.Client(
+            httpx2.Client(
                 headers={
                     "User-Agent": f"{NAME}/{metadata.version('papermap')} (+{URL})",
                     "Accept": "image/png,image/*;q=0.9,*/*;q=0.8",
                 },
                 timeout=30.0,
-                limits=httpx.Limits(
+                limits=httpx2.Limits(
                     max_connections=max_workers,
                     max_keepalive_connections=max_workers,
                 ),
