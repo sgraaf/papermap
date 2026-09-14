@@ -39,6 +39,7 @@ The **third number** is for emergencies when we need to start branches for older
 - Fixed `latlon_to_utm()` and `latlon_to_mgrs()` returning the non-existent UTM zone 61 for a longitude of exactly 180°; it now lies in zone 1, like 180°W.
 - Fixed `latlon_to_utm()` silently converting a latitude beyond the poles (e.g. 100°) to a coordinate in the opposite hemisphere (e.g. -80°); it now raises a `ValueError`.
 - Fixed `utils.dd_to_dms()` returning 60 seconds (e.g. `(0, 59, 60.0)` for `0.99999999999`) instead of carrying over into the minutes and degrees.
+- Fixed `utils.dd_to_dms()` losing the sign of values between -1° and 0° (e.g. `-0.5` became `(0, 30, 0.0)`, i.e. `+0.5`). The sign of a negative value is now carried by its first non-zero component (e.g. `(0, -30, 0.0)`), and `utils.dms_to_dd()` treats a value as negative if any of its components is negative.
 - Fixed two identical `TileProvider` instances comparing unequal, as their internal subdomain cycles were compared by identity. The subdomain cycle is also no longer included in the `repr()`.
 - Fixed the `geojson` and `gpx` CLI sub-commands silently ignoring an explicit `--scale` when combined with `--auto-scale`; this combination is now rejected with a usage error, like it is in `PaperMap.from_geojson()` and `PaperMap.from_gpx()`.
 - Fixed the CLI accepting a non-positive `--scale` or `--dpi`, or a negative margin or `--padding`, which crashed with a traceback (e.g. a `ZeroDivisionError`); these are now rejected with a usage error.
