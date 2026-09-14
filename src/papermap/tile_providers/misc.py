@@ -83,16 +83,6 @@ TILE_PROVIDERS: list[TileProvider] = [
         zoom_max=19,
     ),
     TileProvider(
-        key="komoot",
-        name="Komoot",
-        attribution=f"Map data: {OSM_ATTRIBUTION}",
-        html_attribution=f"Map data: {OSM_HTML_ATTRIBUTION}",
-        url_template="http://{s}.tile.komoot.de/komoot-2/{z}/{x}/{y}.png",
-        subdomains=["a", "b", "c"],
-        zoom_min=0,
-        zoom_max=19,
-    ),
-    TileProvider(
         key="alltrails",
         name="AllTrails",
         attribution=f"Map data: {OSM_ATTRIBUTION}",
@@ -214,20 +204,6 @@ TILE_PROVIDERS: list[TileProvider] = [
         ),
         url_template="https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png",
         subdomains=["a", "b", "c"],
-        zoom_min=0,
-        zoom_max=19,
-    ),
-    TileProvider(
-        key="openfiremap",
-        name="OpenFireMap",
-        attribution="Map data: © OpenStreetMap contributors. Map style: © OpenFireMap (CC-BY-SA)",
-        html_attribution=(
-            f"Map data: {OSM_HTML_ATTRIBUTION}. "
-            'Map style: © <a href="http://www.openfiremap.org/">OpenFireMap</a> '
-            '(<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
-        ),
-        url_template="http://openfiremap.org/hytiles/{z}/{x}/{y}.png",
-        subdomains=None,
         zoom_min=0,
         zoom_max=19,
     ),

@@ -22,6 +22,10 @@ The **third number** is for emergencies when we need to start branches for older
 - `PaperMap` now raises a `ValueError` on construction when a grid is added outside the UTM coverage area (80°S to 84°N), or when the background color is invalid. Previously, these errors were only raised by `render()`, after all tiles had been downloaded.
 - Tile requests now identify themselves with a well-formed `User-Agent` header (`papermap/<version> (+https://github.com/sgraaf/papermap)`), as requested by the usage policies of tile providers such as OpenStreetMap.
 
+### Removed
+
+- Removed the `komoot` and `openfiremap` tile providers, whose tile servers no longer exist: the Komoot tile domain no longer resolves, and OpenFireMap no longer serves its raster tiles.
+
 ### Fixed
 
 - Fixed tile downloads aborting the whole map when a single request failed with a network error (e.g. a timeout) or returned data that is not a valid image. Such tiles are now retried and, if they keep failing, reported like any other failed tile (a warning, or a `RuntimeError` with `strict_download=True`). The failure message now also includes the failure reasons.
