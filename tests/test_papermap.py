@@ -7,8 +7,8 @@ from math import isclose
 from pathlib import Path
 from typing import Any
 
+import httpx
 import pytest
-from PIL import UnidentifiedImageError
 from pytest_httpx import HTTPXMock
 
 from papermap.features import CircleMarker, IconMarker, Line, Polygon
@@ -691,31 +691,57 @@ class TestPaperMapHttpErrors:
         with pytest.raises(RuntimeError, match="Could not download"):
             pm.download_tiles(num_retries=1, strict=True)
 
-    @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
-    def test_download_tiles_empty_response(self, httpx_mock: HTTPXMock) -> None:
-        """Test handling of empty response body."""
+    @pytest.mark.parametrize(
+        "content", [b"", b"This is not a valid PNG image"], ids=["empty", "invalid"]
+    )
+    def test_download_tiles_invalid_image_data_warns(
+        self, httpx_mock: HTTPXMock, content: bytes
+    ) -> None:
+        """Undecodable bodies fail the tile instead of aborting the download."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
-        # Return empty content (one per tile)
         for _ in pm.tiles:
-            httpx_mock.add_response(content=b"")
+            httpx_mock.add_response(content=content)
 
-        # Should raise UnidentifiedImageError when trying to parse empty content
-        with pytest.raises(UnidentifiedImageError):
+        with pytest.warns(UserWarning, match="invalid image data"):
             pm.download_tiles(num_retries=1)
+        assert not any(tile.success for tile in pm.tiles)
 
-    @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
-    def test_download_tiles_invalid_image_data(self, httpx_mock: HTTPXMock) -> None:
-        """Test handling of invalid/corrupted image data."""
+    def test_download_tiles_invalid_image_data_strict(
+        self, httpx_mock: HTTPXMock
+    ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
-        # Return invalid image data (one per tile)
         for _ in pm.tiles:
-            httpx_mock.add_response(content=b"This is not a valid PNG image")
+            httpx_mock.add_response(content=b"<html>rate limited</html>")
 
-        # Should raise UnidentifiedImageError when PIL tries to open invalid image
-        with pytest.raises(UnidentifiedImageError):
-            pm.download_tiles(num_retries=1)
+        with pytest.raises(RuntimeError, match="invalid image data"):
+            pm.download_tiles(num_retries=1, strict=True)
+
+    def test_download_tiles_retries_transport_errors(
+        self, httpx_mock: HTTPXMock, tile_image_content: bytes
+    ) -> None:
+        """Timeouts and connection errors are retried rather than propagated."""
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+
+        httpx_mock.add_exception(httpx.ConnectTimeout("timed out"))
+        for _ in pm.tiles:
+            httpx_mock.add_response(content=tile_image_content)
+
+        pm.download_tiles(num_retries=2)
+
+        assert all(tile.success for tile in pm.tiles)
+
+    def test_download_tiles_transport_errors_strict(
+        self, httpx_mock: HTTPXMock
+    ) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+
+        for _ in pm.tiles:
+            httpx_mock.add_exception(httpx.ConnectError("connection refused"))
+
+        with pytest.raises(RuntimeError, match="ConnectError"):
+            pm.download_tiles(num_retries=1, strict=True)
 
     def test_download_tiles_partial_success(
         self,

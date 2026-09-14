@@ -1,5 +1,6 @@
 import time
 import warnings
+from collections import Counter
 from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import KW_ONLY, InitVar, dataclass, field
@@ -98,6 +99,10 @@ DEFAULT_AUTO_SCALE_PADDING: float = 5.0
 
 class ScaleOutOfBoundsError(ValueError):
     """Raised when the resolved zoom level is outside the tile provider's bounds."""
+
+
+class _TileDownloadError(Exception):
+    """Raised when a single tile cannot be downloaded; the message is the reason."""
 
 
 COMMON_SCALES: tuple[int, ...] = (
@@ -1292,6 +1297,35 @@ class PaperMap:
         )
         self.pdf.cell(w=0, text=text, align="R", fill=True)
 
+    @staticmethod
+    def _fetch_tile_image(client: httpx.Client, url: str) -> Image.Image:
+        """Download and decode a single tile image.
+
+        Args:
+            client: The HTTP client to download the tile with.
+            url: The URL of the tile.
+
+        Returns:
+            The decoded tile image, in RGBA mode.
+
+        Raises:
+            _TileDownloadError: If the request errors (e.g. a timeout),
+                returns a non-success status, or returns data that is not a
+                valid image.
+        """
+        try:
+            response = client.get(url)
+        except httpx.TransportError as e:
+            raise _TileDownloadError(type(e).__name__) from e
+        if not response.is_success:
+            msg = f"HTTP {response.status_code}"
+            raise _TileDownloadError(msg)
+        try:
+            return Image.open(BytesIO(response.content)).convert("RGBA")
+        except OSError as e:  # includes PIL.UnidentifiedImageError
+            msg = "invalid image data"
+            raise _TileDownloadError(msg) from e
+
     def download_tiles(
         self,
         num_retries: int = 3,
@@ -1300,7 +1334,9 @@ class PaperMap:
     ) -> None:
         """Download all tile images for the map in parallel, with retries.
 
-        Tiles that have already been downloaded are skipped. Failed tiles
+        Tiles that have already been downloaded are skipped. A tile fails
+        when its request errors (e.g. a timeout), returns a non-success
+        status, or returns data that is not a valid image. Failed tiles
         are retried up to ``num_retries`` times. When ``strict`` is ``False``
         and tiles still fail after all retries, a warning is emitted; when
         ``strict`` is ``True``, a ``RuntimeError`` is raised instead.
@@ -1330,6 +1366,7 @@ class PaperMap:
                 ),
             ) as client,
         ):
+            failures: Counter[str] = Counter()
             for num_retry in count():
                 # get the unsuccessful tiles
                 tiles = [tile for tile in self.tiles if not tile.success]
@@ -1344,25 +1381,33 @@ class PaperMap:
 
                 # break if max number of retries exceeded
                 if num_retry >= num_retries:
-                    msg = f"Could not download {len(tiles)}/{len(self.tiles)} tiles after {num_retries} retries."
+                    msg = f"Could not download {len(tiles)}/{len(self.tiles)} tiles after {num_retries} retries"
+                    if failures:
+                        msg += f" ({', '.join(f'{reason}: {n}' for reason, n in failures.most_common())})"
                     if strict:
                         raise RuntimeError(msg)
                     warnings.warn(msg, stacklevel=2)
                     break
 
-                responses = executor.map(
-                    client.get,
-                    [
+                futures = [
+                    executor.submit(
+                        self._fetch_tile_image,
+                        client,
                         self.tile_provider.format_url_template(
                             tile=tile, api_key=self.api_key
-                        )
-                        for tile in tiles
-                    ],
-                )
+                        ),
+                    )
+                    for tile in tiles
+                ]
 
-                for tile, r in zip(tiles, responses, strict=True):
-                    if r.is_success:
-                        tile.image = Image.open(BytesIO(r.content)).convert("RGBA")
+                failures = Counter()
+                for tile, future in zip(tiles, futures, strict=True):
+                    try:
+                        tile.image = future.result()
+                    except _TileDownloadError as e:
+                        # Only this tile failed: it is retried and, if it keeps
+                        # failing, reported above (warning or RuntimeError).
+                        failures[str(e)] += 1
 
     def render_base_layer(self) -> None:
         """Download all tiles and assemble the map image.
