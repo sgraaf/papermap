@@ -272,6 +272,11 @@ class TestLatLonToUTM:
         utm = latlon_to_utm(78.2, 15.6)
         assert utm.zone == 33
 
+    @pytest.mark.parametrize("lat", [100, -100, 260])
+    def test_latitude_beyond_poles_is_not_wrapped(self, lat: float) -> None:
+        with pytest.raises(ValueError, match="outside UTM coverage"):
+            latlon_to_utm(lat, 0)
+
     def test_latitude_out_of_range_north(self) -> None:
         with pytest.raises(ValueError, match="outside UTM coverage"):
             latlon_to_utm(85, 0)

@@ -829,11 +829,10 @@ def latlon_to_utm(
     # -------------------------------------------------------------------------
     # Step 1: Validate and normalize input coordinates
     # -------------------------------------------------------------------------
-    lat = wrap_lat(lat)
-    lon = wrap_lon(lon)
-
     # UTM is only defined between 80°S and 84°N
     # Outside this range, the Universal Polar Stereographic (UPS) system is used
+    # (latitude is validated as-is: "wrapping" e.g. 100° to -80° is meaningless)
+    lon = wrap_lon(lon)
     if not -80 <= lat <= 84:
         msg = f"Latitude {lat}° is outside UTM coverage area [-80°, 84°]"
         raise ValueError(msg)
