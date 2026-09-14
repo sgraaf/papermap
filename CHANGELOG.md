@@ -21,6 +21,7 @@ The **third number** is for emergencies when we need to start branches for older
 - `PaperMap.render()` and `PaperMap.download_tiles()` now raise a `RuntimeError` when no tile at all can be downloaded (e.g. due to an invalid API key), even with `strict_download=False`, instead of producing a blank map with only a warning. Tiles failing with a client error that will not succeed on retry (HTTP 4xx other than 408 and 429) are no longer retried.
 - `PaperMap` now raises a `ValueError` on construction when a grid is added outside the UTM coverage area (80°S to 84°N), or when the background color is invalid. Previously, these errors were only raised by `render()`, after all tiles had been downloaded.
 - Tile requests now identify themselves with a well-formed `User-Agent` header (`papermap/<version> (+https://github.com/sgraaf/papermap)`), as requested by the usage policies of tile providers such as OpenStreetMap.
+- The CLI now reports invalid input (e.g. an out-of-range latitude or a malformed MGRS coordinate), tile download failures, a missing optional `gpx` package, and unreadable or unwritable files as a concise `Error: ...` message with exit code 1, instead of a Python traceback.
 
 ### Removed
 

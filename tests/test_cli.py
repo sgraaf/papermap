@@ -1068,21 +1068,86 @@ class TestCliErrorHandling:
         )
         assert result.exit_code != 0
 
-    def test_papermap_error_propagates(
+    @pytest.mark.parametrize(
+        "error",
+        [
+            ValueError("Scale out of bounds"),
+            RuntimeError("Could not download 80/80 tiles (HTTP 401: 80)"),
+            ImportError("Reading GPX files requires the optional 'gpx' package"),
+            PermissionError("Permission denied: 'test.pdf'"),
+        ],
+    )
+    def test_papermap_error_reported_without_traceback(
         self,
         runner: CliRunner,
         mock_papermap: tuple[MagicMock, MagicMock],
         tmp_path: Path,
+        error: Exception,
     ) -> None:
         mock_class, _mock_instance = mock_papermap
-        mock_class.side_effect = ValueError("Scale out of bounds")
+        mock_class.side_effect = error
         output_file = tmp_path / "test.pdf"
 
         result = runner.invoke(
             cli, ["latlon", str(TEST_LAT), str(TEST_LON), str(output_file)]
         )
 
-        assert result.exit_code != 0
+        assert result.exit_code == 1
+        assert result.output == f"Error: {error}\n"
+
+    def test_render_error_reported_without_traceback(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        _mock_class, mock_instance = mock_papermap
+        mock_instance.render.side_effect = RuntimeError("Could not download")
+        output_file = tmp_path / "test.pdf"
+
+        result = runner.invoke(
+            cli, ["latlon", str(TEST_LAT), str(TEST_LON), str(output_file)]
+        )
+
+        assert result.exit_code == 1
+        assert result.output == "Error: Could not download\n"
+
+    def test_unexpected_error_propagates(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        mock_class, _mock_instance = mock_papermap
+        mock_class.side_effect = TypeError("a bug")
+        output_file = tmp_path / "test.pdf"
+
+        result = runner.invoke(
+            cli, ["latlon", str(TEST_LAT), str(TEST_LON), str(output_file)]
+        )
+
+        assert isinstance(result.exception, TypeError)
+
+    def test_invalid_latitude_reported_without_traceback(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        output_file = tmp_path / "test.pdf"
+        result = runner.invoke(cli, ["latlon", "91", "0", str(output_file)])
+
+        assert result.exit_code == 1
+        assert result.output == "Error: Latitude must be in [-90, 90] range, got 91.0\n"
+        assert not output_file.exists()
+
+    def test_invalid_mgrs_square_reported_without_traceback(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        output_file = tmp_path / "test.pdf"
+        result = runner.invoke(
+            cli, ["mgrs", "18", "T", "W", "83959", "7523", str(output_file)]
+        )
+
+        assert result.exit_code == 1
+        assert result.output.startswith("Error: ")
 
 
 GEOJSON_STRING = """\

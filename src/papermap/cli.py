@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from functools import wraps
+from functools import partial, wraps
 from importlib import metadata
 from pathlib import Path
 from typing import Any, TypedDict, Unpack
@@ -248,10 +248,26 @@ def _drop_scale_for_auto_scale(kwargs: dict[str, Any], *, auto_scale: bool) -> N
     del kwargs["scale"]
 
 
-def _render_and_save(pm: PaperMap, file: Path) -> None:
-    """Render the map and write it to *file*."""
-    pm.render()
-    pm.save(file)
+def _render_and_save(create_paper_map: Callable[[], PaperMap], file: Path) -> None:
+    """Create and render the map, and write it to *file*.
+
+    Failures caused by the user's input or environment are reported as a
+    concise error message (with exit code 1), instead of a traceback: invalid
+    input (e.g. coordinates, or a GeoJSON file) raises ``ValueError``, tiles
+    that cannot be downloaded raise ``RuntimeError``, the optional ``gpx``
+    package being unavailable raises ``ImportError``, and files that cannot be
+    read or written raise ``OSError``. Any other exception propagates as is.
+
+    Raises:
+        click.ClickException: If creating, rendering or saving the map fails
+            for one of the reasons above.
+    """
+    try:
+        pm = create_paper_map()
+        pm.render()
+        pm.save(file)
+    except (ValueError, RuntimeError, ImportError, OSError) as e:
+        raise click.ClickException(str(e)) from e
 
 
 @click.group(
@@ -276,7 +292,7 @@ def latlon(
     lat: float, lon: float, file: Path, **kwargs: Unpack[CommonParameters]
 ) -> None:
     """Generates a paper map for the given geographic coordinates (i.e. lat, lon) and outputs it to file."""
-    _render_and_save(PaperMap(lat, lon, **kwargs), file)
+    _render_and_save(partial(PaperMap, lat, lon, **kwargs), file)
 
 
 @cli.command()
@@ -299,7 +315,11 @@ def utm(
 ) -> None:
     """Generates a paper map for the given UTM (Universal Transverse Mercator) coordinates and outputs it to file."""
     _render_and_save(
-        PaperMap.from_utm(UTMCoordinate(easting, northing, zone, hemisphere), **kwargs),
+        partial(
+            PaperMap.from_utm,
+            UTMCoordinate(easting, northing, zone, hemisphere),
+            **kwargs,
+        ),
         file,
     )
 
@@ -322,7 +342,8 @@ def mgrs(  # noqa: PLR0913, PLR0917
 ) -> None:
     """Generates a paper map for the given MGRS (Military Grid Reference System) coordinates and outputs it to file."""
     _render_and_save(
-        PaperMap.from_mgrs(
+        partial(
+            PaperMap.from_mgrs,
             MGRSCoordinate(zone, band.upper(), square.upper(), easting, northing),
             **kwargs,
         ),
@@ -339,7 +360,9 @@ def ecef(
     x: float, y: float, z: float, file: Path, **kwargs: Unpack[CommonParameters]
 ) -> None:
     """Generates a paper map for the given ECEF (Earth-Centered, Earth-Fixed) Cartesian coordinates and outputs it to file."""
-    _render_and_save(PaperMap.from_ecef(ECEFCoordinate(x, y, z), **kwargs), file)
+    _render_and_save(
+        partial(PaperMap.from_ecef, ECEFCoordinate(x, y, z), **kwargs), file
+    )
 
 
 @cli.command()
@@ -374,7 +397,8 @@ def geojson(
     style = _pop_style(forwarded)
     _drop_scale_for_auto_scale(forwarded, auto_scale=auto_scale)
     _render_and_save(
-        PaperMap.from_geojson(
+        partial(
+            PaperMap.from_geojson,
             geojson_file,
             style=style,
             auto_scale=auto_scale,
@@ -420,7 +444,8 @@ def gpx(
     style = _pop_style(forwarded)
     _drop_scale_for_auto_scale(forwarded, auto_scale=auto_scale)
     _render_and_save(
-        PaperMap.from_gpx(
+        partial(
+            PaperMap.from_gpx,
             gpx_file,
             style=style,
             auto_scale=auto_scale,
