@@ -80,12 +80,12 @@ Options:
   --paper-size [a0|a1|a2|a3|a4|a5|a6|a7|letter|legal]
                                   Size of the paper map.
   --landscape                     Use landscape orientation.
-  --margin-top MILLIMETERS        Top margin.
-  --margin-right MILLIMETERS      Right margin.
-  --margin-bottom MILLIMETERS     Bottom margin.
-  --margin-left MILLIMETERS       Left margin.
-  --scale INTEGER                 Scale of the paper map.
-  --dpi INTEGER                   Dots per inch.
+  --margin-top MILLIMETERS        Top margin.  [x>=0]
+  --margin-right MILLIMETERS      Right margin.  [x>=0]
+  --margin-bottom MILLIMETERS     Bottom margin.  [x>=0]
+  --margin-left MILLIMETERS       Left margin.  [x>=0]
+  --scale INTEGER RANGE           Scale of the paper map.  [x>=1]
+  --dpi INTEGER RANGE             Dots per inch.  [x>=1]
   --grid                          Add a coordinate grid overlay to the paper
                                   map.
   --grid-size METERS              Size of the grid squares (if applicable).
@@ -121,12 +121,12 @@ Options:
   --paper-size [a0|a1|a2|a3|a4|a5|a6|a7|letter|legal]
                                   Size of the paper map.
   --landscape                     Use landscape orientation.
-  --margin-top MILLIMETERS        Top margin.
-  --margin-right MILLIMETERS      Right margin.
-  --margin-bottom MILLIMETERS     Bottom margin.
-  --margin-left MILLIMETERS       Left margin.
-  --scale INTEGER                 Scale of the paper map.
-  --dpi INTEGER                   Dots per inch.
+  --margin-top MILLIMETERS        Top margin.  [x>=0]
+  --margin-right MILLIMETERS      Right margin.  [x>=0]
+  --margin-bottom MILLIMETERS     Bottom margin.  [x>=0]
+  --margin-left MILLIMETERS       Left margin.  [x>=0]
+  --scale INTEGER RANGE           Scale of the paper map.  [x>=1]
+  --dpi INTEGER RANGE             Dots per inch.  [x>=1]
   --grid                          Add a coordinate grid overlay to the paper
                                   map.
   --grid-size METERS              Size of the grid squares (if applicable).
@@ -160,12 +160,12 @@ Options:
   --paper-size [a0|a1|a2|a3|a4|a5|a6|a7|letter|legal]
                                   Size of the paper map.
   --landscape                     Use landscape orientation.
-  --margin-top MILLIMETERS        Top margin.
-  --margin-right MILLIMETERS      Right margin.
-  --margin-bottom MILLIMETERS     Bottom margin.
-  --margin-left MILLIMETERS       Left margin.
-  --scale INTEGER                 Scale of the paper map.
-  --dpi INTEGER                   Dots per inch.
+  --margin-top MILLIMETERS        Top margin.  [x>=0]
+  --margin-right MILLIMETERS      Right margin.  [x>=0]
+  --margin-bottom MILLIMETERS     Bottom margin.  [x>=0]
+  --margin-left MILLIMETERS       Left margin.  [x>=0]
+  --scale INTEGER RANGE           Scale of the paper map.  [x>=1]
+  --dpi INTEGER RANGE             Dots per inch.  [x>=1]
   --grid                          Add a coordinate grid overlay to the paper
                                   map.
   --grid-size METERS              Size of the grid squares (if applicable).
@@ -199,12 +199,12 @@ Options:
   --paper-size [a0|a1|a2|a3|a4|a5|a6|a7|letter|legal]
                                   Size of the paper map.
   --landscape                     Use landscape orientation.
-  --margin-top MILLIMETERS        Top margin.
-  --margin-right MILLIMETERS      Right margin.
-  --margin-bottom MILLIMETERS     Bottom margin.
-  --margin-left MILLIMETERS       Left margin.
-  --scale INTEGER                 Scale of the paper map.
-  --dpi INTEGER                   Dots per inch.
+  --margin-top MILLIMETERS        Top margin.  [x>=0]
+  --margin-right MILLIMETERS      Right margin.  [x>=0]
+  --margin-bottom MILLIMETERS     Bottom margin.  [x>=0]
+  --margin-left MILLIMETERS       Left margin.  [x>=0]
+  --scale INTEGER RANGE           Scale of the paper map.  [x>=1]
+  --dpi INTEGER RANGE             Dots per inch.  [x>=1]
   --grid                          Add a coordinate grid overlay to the paper
                                   map.
   --grid-size METERS              Size of the grid squares (if applicable).
@@ -235,7 +235,7 @@ Options:
                                   GeoJSON geometries.
   --padding MILLIMETERS           Padding between the GeoJSON geometries and the
                                   image edge (per side). Only used with --auto-
-                                  scale.
+                                  scale.  [x>=0]
   --stroke COLOR                  Outline colour (CSS-style hex) for markers,
                                   lines and polygons.
   --stroke-width MILLIMETERS      Outline width on paper for markers, lines and
@@ -257,12 +257,12 @@ Options:
   --paper-size [a0|a1|a2|a3|a4|a5|a6|a7|letter|legal]
                                   Size of the paper map.
   --landscape                     Use landscape orientation.
-  --margin-top MILLIMETERS        Top margin.
-  --margin-right MILLIMETERS      Right margin.
-  --margin-bottom MILLIMETERS     Bottom margin.
-  --margin-left MILLIMETERS       Left margin.
-  --scale INTEGER                 Scale of the paper map.
-  --dpi INTEGER                   Dots per inch.
+  --margin-top MILLIMETERS        Top margin.  [x>=0]
+  --margin-right MILLIMETERS      Right margin.  [x>=0]
+  --margin-bottom MILLIMETERS     Bottom margin.  [x>=0]
+  --margin-left MILLIMETERS       Left margin.  [x>=0]
+  --scale INTEGER RANGE           Scale of the paper map.  [x>=1]
+  --dpi INTEGER RANGE             Dots per inch.  [x>=1]
   --grid                          Add a coordinate grid overlay to the paper
                                   map.
   --grid-size METERS              Size of the grid squares (if applicable).
@@ -296,7 +296,7 @@ Options:
                                   geometries.
   --padding MILLIMETERS           Padding between the GPX geometries and the
                                   image edge (per side). Only used with --auto-
-                                  scale.
+                                  scale.  [x>=0]
   --stroke COLOR                  Outline colour (CSS-style hex) for markers,
                                   lines and polygons.
   --stroke-width MILLIMETERS      Outline width on paper for markers, lines and
@@ -318,12 +318,12 @@ Options:
   --paper-size [a0|a1|a2|a3|a4|a5|a6|a7|letter|legal]
                                   Size of the paper map.
   --landscape                     Use landscape orientation.
-  --margin-top MILLIMETERS        Top margin.
-  --margin-right MILLIMETERS      Right margin.
-  --margin-bottom MILLIMETERS     Bottom margin.
-  --margin-left MILLIMETERS       Left margin.
-  --scale INTEGER                 Scale of the paper map.
-  --dpi INTEGER                   Dots per inch.
+  --margin-top MILLIMETERS        Top margin.  [x>=0]
+  --margin-right MILLIMETERS      Right margin.  [x>=0]
+  --margin-bottom MILLIMETERS     Bottom margin.  [x>=0]
+  --margin-left MILLIMETERS       Left margin.  [x>=0]
+  --scale INTEGER RANGE           Scale of the paper map.  [x>=1]
+  --dpi INTEGER RANGE             Dots per inch.  [x>=1]
   --grid                          Add a coordinate grid overlay to the paper
                                   map.
   --grid-size METERS              Size of the grid squares (if applicable).

@@ -51,7 +51,7 @@ def margin_option(side: str) -> Callable:
     """Attaches a margin option for the given side to the command."""
     return click.option(
         f"--margin-{side}",
-        type=int,
+        type=click.IntRange(min=0),
         default=DEFAULT_MARGIN,
         metavar="MILLIMETERS",
         help=f"{side.title()} margin.",
@@ -193,13 +193,13 @@ def common_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
     @margin_option("left")
     @click.option(
         "--scale",
-        type=int,
+        type=click.IntRange(min=1),
         default=DEFAULT_SCALE,
         help="Scale of the paper map.",
     )
     @click.option(
         "--dpi",
-        type=int,
+        type=click.IntRange(min=1),
         default=DEFAULT_DPI,
         help="Dots per inch.",
     )
@@ -354,7 +354,7 @@ def ecef(
 )
 @click.option(
     "--padding",
-    type=float,
+    type=click.FloatRange(min=0),
     default=DEFAULT_AUTO_SCALE_PADDING,
     metavar="MILLIMETERS",
     help="Padding between the GeoJSON geometries and the image edge (per side). Only used with --auto-scale.",
@@ -397,7 +397,7 @@ def geojson(
 )
 @click.option(
     "--padding",
-    type=float,
+    type=click.FloatRange(min=0),
     default=DEFAULT_AUTO_SCALE_PADDING,
     metavar="MILLIMETERS",
     help="Padding between the GPX geometries and the image edge (per side). Only used with --auto-scale.",

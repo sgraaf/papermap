@@ -459,6 +459,19 @@ class TestLatLonCommand:
         result = runner.invoke(cli, ["latlon", str(TEST_LAT), str(TEST_LON)])
         assert result.exit_code != 0
 
+    @pytest.mark.parametrize(
+        "option", ["--scale=0", "--dpi=0", "--margin-top=-1", "--margin-left=-5"]
+    )
+    def test_latlon_out_of_range_numeric_option(
+        self, runner: CliRunner, tmp_path: Path, option: str
+    ) -> None:
+        output_file = tmp_path / "test.pdf"
+        result = runner.invoke(
+            cli, ["latlon", str(TEST_LAT), str(TEST_LON), str(output_file), option]
+        )
+        assert result.exit_code == 2
+        assert option.partition("=")[0] in result.output
+
     @pytest.mark.parametrize("grid_size", ["0", "-1000"])
     def test_latlon_non_positive_grid_size(
         self, runner: CliRunner, tmp_path: Path, grid_size: str
@@ -1170,6 +1183,20 @@ class TestGeoJSONCommand:
 
         assert result.exit_code == 2
         assert "'--scale' cannot be combined with '--auto-scale'" in result.output
+
+    def test_geojson_negative_padding_rejected(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        geojson_in = self._write_geojson(tmp_path)
+        output_file = tmp_path / "out.pdf"
+
+        result = runner.invoke(
+            cli,
+            ["geojson", "--padding=-1", str(geojson_in), str(output_file)],
+        )
+
+        assert result.exit_code == 2
+        assert "--padding" in result.output
 
     def test_geojson_padding_forwarded(
         self,
