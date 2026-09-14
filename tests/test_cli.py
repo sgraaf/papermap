@@ -1150,6 +1150,27 @@ class TestGeoJSONCommand:
         # When --auto-scale is set, the CLI must not forward the default scale.
         assert "scale" not in call_kwargs
 
+    def test_geojson_auto_scale_rejects_explicit_scale(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        geojson_in = self._write_geojson(tmp_path)
+        output_file = tmp_path / "out.pdf"
+
+        result = runner.invoke(
+            cli,
+            [
+                "geojson",
+                "--auto-scale",
+                "--scale",
+                "10000",
+                str(geojson_in),
+                str(output_file),
+            ],
+        )
+
+        assert result.exit_code == 2
+        assert "'--scale' cannot be combined with '--auto-scale'" in result.output
+
     def test_geojson_padding_forwarded(
         self,
         runner: CliRunner,
@@ -1368,6 +1389,27 @@ class TestGpxCommand:
         assert call_kwargs["auto_scale"] is True
         # When --auto-scale is set, the CLI must not forward the default scale.
         assert "scale" not in call_kwargs
+
+    def test_gpx_auto_scale_rejects_explicit_scale(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        gpx_in = self._write_gpx(tmp_path)
+        output_file = tmp_path / "out.pdf"
+
+        result = runner.invoke(
+            cli,
+            [
+                "gpx",
+                "--auto-scale",
+                "--scale",
+                "10000",
+                str(gpx_in),
+                str(output_file),
+            ],
+        )
+
+        assert result.exit_code == 2
+        assert "'--scale' cannot be combined with '--auto-scale'" in result.output
 
     def test_gpx_padding_forwarded(
         self,

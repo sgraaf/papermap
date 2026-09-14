@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, TypedDict, Unpack
 
 import click
+from click.core import ParameterSource
 from click_default_group import DefaultGroup
 
 from .geodesy import ECEFCoordinate, MGRSCoordinate, UTMCoordinate
@@ -230,6 +231,23 @@ def common_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
     return wrapper
 
 
+def _drop_scale_for_auto_scale(kwargs: dict[str, Any], *, auto_scale: bool) -> None:
+    """Remove the default ``scale`` from ``kwargs`` when ``--auto-scale`` is used.
+
+    Raises:
+        click.UsageError: If ``--scale`` is combined with ``--auto-scale``.
+    """
+    if not auto_scale:
+        return
+    if (
+        click.get_current_context().get_parameter_source("scale")
+        is not ParameterSource.DEFAULT
+    ):
+        msg = "'--scale' cannot be combined with '--auto-scale'."
+        raise click.UsageError(msg)
+    del kwargs["scale"]
+
+
 def _render_and_save(pm: PaperMap, file: Path) -> None:
     """Render the map and write it to *file*."""
     pm.render()
@@ -353,8 +371,7 @@ def geojson(
     """Generates a paper map for the given GeoJSON file and outputs it to file."""
     forwarded: dict[str, Any] = dict(**kwargs)
     style = _pop_style(forwarded)
-    if auto_scale:
-        forwarded.pop("scale", None)
+    _drop_scale_for_auto_scale(forwarded, auto_scale=auto_scale)
     _render_and_save(
         PaperMap.from_geojson(
             geojson_file,
@@ -400,8 +417,7 @@ def gpx(
     """
     forwarded: dict[str, Any] = dict(**kwargs)
     style = _pop_style(forwarded)
-    if auto_scale:
-        forwarded.pop("scale", None)
+    _drop_scale_for_auto_scale(forwarded, auto_scale=auto_scale)
     _render_and_save(
         PaperMap.from_gpx(
             gpx_file,

@@ -34,6 +34,7 @@ The **third number** is for emergencies when we need to start branches for older
 - Fixed `latlon_to_utm()` silently converting a latitude beyond the poles (e.g. 100°) to a coordinate in the opposite hemisphere (e.g. -80°); it now raises a `ValueError`.
 - Fixed `utils.dd_to_dms()` returning 60 seconds (e.g. `(0, 59, 60.0)` for `0.99999999999`) instead of carrying over into the minutes and degrees.
 - Fixed two identical `TileProvider` instances comparing unequal, as their internal subdomain cycles were compared by identity. The subdomain cycle is also no longer included in the `repr()`.
+- Fixed the `geojson` and `gpx` CLI sub-commands silently ignoring an explicit `--scale` when combined with `--auto-scale`; this combination is now rejected with a usage error, like it is in `PaperMap.from_geojson()` and `PaperMap.from_gpx()`.
 
 ## [2026.2.0](https://github.com/sgraaf/papermap/compare/2026.1.0...2026.2.0) (2026-05-17)
 
