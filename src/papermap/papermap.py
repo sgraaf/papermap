@@ -987,68 +987,54 @@ class PaperMap:
     ) -> tuple[list[tuple[Decimal, str]], list[tuple[Decimal, str]]]:
         """Compute the UTM grid line positions and labels for the map overlay.
 
-        The map's geographic centre is converted to UTM and snapped to the
-        nearest 1km grid intersection. From there, line positions (in mm
-        relative to the image's top-left corner) are walked outward at
-        ``grid_size_scaled`` intervals, and the matching kilometre labels
-        are derived from the rounded UTM coordinates.
+        The map's geographic centre is converted to UTM to find the UTM
+        coordinates of the image's left and top edges. Grid lines lie on
+        multiples of ``grid_size``: starting from the first one inside the
+        image, line positions (in mm relative to the image's top-left corner)
+        are walked across the image at ``grid_size_scaled`` intervals.
 
         Returns:
             A pair ``(easting_lines, northing_lines)``. Each list holds
             ``(position_mm, label)`` tuples, where ``position_mm`` is a
             ``Decimal`` distance from the top-left of the image area and
-            ``label`` is the UTM coordinate in kilometres.
+            ``label`` is the UTM coordinate in kilometres (e.g. ``"583"``, or
+            ``"583.5"`` for a 500m grid).
         """
         # convert Lat/Lon coordinate into UTM coordinate (easting, northing, zone, hemisphere)
         easting, northing, _, _ = latlon_to_utm(self.lat, self.lon)
+        grid_size = Decimal(self.grid_size)
+        m_per_mm = Decimal(self.scale) / 1000
 
-        # round easting/northing to nearest thousand
-        easting_rnd = round(easting, -3)
-        northing_rnd = round(northing, -3)
+        # determine the UTM coordinates (in m) of the image's left and top edges
+        easting_left = Decimal(easting) - Decimal(self.image_width) / 2 * m_per_mm
+        northing_top = Decimal(northing) + Decimal(self.image_height) / 2 * m_per_mm
 
-        # compute distance between x/y and x/y_rnd in mm using Decimal arithmetic
-        d_easting = Decimal(easting - easting_rnd) / Decimal(self.scale) * 1000
-        d_northing = Decimal(northing - northing_rnd) / Decimal(self.scale) * 1000
-
-        # determine center grid coordinate (in mm); page y grows southward, so a
-        # rounded northing south of the centre (d_northing > 0) lies below it
-        easting_grid_center = Decimal(self.image_width) / 2 - d_easting
-        northing_grid_center = Decimal(self.image_height) / 2 + d_northing
-
-        # determine start grid coordinate (in mm)
-        easting_grid_start = easting_grid_center % self.grid_size_scaled
-        northing_grid_start = northing_grid_center % self.grid_size_scaled
-
-        # determine the start grid coordinate label
-        easting_label_start = int(
-            Decimal(easting_rnd) / 1000 - easting_grid_center // self.grid_size_scaled
-        )
-        northing_label_start = int(
-            Decimal(northing_rnd) / 1000 + northing_grid_center // self.grid_size_scaled
-        )
+        # determine the first grid line inside the image; page x grows eastward
+        # and page y grows southward
+        easting_first = ceil(easting_left / grid_size) * grid_size
+        northing_first = floor(northing_top / grid_size) * grid_size
 
         # determine the grid coordinates (in mm)
-        easting_grid_cs = list(
-            drange(easting_grid_start, Decimal(self.image_width), self.grid_size_scaled)
+        easting_grid_cs = drange(
+            (easting_first - easting_left) / m_per_mm,
+            Decimal(self.image_width),
+            self.grid_size_scaled,
         )
-        northing_grid_cs = list(
-            drange(
-                northing_grid_start, Decimal(self.image_height), self.grid_size_scaled
-            )
+        northing_grid_cs = drange(
+            (northing_top - northing_first) / m_per_mm,
+            Decimal(self.image_height),
+            self.grid_size_scaled,
         )
 
-        # determine the grid coordinates labels
-        easting_labels = [easting_label_start + i for i in range(len(easting_grid_cs))]
-        northing_labels = [
-            northing_label_start - i for i in range(len(northing_grid_cs))
+        # label each grid line with its UTM coordinate (in km)
+        easting_grid_cs_and_labels = [
+            (x, str((easting_first + i * grid_size) / 1000))
+            for i, x in enumerate(easting_grid_cs)
         ]
-
-        easting_grid_cs_and_labels = list(
-            zip(easting_grid_cs, map(str, easting_labels), strict=True)
-        )
-        northing_grid_cs_and_labels = list(
-            zip(northing_grid_cs, map(str, northing_labels), strict=True)
-        )
+        northing_grid_cs_and_labels = [
+            (y, str((northing_first - i * grid_size) / 1000))
+            for i, y in enumerate(northing_grid_cs)
+        ]
 
         return easting_grid_cs_and_labels, northing_grid_cs_and_labels
 

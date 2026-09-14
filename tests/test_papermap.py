@@ -1,5 +1,6 @@
 """Unit tests for papermap.papermap module."""
 
+import itertools
 import re
 import zlib
 from decimal import Decimal
@@ -465,27 +466,44 @@ class TestPaperMapComputeGridCoordinates:
         for y, _ in y_coords:
             assert 0 <= float(y) <= pm.image_height
 
+    @pytest.mark.parametrize("grid_size", [500, 1000, 1500, 2000])
     @pytest.mark.parametrize(
         ("lat", "lon"),
         [(52.0037, 5.0061), (40.7128, -74.0060), (-33.8688, 151.2093)],
     )
     def test_compute_grid_coordinates_match_utm_positions(
-        self, lat: float, lon: float
+        self, lat: float, lon: float, grid_size: int
     ) -> None:
         """Each grid line is drawn where its labelled UTM coordinate lies on the map."""
-        pm = PaperMap(lat=lat, lon=lon, add_grid=True)
+        pm = PaperMap(lat=lat, lon=lon, add_grid=True, grid_size=grid_size)
         easting, northing, zone, hemisphere = latlon_to_utm(lat, lon)
         easting_lines, northing_lines = pm.compute_grid_coordinates()
 
+        # The (spherical) Web Mercator base map and the (ellipsoidal) UTM grid
+        # drift apart by up to ~0.5mm towards the edges of an A4 page.
         for x, label in easting_lines:
             utm = UTMCoordinate(float(label) * 1000, northing, zone, hemisphere)
             expected_x, _ = pm.latlon_to_pdf_mm(*utm_to_latlon(utm)[:2])
-            assert isclose(float(x) + pm.margin_left, expected_x, abs_tol=0.5)
+            assert isclose(float(x) + pm.margin_left, expected_x, abs_tol=1)
 
         for y, label in northing_lines:
             utm = UTMCoordinate(easting, float(label) * 1000, zone, hemisphere)
             _, expected_y = pm.latlon_to_pdf_mm(*utm_to_latlon(utm)[:2])
-            assert isclose(float(y) + pm.margin_top, expected_y, abs_tol=0.5)
+            assert isclose(float(y) + pm.margin_top, expected_y, abs_tol=1)
+
+    def test_compute_grid_coordinates_labels_follow_grid_size(self) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060, add_grid=True, grid_size=500)
+        easting_lines, northing_lines = pm.compute_grid_coordinates()
+
+        easting_labels = [Decimal(label) for _, label in easting_lines]
+        northing_labels = [Decimal(label) for _, label in northing_lines]
+        assert all(
+            b - a == Decimal("0.5") for a, b in itertools.pairwise(easting_labels)
+        )
+        assert all(
+            a - b == Decimal("0.5") for a, b in itertools.pairwise(northing_labels)
+        )
+        assert all(label % Decimal("0.5") == 0 for label in easting_labels)
 
     def test_compute_grid_coordinates_spacing(self) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060, add_grid=True, grid_size=1000)
