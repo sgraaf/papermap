@@ -205,6 +205,14 @@ class TestWrapLon:
 
 
 class TestLatLonToUTM:
+    def test_180_degrees_east_is_zone_1(self) -> None:
+        utm_east = latlon_to_utm(10, 180)
+        utm_west = latlon_to_utm(10, -180)
+        assert utm_east.zone == utm_west.zone == 1
+        assert math.isclose(utm_east.easting, utm_west.easting, abs_tol=1e-6)
+        assert math.isclose(utm_east.northing, utm_west.northing, abs_tol=1e-6)
+        assert abs(utm_to_latlon(utm_east).lon) == pytest.approx(180)
+
     def test_new_york_city(self) -> None:
         # New York City: 40.7128°N, 74.0060°W
         utm = latlon_to_utm(40.7128, -74.0060)

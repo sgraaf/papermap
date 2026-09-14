@@ -372,7 +372,8 @@ def wrap_lon(lon: float) -> float:
 def _compute_utm_zone(lat: float, lon: float) -> int:
     """Compute the UTM zone number for a given latitude/longitude.
 
-    The standard UTM zone formula is: zone = floor((lon + 180) / 6) + 1
+    The standard UTM zone formula is: zone = floor((lon + 180) / 6) % 60 + 1,
+    where the modulo maps 180°E onto zone 1 (the same meridian as 180°W).
 
     However, there are several exceptions to accommodate national mapping
     systems:
@@ -391,7 +392,7 @@ def _compute_utm_zone(lat: float, lon: float) -> int:
         UTM zone number (1-60).
     """
     # Standard zone calculation
-    zone = floor((lon + 180) / 6) + 1
+    zone = floor((lon + 180) / 6) % 60 + 1
 
     # Norway exception: zone 31V is narrowed, 32V is widened
     # This affects latitudes 56°N to 64°N and longitudes 3°E to 12°E
@@ -849,7 +850,8 @@ def latlon_to_utm(
     # φ (phi) = latitude in radians
     # λ (lambda) = longitude offset from central meridian in radians
     φ = radians(lat)
-    λ = radians(lon - central_meridian)
+    # (wrapped, as 180°E lies in zone 1, whose central meridian is 177°W)
+    λ = radians(wrap_lon(lon - central_meridian))
 
     # -------------------------------------------------------------------------
     # Step 4: Compute ellipsoid-derived constants
