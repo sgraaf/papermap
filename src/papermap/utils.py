@@ -182,22 +182,36 @@ def pt_to_mm(pt: float) -> float:
 def dd_to_dms(dd: float) -> tuple[int, int, float]:
     """Convert Decimal Degrees (DD) to Degrees, Minutes, and Seconds (DMS).
 
+    The sign of a negative value is carried by its first non-zero component,
+    e.g. ``-45.5`` becomes ``(-45, 30, 0.0)`` and ``-0.5`` becomes
+    ``(0, -30, 0.0)``.
+
     Args:
         dd: The Decimal Degrees.
 
     Returns:
         The Degrees, Minutes, and Seconds.
     """
-    is_positive = dd >= 0
-    dd = abs(dd)
-    m, s = divmod(dd * 3600, 60)
+    # round the total seconds first, so that rounding cannot yield 60 seconds
+    m, s = divmod(round(abs(dd) * 3600, 6), 60)
     d, m = divmod(m, 60)
-    d = d if is_positive else -d
-    return round(d), round(m), round(s, 6)
+    degrees, minutes, seconds = round(d), round(m), round(s, 6)
+    if dd < 0:
+        if degrees:
+            degrees = -degrees
+        elif minutes:
+            minutes = -minutes
+        else:
+            seconds = -seconds
+    return degrees, minutes, seconds
 
 
 def dms_to_dd(dms: tuple[int, int, float]) -> float:
     """Convert Degrees, Minutes, and Seconds (DMS) to Decimal Degrees (DD).
+
+    The value is negative if any of its components is negative, such that
+    e.g. both ``(-45, 30, 0)`` and ``(0, -30, 0)`` are negative (see
+    :func:`dd_to_dms`).
 
     Args:
         dms: The Degrees, Minutes, and Seconds.
@@ -206,9 +220,8 @@ def dms_to_dd(dms: tuple[int, int, float]) -> float:
         The Decimal Degrees.
     """
     d, m, s = dms
-    is_positive = d >= 0
-    d = d if is_positive else -d
-    return round((d + m / 60 + s / 3600) * (1 if is_positive else -1), 6)
+    sign = -1 if min(d, m, s) < 0 else 1
+    return round(sign * (abs(d) + abs(m) / 60 + abs(s) / 3600), 6)
 
 
 def scale_to_zoom(scale: int, lat: float, dpi: int = DEFAULT_DPI) -> float:

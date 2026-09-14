@@ -1,6 +1,9 @@
 """Unit tests for papermap.features module."""
 
+from pathlib import Path
+
 import pytest
+from PIL import Image
 
 from papermap.features import (
     CircleMarker,
@@ -10,6 +13,29 @@ from papermap.features import (
     Polygon,
     iter_feature_coordinates,
 )
+
+
+class TestIconMarkerLoadIcon:
+    """Tests for IconMarker.load_icon."""
+
+    def test_load_icon_from_path(self, tmp_path: Path) -> None:
+        icon_path = tmp_path / "icon.png"
+        Image.new("RGBA", (4, 2), "red").save(icon_path)
+        marker = IconMarker(0.0, 0.0, icon=icon_path)
+
+        image = marker.load_icon()
+
+        assert image.size == (4, 2)
+        assert getattr(image, "fp", None) is None  # the file is not kept open
+        assert marker.load_icon() is image  # read from disk only once
+
+    def test_load_icon_from_image(self) -> None:
+        icon = Image.new("RGBA", (4, 2))
+        assert IconMarker(0.0, 0.0, icon=icon).load_icon() is icon
+
+    def test_load_icon_missing_file(self, tmp_path: Path) -> None:
+        with pytest.raises(FileNotFoundError):
+            IconMarker(0.0, 0.0, icon=tmp_path / "missing.png").load_icon()
 
 
 class TestDataclassDefaults:

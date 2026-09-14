@@ -1,5 +1,6 @@
 """Integration tests for papermap CLI."""
 
+import re
 import runpy
 import subprocess
 import sys
@@ -131,6 +132,15 @@ class TestCliHelp:
         assert result.exit_code == 0
         # Should contain version number
         assert "." in result.output  # Version numbers have dots
+
+    @pytest.mark.parametrize("command", ["latlon", "geojson", "gpx"])
+    def test_help_does_not_show_option_ranges(
+        self, runner: CliRunner, command: str
+    ) -> None:
+        result = runner.invoke(cli, [command, "--help"])
+        assert result.exit_code == 0
+        assert "--margin-top" in result.output
+        assert not re.search(r"\[[^\]]*x[<>]=", result.output)
 
     def test_latlon_help(self, runner: CliRunner) -> None:
         result = runner.invoke(cli, ["latlon", "--help"])
@@ -459,6 +469,38 @@ class TestLatLonCommand:
         result = runner.invoke(cli, ["latlon", str(TEST_LAT), str(TEST_LON)])
         assert result.exit_code != 0
 
+    @pytest.mark.parametrize(
+        "option", ["--scale=0", "--dpi=0", "--margin-top=-1", "--margin-left=-5"]
+    )
+    def test_latlon_out_of_range_numeric_option(
+        self, runner: CliRunner, tmp_path: Path, option: str
+    ) -> None:
+        output_file = tmp_path / "test.pdf"
+        result = runner.invoke(
+            cli, ["latlon", str(TEST_LAT), str(TEST_LON), str(output_file), option]
+        )
+        assert result.exit_code == 2
+        assert option.partition("=")[0] in result.output
+
+    @pytest.mark.parametrize("grid_size", ["0", "-1000"])
+    def test_latlon_non_positive_grid_size(
+        self, runner: CliRunner, tmp_path: Path, grid_size: str
+    ) -> None:
+        output_file = tmp_path / "test.pdf"
+        result = runner.invoke(
+            cli,
+            [
+                "latlon",
+                str(TEST_LAT),
+                str(TEST_LON),
+                str(output_file),
+                "--grid",
+                f"--grid-size={grid_size}",
+            ],
+        )
+        assert result.exit_code == 2
+        assert "--grid-size" in result.output
+
     def test_latlon_invalid_tile_provider(
         self, runner: CliRunner, tmp_path: Path
     ) -> None:
@@ -524,6 +566,34 @@ class TestUtmCommand:
             cli, ["utm", "583960", "4507523", "invalid", "N", str(output_file)]
         )
         assert result.exit_code != 0
+
+    @pytest.mark.parametrize(
+        ("zone", "hemisphere"), [("61", "N"), ("0", "N"), ("56", "X")]
+    )
+    def test_utm_out_of_range_zone_or_hemisphere(
+        self, runner: CliRunner, tmp_path: Path, zone: str, hemisphere: str
+    ) -> None:
+        output_file = tmp_path / "test.pdf"
+        result = runner.invoke(
+            cli, ["utm", "334000", "6252000", zone, hemisphere, str(output_file)]
+        )
+        assert result.exit_code == 2
+
+    def test_utm_lowercase_hemisphere(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        mock_class, _mock_instance = mock_papermap
+        output_file = tmp_path / "test.pdf"
+
+        result = runner.invoke(
+            cli, ["utm", "334000", "6252000", "56", "s", str(output_file)]
+        )
+
+        assert result.exit_code == 0
+        assert mock_class.from_utm.call_args.args[0][-1] == "S"
 
     def test_utm_basic_execution(
         self,
@@ -625,6 +695,29 @@ class TestMgrsCommand:
             cli, ["mgrs", "invalid", "T", "WL", "85000", "50000", str(output_file)]
         )
         assert result.exit_code != 0
+
+    def test_mgrs_out_of_range_zone(self, runner: CliRunner, tmp_path: Path) -> None:
+        output_file = tmp_path / "test.pdf"
+        result = runner.invoke(
+            cli, ["mgrs", "61", "T", "WL", "85000", "50000", str(output_file)]
+        )
+        assert result.exit_code == 2
+
+    def test_mgrs_lowercase_band_and_square(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        mock_class, _mock_instance = mock_papermap
+        output_file = tmp_path / "test.pdf"
+
+        result = runner.invoke(
+            cli, ["mgrs", "18", "t", "wl", "85000", "50000", str(output_file)]
+        )
+
+        assert result.exit_code == 0
+        assert mock_class.from_mgrs.call_args.args[0][1:3] == ("T", "WL")
 
     def test_mgrs_basic_execution(
         self,
@@ -985,21 +1078,86 @@ class TestCliErrorHandling:
         )
         assert result.exit_code != 0
 
-    def test_papermap_error_propagates(
+    @pytest.mark.parametrize(
+        "error",
+        [
+            ValueError("Scale out of bounds"),
+            RuntimeError("Could not download 80/80 tiles (HTTP 401: 80)"),
+            ImportError("Reading GPX files requires the optional 'gpx' package"),
+            PermissionError("Permission denied: 'test.pdf'"),
+        ],
+    )
+    def test_papermap_error_reported_without_traceback(
         self,
         runner: CliRunner,
         mock_papermap: tuple[MagicMock, MagicMock],
         tmp_path: Path,
+        error: Exception,
     ) -> None:
         mock_class, _mock_instance = mock_papermap
-        mock_class.side_effect = ValueError("Scale out of bounds")
+        mock_class.side_effect = error
         output_file = tmp_path / "test.pdf"
 
         result = runner.invoke(
             cli, ["latlon", str(TEST_LAT), str(TEST_LON), str(output_file)]
         )
 
-        assert result.exit_code != 0
+        assert result.exit_code == 1
+        assert result.output == f"Error: {error}\n"
+
+    def test_render_error_reported_without_traceback(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        _mock_class, mock_instance = mock_papermap
+        mock_instance.render.side_effect = RuntimeError("Could not download")
+        output_file = tmp_path / "test.pdf"
+
+        result = runner.invoke(
+            cli, ["latlon", str(TEST_LAT), str(TEST_LON), str(output_file)]
+        )
+
+        assert result.exit_code == 1
+        assert result.output == "Error: Could not download\n"
+
+    def test_unexpected_error_propagates(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        mock_class, _mock_instance = mock_papermap
+        mock_class.side_effect = TypeError("a bug")
+        output_file = tmp_path / "test.pdf"
+
+        result = runner.invoke(
+            cli, ["latlon", str(TEST_LAT), str(TEST_LON), str(output_file)]
+        )
+
+        assert isinstance(result.exception, TypeError)
+
+    def test_invalid_latitude_reported_without_traceback(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        output_file = tmp_path / "test.pdf"
+        result = runner.invoke(cli, ["latlon", "91", "0", str(output_file)])
+
+        assert result.exit_code == 1
+        assert result.output == "Error: Latitude must be in [-90, 90] range, got 91.0\n"
+        assert not output_file.exists()
+
+    def test_invalid_mgrs_square_reported_without_traceback(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        output_file = tmp_path / "test.pdf"
+        result = runner.invoke(
+            cli, ["mgrs", "18", "T", "W", "83959", "7523", str(output_file)]
+        )
+
+        assert result.exit_code == 1
+        assert result.output.startswith("Error: ")
 
 
 GEOJSON_STRING = """\
@@ -1102,6 +1260,41 @@ class TestGeoJSONCommand:
         assert call_kwargs["auto_scale"] is True
         # When --auto-scale is set, the CLI must not forward the default scale.
         assert "scale" not in call_kwargs
+
+    def test_geojson_auto_scale_rejects_explicit_scale(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        geojson_in = self._write_geojson(tmp_path)
+        output_file = tmp_path / "out.pdf"
+
+        result = runner.invoke(
+            cli,
+            [
+                "geojson",
+                "--auto-scale",
+                "--scale",
+                "10000",
+                str(geojson_in),
+                str(output_file),
+            ],
+        )
+
+        assert result.exit_code == 2
+        assert "'--scale' cannot be combined with '--auto-scale'" in result.output
+
+    def test_geojson_negative_padding_rejected(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        geojson_in = self._write_geojson(tmp_path)
+        output_file = tmp_path / "out.pdf"
+
+        result = runner.invoke(
+            cli,
+            ["geojson", "--padding=-1", str(geojson_in), str(output_file)],
+        )
+
+        assert result.exit_code == 2
+        assert "--padding" in result.output
 
     def test_geojson_padding_forwarded(
         self,
@@ -1321,6 +1514,27 @@ class TestGpxCommand:
         assert call_kwargs["auto_scale"] is True
         # When --auto-scale is set, the CLI must not forward the default scale.
         assert "scale" not in call_kwargs
+
+    def test_gpx_auto_scale_rejects_explicit_scale(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        gpx_in = self._write_gpx(tmp_path)
+        output_file = tmp_path / "out.pdf"
+
+        result = runner.invoke(
+            cli,
+            [
+                "gpx",
+                "--auto-scale",
+                "--scale",
+                "10000",
+                str(gpx_in),
+                str(output_file),
+            ],
+        )
+
+        assert result.exit_code == 2
+        assert "'--scale' cannot be combined with '--auto-scale'" in result.output
 
     def test_gpx_padding_forwarded(
         self,

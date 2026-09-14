@@ -272,6 +272,15 @@ class TestDdToDms:
         assert m == 30
         assert isclose(s, 30, abs_tol=1e-3)
 
+    @pytest.mark.parametrize(
+        ("dd", "expected"),
+        [(0.99999999999, (1, 0, 0)), (-45.99999999999, (-46, 0, 0))],
+    )
+    def test_dd_to_dms_rounding_carries_over(
+        self, dd: float, expected: tuple[int, int, float]
+    ) -> None:
+        assert dd_to_dms(dd) == expected
+
 
 class TestDmsToDd:
     """Tests for dms_to_dd conversion."""
@@ -310,17 +319,20 @@ class TestDdDmsRoundtrip:
         result = dms_to_dd(dms)
         assert isclose(result, dd, abs_tol=0.01)
 
-    def test_dd_dms_small_negative_loses_sign(self) -> None:
-        # Small negative values: dd_to_dms returns (0, m, s) which loses sign
-        # This is a known limitation when degrees rounds to 0
-        dd = -0.5
+    @pytest.mark.parametrize(
+        ("dd", "expected"),
+        [(-0.5, (0, -30, 0)), (-0.005, (0, 0, -18)), (-1.5, (-1, 30, 0))],
+    )
+    def test_dd_dms_negative_sign_on_first_non_zero_component(
+        self, dd: float, expected: tuple[int, int, float]
+    ) -> None:
         dms = dd_to_dms(dd)
-        # The degrees component rounds to 0, losing the negative sign
-        assert dms[0] == 0
-        assert dms[1] == 30
-        # This means the roundtrip gives positive value - documented limitation
-        result = dms_to_dd(dms)
-        assert result == 0.5  # Sign is lost
+        assert dms == expected
+        assert isclose(dms_to_dd(dms), dd, abs_tol=1e-9)
+
+    @pytest.mark.parametrize("dms", [(-45, 30, 0), (0, -45, 30), (0, 0, -45.5)])
+    def test_dms_to_dd_negative_component(self, dms: tuple[int, int, float]) -> None:
+        assert dms_to_dd(dms) < 0
 
 
 class TestScaleToZoom:

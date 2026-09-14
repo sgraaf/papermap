@@ -205,6 +205,14 @@ class TestWrapLon:
 
 
 class TestLatLonToUTM:
+    def test_180_degrees_east_is_zone_1(self) -> None:
+        utm_east = latlon_to_utm(10, 180)
+        utm_west = latlon_to_utm(10, -180)
+        assert utm_east.zone == utm_west.zone == 1
+        assert math.isclose(utm_east.easting, utm_west.easting, abs_tol=1e-6)
+        assert math.isclose(utm_east.northing, utm_west.northing, abs_tol=1e-6)
+        assert abs(utm_to_latlon(utm_east).lon) == pytest.approx(180)
+
     def test_new_york_city(self) -> None:
         # New York City: 40.7128°N, 74.0060°W
         utm = latlon_to_utm(40.7128, -74.0060)
@@ -264,6 +272,11 @@ class TestLatLonToUTM:
         utm = latlon_to_utm(78.2, 15.6)
         assert utm.zone == 33
 
+    @pytest.mark.parametrize("lat", [100, -100, 260])
+    def test_latitude_beyond_poles_is_not_wrapped(self, lat: float) -> None:
+        with pytest.raises(ValueError, match="outside UTM coverage"):
+            latlon_to_utm(lat, 0)
+
     def test_latitude_out_of_range_north(self) -> None:
         with pytest.raises(ValueError, match="outside UTM coverage"):
             latlon_to_utm(85, 0)
@@ -311,6 +324,16 @@ class TestUTMToLatLon:
         lat, lon, _ = utm_to_latlon(utm)
         assert math.isclose(lat, original_lat, abs_tol=0.0001)
         assert math.isclose(lon, original_lon, abs_tol=0.0001)
+
+    @pytest.mark.parametrize("hemisphere", ["s", "X", ""])
+    def test_invalid_hemisphere(self, hemisphere: str) -> None:
+        with pytest.raises(ValueError, match="Hemisphere must be 'N' or 'S'"):
+            utm_to_latlon(UTMCoordinate(334786, 6252182, 56, hemisphere))
+
+    @pytest.mark.parametrize("zone", [0, 61])
+    def test_invalid_zone(self, zone: int) -> None:
+        with pytest.raises(ValueError, match="Zone must be 1-60"):
+            utm_to_latlon(UTMCoordinate(334786, 6252182, zone, "S"))
 
     def test_equator(self) -> None:
         utm = UTMCoordinate(166021, 0, 31, "N")
@@ -558,6 +581,40 @@ class TestMGRSToLatLon:
             # MGRS has 1-meter precision at best
             assert math.isclose(lat, lat2, abs_tol=0.0001)
             assert math.isclose(lon, lon2, abs_tol=0.0001)
+
+    @pytest.mark.parametrize("band_lat_south", range(-80, 84, 8))
+    def test_roundtrip_across_latitude_band(self, band_lat_south: int) -> None:
+        """Round trip near the edges and middle of a band, on and off central meridians."""
+        lons = [cm + d for cm in range(-177, 180, 6) for d in (-2.9, 0, 2.9)]
+        lats = [band_lat_south + d for d in (0.0001, 0.02, 4, 7.9999)]
+        for lat in (lat for lat in lats if lat < 84):  # MGRS/UTM ends at 84°N
+            for lon in lons:
+                mgrs = format_mgrs(latlon_to_mgrs(lat, lon))
+                lat2, lon2, _ = mgrs_to_latlon(mgrs)
+                assert math.isclose(lat, lat2, abs_tol=0.0001), mgrs
+                assert math.isclose(lon, lon2, abs_tol=0.0001), mgrs
+
+    @pytest.mark.parametrize(
+        ("mgrs", "match"),
+        [
+            (MGRSCoordinate(0, "T", "WK", 0, 0), "Zone must be 1-60"),
+            (MGRSCoordinate(18, "t", "WK", 0, 0), "Invalid latitude band"),
+            (MGRSCoordinate(18, "", "WK", 0, 0), "Invalid latitude band"),
+            (MGRSCoordinate(18, "T", "W", 0, 0), "Invalid 100km square"),
+            (MGRSCoordinate(18, "T", "AK", 0, 0), "Invalid 100km square"),
+            (MGRSCoordinate(18, "T", "WW", 0, 0), "Invalid 100km square"),
+            (MGRSCoordinate(18, "T", "WK", 100_000, 0), "Easting and northing"),
+            (MGRSCoordinate(18, "T", "WK", 0, -1), "Easting and northing"),
+        ],
+    )
+    def test_invalid_mgrs_coordinate(self, mgrs: MGRSCoordinate, match: str) -> None:
+        with pytest.raises(ValueError, match=match):
+            mgrs_to_latlon(mgrs)
+
+    def test_parse_invalid_square_letters(self) -> None:
+        # I and O are never used; zone 18 columns are S-Z
+        with pytest.raises(ValueError, match="Invalid 100km square"):
+            mgrs_to_latlon("18TIO12345678")
 
     def test_parse_invalid_too_short(self) -> None:
         with pytest.raises(ValueError, match="too short"):

@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import importlib
 import pkgutil
+from collections import Counter
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -48,13 +49,23 @@ if TYPE_CHECKING:
 
 
 def _discover_tile_providers() -> list[TileProvider]:
-    """Import every public submodule and collect their ``TILE_PROVIDERS`` lists."""
+    """Import every public submodule and collect their ``TILE_PROVIDERS`` lists.
+
+    Raises:
+        AttributeError: If a public submodule has no ``TILE_PROVIDERS`` attribute.
+        ValueError: If multiple tile providers share the same key.
+    """
     providers: list[TileProvider] = []
     for module_info in pkgutil.iter_modules(__path__):
         if module_info.name.startswith("_"):
             continue
         module = importlib.import_module(f"{__name__}.{module_info.name}")
-        providers.extend(getattr(module, "TILE_PROVIDERS", []))
+        providers.extend(module.TILE_PROVIDERS)
+
+    key_counts = Counter(tp.key for tp in providers)
+    if duplicate_keys := sorted(key for key, n in key_counts.items() if n > 1):
+        msg = f"Duplicate tile provider keys: {', '.join(duplicate_keys)}"
+        raise ValueError(msg)
     return providers
 
 

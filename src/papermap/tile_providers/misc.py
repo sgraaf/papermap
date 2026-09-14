@@ -31,7 +31,7 @@ TILE_PROVIDERS: list[TileProvider] = [
             f"Map data: {OSM_HTML_ATTRIBUTION} & USGS. "
             'Map style: © <a href="https://mtbmap.cz/">mtbmap.cz</a>'
         ),
-        url_template="http://tile.mtbmap.cz/mtbmap_tiles/{z}/{x}/{y}.png",
+        url_template="https://tile.mtbmap.cz/mtbmap_tiles/{z}/{x}/{y}.png",
         subdomains=None,
         zoom_min=0,
         zoom_max=18,
@@ -64,7 +64,7 @@ TILE_PROVIDERS: list[TileProvider] = [
         name="Geofabrik Topo",
         attribution=f"Map data: {OSM_ATTRIBUTION}",
         html_attribution=f"Map data: {OSM_HTML_ATTRIBUTION}",
-        url_template="http://{s}.tile.geofabrik.de/15173cf79060ee4a66573954f6017ab0/{z}/{x}/{y}.png",
+        url_template="https://{s}.tile.geofabrik.de/15173cf79060ee4a66573954f6017ab0/{z}/{x}/{y}.png",
         subdomains=["a", "b", "c"],
         zoom_min=0,
         zoom_max=19,
@@ -79,16 +79,6 @@ TILE_PROVIDERS: list[TileProvider] = [
         ),
         url_template="https://m{s}.mapserver.mapy.cz/turist-m/{z}-{x}-{y}.png",
         subdomains=[1, 2, 3, 4],
-        zoom_min=0,
-        zoom_max=19,
-    ),
-    TileProvider(
-        key="komoot",
-        name="Komoot",
-        attribution=f"Map data: {OSM_ATTRIBUTION}",
-        html_attribution=f"Map data: {OSM_HTML_ATTRIBUTION}",
-        url_template="http://{s}.tile.komoot.de/komoot-2/{z}/{x}/{y}.png",
-        subdomains=["a", "b", "c"],
         zoom_min=0,
         zoom_max=19,
     ),
@@ -214,20 +204,6 @@ TILE_PROVIDERS: list[TileProvider] = [
         ),
         url_template="https://{s}.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png",
         subdomains=["a", "b", "c"],
-        zoom_min=0,
-        zoom_max=19,
-    ),
-    TileProvider(
-        key="openfiremap",
-        name="OpenFireMap",
-        attribution="Map data: © OpenStreetMap contributors. Map style: © OpenFireMap (CC-BY-SA)",
-        html_attribution=(
-            f"Map data: {OSM_HTML_ATTRIBUTION}. "
-            'Map style: © <a href="http://www.openfiremap.org/">OpenFireMap</a> '
-            '(<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)'
-        ),
-        url_template="http://openfiremap.org/hytiles/{z}/{x}/{y}.png",
-        subdomains=None,
         zoom_min=0,
         zoom_max=19,
     ),

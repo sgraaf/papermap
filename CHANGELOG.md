@@ -13,10 +13,41 @@ The **third number** is for emergencies when we need to start branches for older
 ### Added
 
 - Added shared styling options to the `geojson` and `gpx` CLI sub-commands: `--stroke`, `--stroke-width`, `--stroke-opacity`, `--fill`, `--fill-opacity`, `--opacity` and `--marker-radius`. These apply as defaults to every parsed feature; per-feature GeoJSON `simplestyle-spec` properties still take precedence.
+- Added `IconMarker.load_icon()`, which returns the icon image, reading it from disk (once) if the icon is a path.
 
 ### Changed
 
 - Bumped the minimum version of the optional `gpx` dependency to `2026.3.0`, and narrowed the accepted `gpx_source` type on `PaperMap.from_gpx()`, `PaperMap.add_gpx()` and `gpx_to_features()` from any object exposing `__geo_interface__` to a path-like or a `gpx.GeoGPXModel` instance. As a consequence, parsing an already-loaded GPX object now also requires the optional `gpx` package (previously only reading from disk did); install it with `uv add --extra gpx papermap`.
+- `PaperMap.render()` and `PaperMap.download_tiles()` now raise a `RuntimeError` when no tile at all can be downloaded (e.g. due to an invalid API key), even with `strict_download=False`, instead of producing a blank map with only a warning. Tiles failing with a client error that will not succeed on retry (HTTP 4xx other than 408 and 429) are no longer retried.
+- `PaperMap` now raises a `ValueError` on construction when a grid is added outside the UTM coverage area (80°S to 84°N), or when the background color is invalid. Previously, these errors were only raised by `render()`, after all tiles had been downloaded.
+- Tile requests now identify themselves with a well-formed `User-Agent` header (`papermap/<version> (+https://github.com/sgraaf/papermap)`), as requested by the usage policies of tile providers such as OpenStreetMap.
+- The CLI now reports invalid input (e.g. an out-of-range latitude or a malformed MGRS coordinate), tile download failures, a missing optional `gpx` package, and unreadable or unwritable files as a concise `Error: ...` message with exit code 1, instead of a Python traceback.
+- Improved the help of the CLI options: `--scale` and `--dpi` now show descriptive `DENOMINATOR` and `DOTS-PER-INCH` placeholders, and the allowed ranges of numeric options (e.g. `[x>=1]`) are no longer shown.
+
+### Removed
+
+- Removed the `komoot` and `openfiremap` tile providers, whose tile servers no longer exist: the Komoot tile domain no longer resolves, and OpenFireMap no longer serves its raster tiles.
+
+### Fixed
+
+- Fixed tile downloads aborting the whole map when a single request failed with a network error (e.g. a timeout) or returned data that is not a valid image. Such tiles are now retried and, if they keep failing, reported like any other failed tile (a warning, or a `RuntimeError` with `strict_download=True`). The failure message now also includes the failure reasons.
+- Fixed horizontal (northing) grid lines being drawn mirrored about the map centre, placing them up to one grid square away from the northing their label names.
+- Fixed wrong grid labels for any `grid_size` other than 1000m: labels always stepped by 1km per line. Grid lines now lie on multiples of `grid_size`, and are labelled with their UTM coordinate in kilometres (e.g. `583.5` for a 500m grid).
+- Fixed maps crossing the ±180° meridian rendering the far side of the meridian blank: its tiles were downloaded but pasted outside the map image. Maps extending beyond the latitude limits of the Web Mercator projection (±85.05°) no longer download tiles from the opposite pole.
+- Fixed `mgrs_to_latlon()` (and thereby `PaperMap.from_mgrs()` and the `mgrs` CLI sub-command) placing MGRS coordinates in a narrow strip just north of 64°N about 2,000km too far north.
+- Fixed `PaperMap.download_tiles(num_retries=n)` retrying failed tiles only `n - 1` times.
+- Fixed a non-positive `grid_size` (or `--grid-size`) hanging the process while consuming ever more memory when rendering the grid. It now raises a `ValueError` (or a usage error in the CLI).
+- Fixed `utm_to_latlon()` (and thereby `PaperMap.from_utm()`) silently treating any hemisphere other than `S` (e.g. a lowercase `s`) as the northern hemisphere. It now raises a `ValueError` for a hemisphere other than `N` or `S`, or a zone outside 1-60. The `utm` CLI sub-command now accepts a lowercase hemisphere, and rejects invalid hemispheres and zones with a usage error.
+- Fixed `mgrs_to_latlon()` (and thereby `PaperMap.from_mgrs()`) not validating `MGRSCoordinate` objects, and not validating the letters of the 100km square identifier of MGRS strings, which crashed with unhelpful errors (e.g. `IndexError: string index out of range`). It now raises a `ValueError` for an invalid zone, latitude band, 100km square identifier, easting or northing. The `mgrs` CLI sub-command now accepts a lowercase band and square, and rejects zones outside 1-60 with a usage error.
+- Fixed `latlon_to_utm()` and `latlon_to_mgrs()` returning the non-existent UTM zone 61 for a longitude of exactly 180°; it now lies in zone 1, like 180°W.
+- Fixed `latlon_to_utm()` silently converting a latitude beyond the poles (e.g. 100°) to a coordinate in the opposite hemisphere (e.g. -80°); it now raises a `ValueError`.
+- Fixed `utils.dd_to_dms()` returning 60 seconds (e.g. `(0, 59, 60.0)` for `0.99999999999`) instead of carrying over into the minutes and degrees.
+- Fixed `utils.dd_to_dms()` losing the sign of values between -1° and 0° (e.g. `-0.5` became `(0, 30, 0.0)`, i.e. `+0.5`). The sign of a negative value is now carried by its first non-zero component (e.g. `(0, -30, 0.0)`), and `utils.dms_to_dd()` treats a value as negative if any of its components is negative.
+- Fixed two identical `TileProvider` instances comparing unequal, as their internal subdomain cycles were compared by identity. The subdomain cycle is also no longer included in the `repr()`.
+- Fixed the `geojson` and `gpx` CLI sub-commands silently ignoring an explicit `--scale` when combined with `--auto-scale`; this combination is now rejected with a usage error, like it is in `PaperMap.from_geojson()` and `PaperMap.from_gpx()`.
+- Fixed the CLI accepting a non-positive `--scale` or `--dpi`, or a negative margin or `--padding`, which crashed with a traceback (e.g. a `ZeroDivisionError`); these are now rejected with a usage error.
+- Fixed the MtbMap and Geofabrik Topo tile providers downloading tiles over plain HTTP; they now use HTTPS.
+- Fixed a missing or invalid icon file of an `IconMarker` only raising an error after all tiles had been downloaded; icons are now loaded before downloading tiles. Icon files are also no longer kept open after rendering.
 
 ## [2026.2.0](https://github.com/sgraaf/papermap/compare/2026.1.0...2026.2.0) (2026-05-17)
 

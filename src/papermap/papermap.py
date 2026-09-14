@@ -1,20 +1,20 @@
+import os
 import time
 import warnings
+from collections import Counter
 from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import KW_ONLY, InitVar, dataclass, field
 from decimal import Decimal
 from importlib import metadata
 from io import BytesIO
-from itertools import count
 from math import ceil, floor, log2, radians
 from pathlib import Path
-from typing import Any, Self
+from typing import TYPE_CHECKING, Any, Self
 
 import httpx
 from fpdf import FPDF
-from gpx import GeoGPXModel
-from PIL import Image
+from PIL import Image, ImageColor
 
 from .features import (
     CircleMarker,
@@ -55,8 +55,14 @@ from .utils import (
     zoom_to_scale,
 )
 
+if TYPE_CHECKING:
+    from gpx import GeoGPXModel
+
 NAME: str = "papermap"
 """Name of the application."""
+
+URL: str = "https://github.com/sgraaf/papermap"
+"""URL of the application."""
 
 PAPER_SIZE_TO_DIMENSIONS_MAP: dict[str, tuple[int, int]] = {
     "a0": (841, 1189),
@@ -98,6 +104,14 @@ class ScaleOutOfBoundsError(ValueError):
     """Raised when the resolved zoom level is outside the tile provider's bounds."""
 
 
+class _TileDownloadError(Exception):
+    """Raised when a single tile cannot be downloaded; the message is the reason."""
+
+    def __init__(self, reason: str, *, retryable: bool = True) -> None:
+        super().__init__(reason)
+        self.retryable = retryable
+
+
 COMMON_SCALES: tuple[int, ...] = (
     500,
     1_000,
@@ -117,6 +131,26 @@ COMMON_SCALES: tuple[int, ...] = (
     50_000_000,
 )
 """Common cartographic scales that ``auto_scale`` snaps up to."""
+
+
+def _paper_dimensions(paper_size: str, *, use_landscape: bool) -> tuple[int, int]:
+    """Look up the dimensions of a paper size, in the given orientation.
+
+    Args:
+        paper_size: Paper size name (e.g. ``"a4"``).
+        use_landscape: Whether the paper is in landscape orientation.
+
+    Returns:
+        The ``(width, height)`` of the paper, in mm.
+
+    Raises:
+        ValueError: If the paper size is invalid.
+    """
+    if paper_size not in PAPER_SIZE_TO_DIMENSIONS_MAP:
+        msg = f"Invalid paper size. Please choose one of {', '.join(PAPER_SIZES)}"
+        raise ValueError(msg)
+    width, height = PAPER_SIZE_TO_DIMENSIONS_MAP[paper_size]
+    return (height, width) if use_landscape else (width, height)
 
 
 def _compute_auto_scale(  # noqa: PLR0913
@@ -164,12 +198,7 @@ def _compute_auto_scale(  # noqa: PLR0913
         ValueError: If padding/margins leave no printable area.
         ValueError: If the bounding box has zero extent on either axis.
     """
-    if paper_size not in PAPER_SIZE_TO_DIMENSIONS_MAP:
-        msg = f"Invalid paper size. Please choose one of {', '.join(PAPER_SIZES)}"
-        raise ValueError(msg)
-    width_mm, height_mm = PAPER_SIZE_TO_DIMENSIONS_MAP[paper_size]
-    if use_landscape:
-        width_mm, height_mm = height_mm, width_mm
+    width_mm, height_mm = _paper_dimensions(paper_size, use_landscape=use_landscape)
 
     image_w_mm = width_mm - margin_left - margin_right - 2 * padding
     image_h_mm = height_mm - margin_top - margin_bottom - 2 * padding
@@ -247,6 +276,9 @@ class PaperMap:
         ValueError: If the tile provider is invalid.
         ValueError: If no API key is specified (when applicable).
         ValueError: If the paper size is invalid.
+        ValueError: If the grid size is not positive.
+        ValueError: If a grid is added outside the UTM coverage area.
+        ValueError: If the background color is invalid.
         ScaleOutOfBoundsError: If the scale is "out of bounds" for the chosen
             tile provider.
     """
@@ -300,6 +332,10 @@ class PaperMap:
     def __post_init__(self, tile_provider_key: str, paper_size: str) -> None:
         # Store basic parameters
         self._validate_coordinates()
+
+        # Validate grid parameters and background color
+        self._validate_grid()
+        self._validate_background_color()
 
         # Validate and initialize tile provider
         self._validate_and_set_tile_provider(tile_provider_key)
@@ -593,7 +629,7 @@ class PaperMap:
     @classmethod
     def from_gpx(
         cls,
-        gpx_source: str | Path | GeoGPXModel,
+        gpx_source: "str | Path | GeoGPXModel",
         style: dict[str, Any] | None = None,
         *,
         auto_scale: bool = False,
@@ -669,6 +705,33 @@ class PaperMap:
             msg = f"Longitude must be in [-180, 180] range, got {self.lon}"
             raise ValueError(msg)
 
+    def _validate_grid(self) -> None:
+        """Validate the grid parameters.
+
+        Raises:
+            ValueError: If the grid size is not positive.
+            ValueError: If a grid is added, but the latitude is outside the
+                UTM coverage area.
+        """
+        if self.grid_size <= 0:
+            msg = f"Grid size must be positive, got {self.grid_size}"
+            raise ValueError(msg)
+        if self.add_grid and not -80 <= self.lat <= 84:  # noqa: PLR2004
+            msg = f"Cannot add a UTM grid: latitude {self.lat} is outside the UTM coverage area [-80, 84]"
+            raise ValueError(msg)
+
+    def _validate_background_color(self) -> None:
+        """Validate ``self.background_color`` is a color understood by Pillow.
+
+        Raises:
+            ValueError: If the background color is invalid.
+        """
+        try:
+            ImageColor.getrgb(self.background_color)
+        except ValueError as e:
+            msg = f"Invalid background color {self.background_color!r}"
+            raise ValueError(msg) from e
+
     def _validate_and_set_tile_provider(self, tile_provider_key: str) -> None:
         """Validate tile provider key and check API key requirements.
 
@@ -703,13 +766,9 @@ class PaperMap:
         Raises:
             ValueError: If paper size is invalid.
         """
-        if paper_size in PAPER_SIZE_TO_DIMENSIONS_MAP:
-            self.width, self.height = PAPER_SIZE_TO_DIMENSIONS_MAP[paper_size]
-            if self.use_landscape:
-                self.width, self.height = self.height, self.width
-        else:
-            msg = f"Invalid paper size. Please choose one of {', '.join(PAPER_SIZES)}"
-            raise ValueError(msg)
+        self.width, self.height = _paper_dimensions(
+            paper_size, use_landscape=self.use_landscape
+        )
 
     def _compute_zoom_and_resize_factor(self, tile_provider_key: str) -> None:
         """Compute zoom levels and validate they are within tile provider bounds.
@@ -771,35 +830,37 @@ class PaperMap:
         )
 
     def _initialize_tiles(self) -> None:
-        """Initialize the list of tiles required for the map."""
-        self.tiles = []
-        for x in range(self.x_min, self.x_max):
-            for y in range(self.y_min, self.y_max):
-                # x and y may have crossed the date line
-                max_tile = 2**self.zoom_scaled
-                x_tile = (x + max_tile) % max_tile
-                y_tile = (y + max_tile) % max_tile
+        """Initialize the list of tiles required for the map.
 
+        Each tile is placed on the map image at its unwrapped position, so a
+        map crossing the ±180° meridian is stitched together seamlessly, but
+        is downloaded using its x coordinate wrapped into the valid range.
+        Rows beyond the latitude limits of the Web Mercator projection
+        (±85.05°) have no tiles and are left as background.
+        """
+        self.tiles = []
+        max_tile = 2**self.zoom_scaled
+        for x in range(self.x_min, self.x_max):
+            for y in range(max(self.y_min, 0), min(self.y_max, max_tile)):
                 bbox = (
                     round(
-                        (x_tile - self.x_center) * TILE_SIZE
-                        + self.image_width_scaled_px / 2
+                        (x - self.x_center) * TILE_SIZE + self.image_width_scaled_px / 2
                     ),
                     round(
-                        (y_tile - self.y_center) * TILE_SIZE
+                        (y - self.y_center) * TILE_SIZE
                         + self.image_height_scaled_px / 2
                     ),
                     round(
-                        (x_tile + 1 - self.x_center) * TILE_SIZE
+                        (x + 1 - self.x_center) * TILE_SIZE
                         + self.image_width_scaled_px / 2
                     ),
                     round(
-                        (y_tile + 1 - self.y_center) * TILE_SIZE
+                        (y + 1 - self.y_center) * TILE_SIZE
                         + self.image_height_scaled_px / 2
                     ),
                 )
 
-                self.tiles.append(Tile(x_tile, y_tile, self.zoom_scaled, bbox))
+                self.tiles.append(Tile(x % max_tile, y, self.zoom_scaled, bbox))
 
     def _initialize_pdf(self) -> None:
         """Initialize the PDF document with margins and settings."""
@@ -953,7 +1014,7 @@ class PaperMap:
 
     def add_gpx(
         self,
-        gpx_source: str | Path | GeoGPXModel,
+        gpx_source: "str | Path | GeoGPXModel",
         style: dict[str, Any] | None = None,
     ) -> list[MapFeature]:
         """Add geometries from a GPX file or GPX object.
@@ -980,67 +1041,54 @@ class PaperMap:
     ) -> tuple[list[tuple[Decimal, str]], list[tuple[Decimal, str]]]:
         """Compute the UTM grid line positions and labels for the map overlay.
 
-        The map's geographic centre is converted to UTM and snapped to the
-        nearest 1km grid intersection. From there, line positions (in mm
-        relative to the image's top-left corner) are walked outward at
-        ``grid_size_scaled`` intervals, and the matching kilometre labels
-        are derived from the rounded UTM coordinates.
+        The map's geographic centre is converted to UTM to find the UTM
+        coordinates of the image's left and top edges. Grid lines lie on
+        multiples of ``grid_size``: starting from the first one inside the
+        image, line positions (in mm relative to the image's top-left corner)
+        are walked across the image at ``grid_size_scaled`` intervals.
 
         Returns:
             A pair ``(easting_lines, northing_lines)``. Each list holds
             ``(position_mm, label)`` tuples, where ``position_mm`` is a
             ``Decimal`` distance from the top-left of the image area and
-            ``label`` is the UTM coordinate in kilometres.
+            ``label`` is the UTM coordinate in kilometres (e.g. ``"583"``, or
+            ``"583.5"`` for a 500m grid).
         """
         # convert Lat/Lon coordinate into UTM coordinate (easting, northing, zone, hemisphere)
         easting, northing, _, _ = latlon_to_utm(self.lat, self.lon)
+        grid_size = Decimal(self.grid_size)
+        m_per_mm = Decimal(self.scale) / 1000
 
-        # round easting/northing to nearest thousand
-        easting_rnd = round(easting, -3)
-        northing_rnd = round(northing, -3)
+        # determine the UTM coordinates (in m) of the image's left and top edges
+        easting_left = Decimal(easting) - Decimal(self.image_width) / 2 * m_per_mm
+        northing_top = Decimal(northing) + Decimal(self.image_height) / 2 * m_per_mm
 
-        # compute distance between x/y and x/y_rnd in mm using Decimal arithmetic
-        d_easting = Decimal(easting - easting_rnd) / Decimal(self.scale) * 1000
-        d_northing = Decimal(northing - northing_rnd) / Decimal(self.scale) * 1000
-
-        # determine center grid coordinate (in mm)
-        easting_grid_center = Decimal(self.image_width) / 2 - d_easting
-        northing_grid_center = Decimal(self.image_height) / 2 - d_northing
-
-        # determine start grid coordinate (in mm)
-        easting_grid_start = easting_grid_center % self.grid_size_scaled
-        northing_grid_start = northing_grid_center % self.grid_size_scaled
-
-        # determine the start grid coordinate label
-        easting_label_start = int(
-            Decimal(easting_rnd) / 1000 - easting_grid_center // self.grid_size_scaled
-        )
-        northing_label_start = int(
-            Decimal(northing_rnd) / 1000 + northing_grid_center // self.grid_size_scaled
-        )
+        # determine the first grid line inside the image; page x grows eastward
+        # and page y grows southward
+        easting_first = ceil(easting_left / grid_size) * grid_size
+        northing_first = floor(northing_top / grid_size) * grid_size
 
         # determine the grid coordinates (in mm)
-        easting_grid_cs = list(
-            drange(easting_grid_start, Decimal(self.image_width), self.grid_size_scaled)
+        easting_grid_cs = drange(
+            (easting_first - easting_left) / m_per_mm,
+            Decimal(self.image_width),
+            self.grid_size_scaled,
         )
-        northing_grid_cs = list(
-            drange(
-                northing_grid_start, Decimal(self.image_height), self.grid_size_scaled
-            )
+        northing_grid_cs = drange(
+            (northing_top - northing_first) / m_per_mm,
+            Decimal(self.image_height),
+            self.grid_size_scaled,
         )
 
-        # determine the grid coordinates labels
-        easting_labels = [easting_label_start + i for i in range(len(easting_grid_cs))]
-        northing_labels = [
-            northing_label_start - i for i in range(len(northing_grid_cs))
+        # label each grid line with its UTM coordinate (in km)
+        easting_grid_cs_and_labels = [
+            (x, str((easting_first + i * grid_size) / 1000))
+            for i, x in enumerate(easting_grid_cs)
         ]
-
-        easting_grid_cs_and_labels = list(
-            zip(easting_grid_cs, map(str, easting_labels), strict=True)
-        )
-        northing_grid_cs_and_labels = list(
-            zip(northing_grid_cs, map(str, northing_labels), strict=True)
-        )
+        northing_grid_cs_and_labels = [
+            (y, str((northing_first - i * grid_size) / 1000))
+            for i, y in enumerate(northing_grid_cs)
+        ]
 
         return easting_grid_cs_and_labels, northing_grid_cs_and_labels
 
@@ -1154,12 +1202,7 @@ class PaperMap:
 
     def _render_icon_marker(self, marker: IconMarker) -> None:
         """Render a single :class:`IconMarker` to the PDF."""
-        if marker._loaded_icon is None:  # noqa: SLF001
-            if isinstance(marker.icon, Image.Image):
-                marker._loaded_icon = marker.icon  # noqa: SLF001
-            else:
-                marker._loaded_icon = Image.open(marker.icon)  # noqa: SLF001
-        img = marker._loaded_icon  # noqa: SLF001
+        img = marker.load_icon()
         width = marker.width
         if marker.height is None:
             height = width * img.height / img.width
@@ -1290,6 +1333,43 @@ class PaperMap:
         )
         self.pdf.cell(w=0, text=text, align="R", fill=True)
 
+    @staticmethod
+    def _fetch_tile_image(client: httpx.Client, url: str) -> Image.Image:
+        """Download and decode a single tile image.
+
+        Args:
+            client: The HTTP client to download the tile with.
+            url: The URL of the tile.
+
+        Returns:
+            The decoded tile image, in RGBA mode.
+
+        Raises:
+            _TileDownloadError: If the request errors (e.g. a timeout),
+                returns a non-success status, or returns data that is not a
+                valid image. Its ``retryable`` attribute is ``False`` for
+                client errors that will not succeed on retry.
+        """
+        try:
+            response = client.get(url)
+        except httpx.TransportError as e:
+            raise _TileDownloadError(type(e).__name__) from e
+        if not response.is_success:
+            msg = f"HTTP {response.status_code}"
+            # Client errors (e.g. an invalid API key, or a tile outside the
+            # provider's coverage) persist on retry, unless the provider timed
+            # out or is rate limiting.
+            retryable = not response.is_client_error or response.status_code in {
+                httpx.codes.REQUEST_TIMEOUT,
+                httpx.codes.TOO_MANY_REQUESTS,
+            }
+            raise _TileDownloadError(msg, retryable=retryable)
+        try:
+            return Image.open(BytesIO(response.content)).convert("RGBA")
+        except OSError as e:  # includes PIL.UnidentifiedImageError
+            msg = "invalid image data"
+            raise _TileDownloadError(msg) from e
+
     def download_tiles(
         self,
         num_retries: int = 3,
@@ -1298,69 +1378,83 @@ class PaperMap:
     ) -> None:
         """Download all tile images for the map in parallel, with retries.
 
-        Tiles that have already been downloaded are skipped. Failed tiles
-        are retried up to ``num_retries`` times. When ``strict`` is ``False``
-        and tiles still fail after all retries, a warning is emitted; when
-        ``strict`` is ``True``, a ``RuntimeError`` is raised instead.
+        Tiles that have already been downloaded are skipped. A tile fails
+        when its request errors (e.g. a timeout), returns a non-success
+        status, or returns data that is not a valid image. Failed tiles are
+        retried up to ``num_retries`` times, except for client errors that
+        will not succeed on retry (HTTP 4xx other than 408 and 429).
+
+        If no tile at all can be downloaded, a ``RuntimeError`` is raised.
+        If only some tiles cannot be downloaded, a warning is emitted when
+        ``strict`` is ``False``, and a ``RuntimeError`` is raised when
+        ``strict`` is ``True``.
 
         Args:
-            num_retries: Maximum number of retry passes before giving up.
+            num_retries: Maximum number of times a failed tile is retried.
             sleep_between_retries: Optional delay (in seconds) between retry
                 passes.
             strict: Raise on persistent failures instead of warning.
 
         Raises:
-            RuntimeError: If ``strict`` is ``True`` and one or more tiles
-                cannot be downloaded after ``num_retries`` retries.
+            RuntimeError: If no tile can be downloaded, or if ``strict`` is
+                ``True`` and one or more tiles cannot be downloaded.
         """
-        # download the tile images
+        failures: dict[int, _TileDownloadError] = {}
+        pending = [i for i, tile in enumerate(self.tiles) if not tile.success]
+
+        # download the tile images, with (at most) one connection per worker
+        max_workers = min(32, (os.cpu_count() or 1) + 4)
         with (
-            ThreadPoolExecutor() as executor,
+            ThreadPoolExecutor(max_workers) as executor,
             httpx.Client(
                 headers={
-                    "User-Agent": f"{NAME}v{metadata.version('papermap')}",
+                    "User-Agent": f"{NAME}/{metadata.version('papermap')} (+{URL})",
                     "Accept": "image/png,image/*;q=0.9,*/*;q=0.8",
                 },
                 timeout=30.0,
                 limits=httpx.Limits(
-                    max_connections=executor._max_workers,  # noqa: SLF001
-                    max_keepalive_connections=executor._max_workers,  # noqa: SLF001
+                    max_connections=max_workers,
+                    max_keepalive_connections=max_workers,
                 ),
             ) as client,
         ):
-            for num_retry in count():
-                # get the unsuccessful tiles
-                tiles = [tile for tile in self.tiles if not tile.success]
-
-                # break if all tiles successful
-                if not tiles:
-                    break
-
+            for num_retry in range(num_retries + 1):
                 # possibly sleep between retries
                 if num_retry > 0 and sleep_between_retries is not None:
                     time.sleep(sleep_between_retries)
 
-                # break if max number of retries exceeded
-                if num_retry >= num_retries:
-                    msg = f"Could not download {len(tiles)}/{len(self.tiles)} tiles after {num_retries} retries."
-                    if strict:
-                        raise RuntimeError(msg)
-                    warnings.warn(msg, stacklevel=2)
+                futures = {
+                    i: executor.submit(
+                        self._fetch_tile_image,
+                        client,
+                        self.tile_provider.format_url_template(
+                            tile=self.tiles[i], api_key=self.api_key
+                        ),
+                    )
+                    for i in pending
+                }
+                for i, future in futures.items():
+                    try:
+                        self.tiles[i].image = future.result()
+                        failures.pop(i, None)
+                    except _TileDownloadError as e:
+                        # Only this tile failed: it is retried (if retryable)
+                        # and, if it keeps failing, reported below.
+                        failures[i] = e
+
+                pending = [i for i, e in failures.items() if e.retryable]
+                if not pending:
                     break
 
-                responses = executor.map(
-                    client.get,
-                    [
-                        self.tile_provider.format_url_template(
-                            tile=tile, api_key=self.api_key
-                        )
-                        for tile in tiles
-                    ],
-                )
-
-                for tile, r in zip(tiles, responses, strict=True):
-                    if r.is_success:
-                        tile.image = Image.open(BytesIO(r.content)).convert("RGBA")
+        if failures:
+            reasons = Counter(str(e) for e in failures.values())
+            msg = (
+                f"Could not download {len(failures)}/{len(self.tiles)} tiles "
+                f"({', '.join(f'{reason}: {n}' for reason, n in reasons.most_common())})"
+            )
+            if strict or not any(tile.success for tile in self.tiles):
+                raise RuntimeError(msg)
+            warnings.warn(msg, stacklevel=2)
 
     def render_base_layer(self) -> None:
         """Download all tiles and assemble the map image.
@@ -1392,6 +1486,12 @@ class PaperMap:
 
     def render(self) -> None:
         """Render the paper map, consisting of the map image, features (if any), grid (if applicable), attribution and scale."""
+        # load any icons first, so that e.g. a missing icon file fails before
+        # downloading all tiles
+        for feature in self.features:
+            if isinstance(feature, IconMarker):
+                feature.load_icon()
+
         # render the base layer
         self.render_base_layer()
 

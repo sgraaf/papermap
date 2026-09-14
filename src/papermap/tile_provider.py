@@ -40,7 +40,7 @@ class TileProvider:
     zoom_max: int
     bounds: tuple[float, float, float, float] | None = None
     subdomains: list[str | int | None] | None = None
-    subdomains_cycle: cycle = field(init=False)
+    subdomains_cycle: cycle = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         self.subdomains_cycle = cycle(self.subdomains or [None])

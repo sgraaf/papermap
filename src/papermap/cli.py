@@ -1,10 +1,12 @@
 from collections.abc import Callable
-from functools import wraps
+from functools import partial, wraps
 from importlib import metadata
 from pathlib import Path
 from typing import Any, TypedDict, Unpack
 
 import click
+from click.core import ParameterSource
+from click.types import OptionHelpExtra
 from click_default_group import DefaultGroup
 
 from .geodesy import ECEFCoordinate, MGRSCoordinate, UTMCoordinate
@@ -21,6 +23,20 @@ from .papermap import (
 from .tile_providers import DEFAULT_TILE_PROVIDER_KEY, TILE_PROVIDER_KEYS
 
 CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
+
+
+class _HiddenRangeOption(click.Option):
+    """An option that does not show the range of its (numeric) type in the help.
+
+    The ranges (e.g. a positive scale, or non-negative margins) are either
+    self-evident or described in the help text. Values outside the range are
+    still rejected.
+    """
+
+    def get_help_extra(self, ctx: click.Context) -> OptionHelpExtra:
+        extra = super().get_help_extra(ctx)
+        extra.pop("range", None)
+        return extra
 
 
 class CommonParameters(TypedDict):
@@ -50,7 +66,8 @@ def margin_option(side: str) -> Callable:
     """Attaches a margin option for the given side to the command."""
     return click.option(
         f"--margin-{side}",
-        type=int,
+        cls=_HiddenRangeOption,
+        type=click.IntRange(min=0),
         default=DEFAULT_MARGIN,
         metavar="MILLIMETERS",
         help=f"{side.title()} margin.",
@@ -111,6 +128,7 @@ def style_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
     )
     @click.option(
         "--stroke-opacity",
+        cls=_HiddenRangeOption,
         type=click.FloatRange(0.0, 1.0),
         default=None,
         metavar="FLOAT",
@@ -126,6 +144,7 @@ def style_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
     )
     @click.option(
         "--fill-opacity",
+        cls=_HiddenRangeOption,
         type=click.FloatRange(0.0, 1.0),
         default=None,
         metavar="FLOAT",
@@ -133,6 +152,7 @@ def style_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
     )
     @click.option(
         "--opacity",
+        cls=_HiddenRangeOption,
         type=click.FloatRange(0.0, 1.0),
         default=None,
         metavar="FLOAT",
@@ -192,15 +212,19 @@ def common_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
     @margin_option("left")
     @click.option(
         "--scale",
-        type=int,
+        cls=_HiddenRangeOption,
+        type=click.IntRange(min=1),
         default=DEFAULT_SCALE,
-        help="Scale of the paper map.",
+        metavar="DENOMINATOR",
+        help="Scale of the paper map (e.g. 25000 for 1:25000).",
     )
     @click.option(
         "--dpi",
-        type=int,
+        cls=_HiddenRangeOption,
+        type=click.IntRange(min=1),
         default=DEFAULT_DPI,
-        help="Dots per inch.",
+        metavar="DOTS-PER-INCH",
+        help="Resolution of the map image.",
     )
     @click.option(
         "--grid",
@@ -211,7 +235,8 @@ def common_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
     )
     @click.option(
         "--grid-size",
-        type=int,
+        cls=_HiddenRangeOption,
+        type=click.IntRange(min=1),
         default=DEFAULT_GRID_SIZE,
         metavar="METERS",
         help="Size of the grid squares (if applicable).",
@@ -230,10 +255,43 @@ def common_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
     return wrapper
 
 
-def _render_and_save(pm: PaperMap, file: Path) -> None:
-    """Render the map and write it to *file*."""
-    pm.render()
-    pm.save(file)
+def _drop_scale_for_auto_scale(kwargs: dict[str, Any], *, auto_scale: bool) -> None:
+    """Remove the default ``scale`` from ``kwargs`` when ``--auto-scale`` is used.
+
+    Raises:
+        click.UsageError: If ``--scale`` is combined with ``--auto-scale``.
+    """
+    if not auto_scale:
+        return
+    if (
+        click.get_current_context().get_parameter_source("scale")
+        is not ParameterSource.DEFAULT
+    ):
+        msg = "'--scale' cannot be combined with '--auto-scale'."
+        raise click.UsageError(msg)
+    del kwargs["scale"]
+
+
+def _render_and_save(create_paper_map: Callable[[], PaperMap], file: Path) -> None:
+    """Create and render the map, and write it to *file*.
+
+    Failures caused by the user's input or environment are reported as a
+    concise error message (with exit code 1), instead of a traceback: invalid
+    input (e.g. coordinates, or a GeoJSON file) raises ``ValueError``, tiles
+    that cannot be downloaded raise ``RuntimeError``, the optional ``gpx``
+    package being unavailable raises ``ImportError``, and files that cannot be
+    read or written raise ``OSError``. Any other exception propagates as is.
+
+    Raises:
+        click.ClickException: If creating, rendering or saving the map fails
+            for one of the reasons above.
+    """
+    try:
+        pm = create_paper_map()
+        pm.render()
+        pm.save(file)
+    except (ValueError, RuntimeError, ImportError, OSError) as e:
+        raise click.ClickException(str(e)) from e
 
 
 @click.group(
@@ -258,14 +316,18 @@ def latlon(
     lat: float, lon: float, file: Path, **kwargs: Unpack[CommonParameters]
 ) -> None:
     """Generates a paper map for the given geographic coordinates (i.e. lat, lon) and outputs it to file."""
-    _render_and_save(PaperMap(lat, lon, **kwargs), file)
+    _render_and_save(partial(PaperMap, lat, lon, **kwargs), file)
 
 
 @cli.command()
 @click.argument("easting", type=float, metavar="EASTING")
 @click.argument("northing", type=float, metavar="NORTHING")
-@click.argument("zone", type=int, metavar="ZONE-NUMBER")
-@click.argument("hemisphere", type=str, metavar="HEMISPHERE")
+@click.argument("zone", type=click.IntRange(1, 60), metavar="ZONE-NUMBER")
+@click.argument(
+    "hemisphere",
+    type=click.Choice(["N", "S"], case_sensitive=False),
+    metavar="HEMISPHERE",
+)
 @common_parameters
 def utm(
     easting: float,
@@ -277,13 +339,17 @@ def utm(
 ) -> None:
     """Generates a paper map for the given UTM (Universal Transverse Mercator) coordinates and outputs it to file."""
     _render_and_save(
-        PaperMap.from_utm(UTMCoordinate(easting, northing, zone, hemisphere), **kwargs),
+        partial(
+            PaperMap.from_utm,
+            UTMCoordinate(easting, northing, zone, hemisphere),
+            **kwargs,
+        ),
         file,
     )
 
 
 @cli.command()
-@click.argument("zone", type=int, metavar="ZONE-NUMBER")
+@click.argument("zone", type=click.IntRange(1, 60), metavar="ZONE-NUMBER")
 @click.argument("band", type=str, metavar="BAND")
 @click.argument("square", type=str, metavar="SQUARE")
 @click.argument("easting", type=float, metavar="EASTING")
@@ -300,8 +366,10 @@ def mgrs(  # noqa: PLR0913, PLR0917
 ) -> None:
     """Generates a paper map for the given MGRS (Military Grid Reference System) coordinates and outputs it to file."""
     _render_and_save(
-        PaperMap.from_mgrs(
-            MGRSCoordinate(zone, band, square, easting, northing), **kwargs
+        partial(
+            PaperMap.from_mgrs,
+            MGRSCoordinate(zone, band.upper(), square.upper(), easting, northing),
+            **kwargs,
         ),
         file,
     )
@@ -316,7 +384,9 @@ def ecef(
     x: float, y: float, z: float, file: Path, **kwargs: Unpack[CommonParameters]
 ) -> None:
     """Generates a paper map for the given ECEF (Earth-Centered, Earth-Fixed) Cartesian coordinates and outputs it to file."""
-    _render_and_save(PaperMap.from_ecef(ECEFCoordinate(x, y, z), **kwargs), file)
+    _render_and_save(
+        partial(PaperMap.from_ecef, ECEFCoordinate(x, y, z), **kwargs), file
+    )
 
 
 @cli.command()
@@ -332,7 +402,8 @@ def ecef(
 )
 @click.option(
     "--padding",
-    type=float,
+    cls=_HiddenRangeOption,
+    type=click.FloatRange(min=0),
     default=DEFAULT_AUTO_SCALE_PADDING,
     metavar="MILLIMETERS",
     help="Padding between the GeoJSON geometries and the image edge (per side). Only used with --auto-scale.",
@@ -349,10 +420,10 @@ def geojson(
     """Generates a paper map for the given GeoJSON file and outputs it to file."""
     forwarded: dict[str, Any] = dict(**kwargs)
     style = _pop_style(forwarded)
-    if auto_scale:
-        forwarded.pop("scale", None)
+    _drop_scale_for_auto_scale(forwarded, auto_scale=auto_scale)
     _render_and_save(
-        PaperMap.from_geojson(
+        partial(
+            PaperMap.from_geojson,
             geojson_file,
             style=style,
             auto_scale=auto_scale,
@@ -376,7 +447,8 @@ def geojson(
 )
 @click.option(
     "--padding",
-    type=float,
+    cls=_HiddenRangeOption,
+    type=click.FloatRange(min=0),
     default=DEFAULT_AUTO_SCALE_PADDING,
     metavar="MILLIMETERS",
     help="Padding between the GPX geometries and the image edge (per side). Only used with --auto-scale.",
@@ -396,10 +468,10 @@ def gpx(
     """
     forwarded: dict[str, Any] = dict(**kwargs)
     style = _pop_style(forwarded)
-    if auto_scale:
-        forwarded.pop("scale", None)
+    _drop_scale_for_auto_scale(forwarded, auto_scale=auto_scale)
     _render_and_save(
-        PaperMap.from_gpx(
+        partial(
+            PaperMap.from_gpx,
             gpx_file,
             style=style,
             auto_scale=auto_scale,

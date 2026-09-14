@@ -372,7 +372,8 @@ def wrap_lon(lon: float) -> float:
 def _compute_utm_zone(lat: float, lon: float) -> int:
     """Compute the UTM zone number for a given latitude/longitude.
 
-    The standard UTM zone formula is: zone = floor((lon + 180) / 6) + 1
+    The standard UTM zone formula is: zone = floor((lon + 180) / 6) % 60 + 1,
+    where the modulo maps 180°E onto zone 1 (the same meridian as 180°W).
 
     However, there are several exceptions to accommodate national mapping
     systems:
@@ -391,7 +392,7 @@ def _compute_utm_zone(lat: float, lon: float) -> int:
         UTM zone number (1-60).
     """
     # Standard zone calculation
-    zone = floor((lon + 180) / 6) + 1
+    zone = floor((lon + 180) / 6) % 60 + 1
 
     # Norway exception: zone 31V is narrowed, 32V is widened
     # This affects latitudes 56°N to 64°N and longitudes 3°E to 12°E
@@ -656,6 +657,38 @@ def _parse_utm_string(utm_str: str) -> UTMCoordinate:
     )
 
 
+def _validate_mgrs_coordinate(mgrs: MGRSCoordinate) -> None:
+    """Validate the components of an MGRS coordinate.
+
+    Args:
+        mgrs: MGRS coordinate to validate.
+
+    Raises:
+        ValueError: If the zone is not 1-60, the latitude band or 100km square
+            identifier is invalid (for the zone), or the easting or northing is
+            outside the 100km square.
+    """
+    if not 1 <= mgrs.zone <= 60:
+        msg = f"Zone must be 1-60, got {mgrs.zone}"
+        raise ValueError(msg)
+
+    if len(mgrs.band) != 1 or mgrs.band not in MGRS_LATITUDE_BANDS:
+        msg = f"Invalid latitude band {mgrs.band!r}"
+        raise ValueError(msg)
+
+    if (
+        len(mgrs.square) != 2
+        or mgrs.square[0] not in _column_letter_set(mgrs.zone)
+        or mgrs.square[1] not in _row_letter_set(mgrs.zone)
+    ):
+        msg = f"Invalid 100km square identifier {mgrs.square!r} for zone {mgrs.zone}"
+        raise ValueError(msg)
+
+    if not (0 <= mgrs.easting < 100_000 and 0 <= mgrs.northing < 100_000):
+        msg = f"Easting and northing must be in [0, 100000), got {mgrs.easting}, {mgrs.northing}"
+        raise ValueError(msg)
+
+
 def _parse_mgrs_string(mgrs_str: str) -> MGRSCoordinate:
     """Parse an MGRS string into its components.
 
@@ -828,11 +861,10 @@ def latlon_to_utm(
     # -------------------------------------------------------------------------
     # Step 1: Validate and normalize input coordinates
     # -------------------------------------------------------------------------
-    lat = wrap_lat(lat)
-    lon = wrap_lon(lon)
-
     # UTM is only defined between 80°S and 84°N
     # Outside this range, the Universal Polar Stereographic (UPS) system is used
+    # (latitude is validated as-is: "wrapping" e.g. 100° to -80° is meaningless)
+    lon = wrap_lon(lon)
     if not -80 <= lat <= 84:
         msg = f"Latitude {lat}° is outside UTM coverage area [-80°, 84°]"
         raise ValueError(msg)
@@ -849,7 +881,8 @@ def latlon_to_utm(
     # φ (phi) = latitude in radians
     # λ (lambda) = longitude offset from central meridian in radians
     φ = radians(lat)
-    λ = radians(lon - central_meridian)
+    # (wrapped, as 180°E lies in zone 1, whose central meridian is 177°W)
+    λ = radians(wrap_lon(lon - central_meridian))
 
     # -------------------------------------------------------------------------
     # Step 4: Compute ellipsoid-derived constants
@@ -1008,6 +1041,7 @@ def utm_to_latlon(
 
     Raises:
         ValueError: If the UTM string is malformed.
+        ValueError: If the zone is not 1-60, or the hemisphere is not 'N' or 'S'.
 
     Examples:
         >>> utm = UTMCoordinate(583960, 4507523, 18, "N")
@@ -1018,10 +1052,17 @@ def utm_to_latlon(
         40.71435, -74.00597
     """
     # -------------------------------------------------------------------------
-    # Step 1: Parse UTM string if necessary
+    # Step 1: Parse UTM string if necessary, and validate zone and hemisphere
     # -------------------------------------------------------------------------
     if isinstance(utm, str):
         utm = _parse_utm_string(utm)
+
+    if not 1 <= utm.zone <= 60:
+        msg = f"Zone must be 1-60, got {utm.zone}"
+        raise ValueError(msg)
+    if utm.hemisphere not in {"N", "S"}:
+        msg = f"Hemisphere must be 'N' or 'S', got {utm.hemisphere!r}"
+        raise ValueError(msg)
 
     # -------------------------------------------------------------------------
     # Step 2: Remove false origin offsets
@@ -1208,11 +1249,8 @@ def latlon_to_mgrs(
         >>> print(mgrs)
         MGRSCoordinate(zone=18, band='T', square='WL', easting=83959.37232408463, northing=7350.998243321665)
 
-        >>> mgrs = latlon_to_mgrs(40.7128, -74.0060)
         >>> print(format_mgrs(mgrs))
         18TWL8395907350
-
-        >>> mgrs = latlon_to_mgrs(40.7128, -74.0060, precision=3)
         >>> print(format_mgrs(mgrs, precision=3))
         18TWL839073
     """
@@ -1275,7 +1313,8 @@ def mgrs_to_latlon(
         Tuple of (latitude, longitude) in degrees.
 
     Raises:
-        ValueError: If the MGRS string is malformed.
+        ValueError: If the MGRS string is malformed, or the MGRS coordinate is
+            invalid (e.g. an unknown latitude band or 100km square identifier).
 
     Examples:
         >>> latlon = mgrs_to_latlon("18TWK8395907523")
@@ -1288,10 +1327,11 @@ def mgrs_to_latlon(
         39.81354433765199 -74.01908091495618
     """
     # -------------------------------------------------------------------------
-    # Step 1: Parse MGRS string if necessary
+    # Step 1: Parse MGRS string if necessary, and validate its components
     # -------------------------------------------------------------------------
     if isinstance(mgrs, str):
         mgrs = _parse_mgrs_string(mgrs)
+    _validate_mgrs_coordinate(mgrs)
 
     # -------------------------------------------------------------------------
     # Step 2: Determine hemisphere from latitude band
@@ -1317,35 +1357,33 @@ def mgrs_to_latlon(
     northing_100km = row_index * 100_000
 
     # -------------------------------------------------------------------------
-    # Step 5: Determine the correct 2,000km band for the northing
-    # -------------------------------------------------------------------------
-    # The row letters repeat every 2,000km, so we need to figure out which
-    # 2,000km band we're in based on the latitude band.
-
-    # Convert the southern edge of the band to UTM to get the approximate
-    # northing in UTM-stored form (i.e. with false northing applied for
-    # southern bands). `latlon_to_utm` already encodes both hemispheres
-    # consistently, so we can use the value directly.
-    band_index = MGRS_LATITUDE_BANDS.index(mgrs.band)
-    band_lat_south = -80 + band_index * 8
-    approx_northing = latlon_to_utm(band_lat_south, 0, ellipsoid=ellipsoid).northing
-
-    # Determine which 2,000km block we're in
-    base_northing = (approx_northing // 2_000_000) * 2_000_000
-
-    # Add the 100km northing within the 2,000km block
-    northing = base_northing + northing_100km
-
-    # Adjust if we've crossed into the next 2,000km block
-    # This handles cases at the boundary of latitude bands
-    while northing < approx_northing - 100_000:
-        northing += 2_000_000
-
-    # -------------------------------------------------------------------------
-    # Step 6: Add coordinates within 100km square
+    # Step 5: Add coordinates within 100km square
     # -------------------------------------------------------------------------
     easting = easting_100km + mgrs.easting
-    northing = northing + mgrs.northing
+    northing_in_block = northing_100km + mgrs.northing
+
+    # -------------------------------------------------------------------------
+    # Step 6: Determine the correct 2,000km block for the northing
+    # -------------------------------------------------------------------------
+    # The row letters repeat every 2,000km, so we need the latitude band to
+    # figure out which 2,000km block the northing lies in. Every band spans
+    # well under 2,000km of northing (8°, or 12° for band X), so the correct
+    # block is the one that puts the northing within 1,000km of the band's
+    # centre.
+    #
+    # The northing of the band's centre is computed in UTM-stored form (i.e.
+    # with false northing applied for southern bands) on a central meridian.
+    # Points off the central meridian lie at most a few tens of kilometres
+    # north or south of it, well within the 1,000km margin.
+    band_lat_south = -80 + MGRS_LATITUDE_BANDS.index(mgrs.band) * 8
+    band_lat_north = 84 if mgrs.band == "X" else band_lat_south + 8
+    band_center_northing = latlon_to_utm(
+        (band_lat_south + band_lat_north) / 2, -177, ellipsoid=ellipsoid
+    ).northing
+    northing = (
+        northing_in_block
+        + round((band_center_northing - northing_in_block) / 2_000_000) * 2_000_000
+    )
 
     # -------------------------------------------------------------------------
     # Step 7: Convert UTM to lat/lon

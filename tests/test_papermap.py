@@ -1,5 +1,6 @@
 """Unit tests for papermap.papermap module."""
 
+import itertools
 import re
 import zlib
 from decimal import Decimal
@@ -7,12 +8,18 @@ from math import isclose
 from pathlib import Path
 from typing import Any
 
+import httpx
 import pytest
-from PIL import UnidentifiedImageError
 from pytest_httpx import HTTPXMock
 
 from papermap.features import CircleMarker, IconMarker, Line, Polygon
-from papermap.geodesy import ECEFCoordinate, MGRSCoordinate, UTMCoordinate
+from papermap.geodesy import (
+    ECEFCoordinate,
+    MGRSCoordinate,
+    UTMCoordinate,
+    latlon_to_utm,
+    utm_to_latlon,
+)
 from papermap.papermap import (
     COMMON_SCALES,
     DEFAULT_DPI,
@@ -22,6 +29,7 @@ from papermap.papermap import (
     PaperMap,
     _compute_auto_scale,
 )
+from papermap.tile import TILE_SIZE
 
 
 class TestPaperMapInit:
@@ -141,6 +149,24 @@ class TestPaperMapValidation:
     def test_invalid_paper_size_raises_error(self) -> None:
         with pytest.raises(ValueError, match="Invalid paper size"):
             PaperMap(lat=40.7128, lon=-74.0060, paper_size="nonexistent_size")
+
+    @pytest.mark.parametrize("grid_size", [0, -1000])
+    def test_non_positive_grid_size_raises_error(self, grid_size: int) -> None:
+        with pytest.raises(ValueError, match="Grid size must be positive"):
+            PaperMap(lat=40.7128, lon=-74.0060, add_grid=True, grid_size=grid_size)
+
+    @pytest.mark.parametrize("lat", [-80.5, 84.5])
+    def test_grid_outside_utm_coverage_raises_error(self, lat: float) -> None:
+        with pytest.raises(ValueError, match="outside the UTM coverage area"):
+            PaperMap(lat=lat, lon=0.0, add_grid=True)
+
+    def test_no_grid_outside_utm_coverage(self) -> None:
+        pm = PaperMap(lat=84.5, lon=0.0)
+        assert not pm.add_grid
+
+    def test_invalid_background_color_raises_error(self) -> None:
+        with pytest.raises(ValueError, match="Invalid background color"):
+            PaperMap(lat=40.7128, lon=-74.0060, background_color="not-a-color")
 
     def test_valid_paper_sizes(self) -> None:
         for size in PAPER_SIZES:
@@ -459,6 +485,45 @@ class TestPaperMapComputeGridCoordinates:
         for y, _ in y_coords:
             assert 0 <= float(y) <= pm.image_height
 
+    @pytest.mark.parametrize("grid_size", [500, 1000, 1500, 2000])
+    @pytest.mark.parametrize(
+        ("lat", "lon"),
+        [(52.0037, 5.0061), (40.7128, -74.0060), (-33.8688, 151.2093)],
+    )
+    def test_compute_grid_coordinates_match_utm_positions(
+        self, lat: float, lon: float, grid_size: int
+    ) -> None:
+        """Each grid line is drawn where its labelled UTM coordinate lies on the map."""
+        pm = PaperMap(lat=lat, lon=lon, add_grid=True, grid_size=grid_size)
+        easting, northing, zone, hemisphere = latlon_to_utm(lat, lon)
+        easting_lines, northing_lines = pm.compute_grid_coordinates()
+
+        # The (spherical) Web Mercator base map and the (ellipsoidal) UTM grid
+        # drift apart by up to ~0.5mm towards the edges of an A4 page.
+        for x, label in easting_lines:
+            utm = UTMCoordinate(float(label) * 1000, northing, zone, hemisphere)
+            expected_x, _ = pm.latlon_to_pdf_mm(*utm_to_latlon(utm)[:2])
+            assert isclose(float(x) + pm.margin_left, expected_x, abs_tol=1)
+
+        for y, label in northing_lines:
+            utm = UTMCoordinate(easting, float(label) * 1000, zone, hemisphere)
+            _, expected_y = pm.latlon_to_pdf_mm(*utm_to_latlon(utm)[:2])
+            assert isclose(float(y) + pm.margin_top, expected_y, abs_tol=1)
+
+    def test_compute_grid_coordinates_labels_follow_grid_size(self) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060, add_grid=True, grid_size=500)
+        easting_lines, northing_lines = pm.compute_grid_coordinates()
+
+        easting_labels = [Decimal(label) for _, label in easting_lines]
+        northing_labels = [Decimal(label) for _, label in northing_lines]
+        assert all(
+            b - a == Decimal("0.5") for a, b in itertools.pairwise(easting_labels)
+        )
+        assert all(
+            a - b == Decimal("0.5") for a, b in itertools.pairwise(northing_labels)
+        )
+        assert all(label % Decimal("0.5") == 0 for label in easting_labels)
+
     def test_compute_grid_coordinates_spacing(self) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060, add_grid=True, grid_size=1000)
         x_coords, _y_coords = pm.compute_grid_coordinates()
@@ -485,6 +550,27 @@ class TestPaperMapTileCalculations:
 
         for i in range(len(y_values) - 1):
             assert y_values[i + 1] - y_values[i] == 1
+
+    @pytest.mark.parametrize("lon", [179.99, -179.99])
+    def test_tiles_placed_seamlessly_across_antimeridian(self, lon: float) -> None:
+        pm = PaperMap(lat=0.0, lon=lon)
+        max_tile = 2**pm.zoom_scaled
+
+        # The map spans both sides of the ±180° meridian...
+        assert {0, max_tile - 1} <= {t.x for t in pm.tiles}
+        # ...yet every tile lands on the map image, without gaps
+        lefts = sorted({t.bbox[0] for t in pm.tiles})
+        assert lefts[0] <= 0
+        assert lefts[-1] + TILE_SIZE >= pm.image_width_scaled_px
+        assert all(b - a == TILE_SIZE for a, b in itertools.pairwise(lefts))
+
+    def test_no_tiles_beyond_web_mercator_bounds(self) -> None:
+        pm = PaperMap(lat=85.05, lon=0.0)
+        assert pm.y_min < 0  # the map extends beyond the top of the projection
+
+        assert pm.tiles
+        # No rows wrapped around from the opposite pole are used
+        assert all(0 <= t.y < pm.y_max for t in pm.tiles)
 
     def test_tile_zoom_matches_computed_zoom(self) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
@@ -541,6 +627,22 @@ class TestPaperMapDownloadTiles:
         for tile in pm.tiles:
             assert tile.success
 
+    def test_download_tiles_user_agent(
+        self, httpx_mock: HTTPXMock, tile_image_content: bytes
+    ) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        for _ in pm.tiles:
+            httpx_mock.add_response(content=tile_image_content)
+
+        pm.download_tiles()
+
+        user_agents = {r.headers["User-Agent"] for r in httpx_mock.get_requests()}
+        assert len(user_agents) == 1
+        assert re.fullmatch(
+            r"papermap/\S+ \(\+https://github\.com/sgraaf/papermap\)",
+            user_agents.pop(),
+        )
+
     def test_download_tiles_retry_on_failure(
         self,
         httpx_mock: HTTPXMock,
@@ -550,9 +652,9 @@ class TestPaperMapDownloadTiles:
 
         num_tiles = len(pm.tiles)
 
-        # First attempt: all tiles fail (404 error)
+        # First attempt: all tiles fail (503 error)
         for _ in range(num_tiles):
-            httpx_mock.add_response(status_code=404)
+            httpx_mock.add_response(status_code=503)
 
         # Second attempt: all tiles succeed
         for _ in range(num_tiles):
@@ -613,21 +715,65 @@ class TestPaperMapDownloadTiles:
         assert len(sleep_calls) >= 1
         assert all(duration == 1 for duration in sleep_calls)
 
-    @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
-    def test_download_tiles_graceful_failure(self, httpx_mock: HTTPXMock) -> None:
+    def test_download_tiles_graceful_failure(
+        self, httpx_mock: HTTPXMock, tile_image_content: bytes
+    ) -> None:
         """Test that partial tile failure with strict=False logs warning but completes."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
         num_tiles = len(pm.tiles)
         num_retries = 2
 
-        # All attempts fail
-        for _ in range(num_tiles * (num_retries + 1)):
+        # One tile fails on every attempt, the others succeed
+        httpx_mock.add_response(status_code=500)
+        for _ in range(num_tiles - 1):
+            httpx_mock.add_response(content=tile_image_content)
+        for _ in range(num_retries):
             httpx_mock.add_response(status_code=500)
 
         # Should not raise, but should warn
-        with pytest.warns(UserWarning, match="Could not download"):
+        with pytest.warns(UserWarning, match=r"Could not download 1/\d+ tiles"):
             pm.download_tiles(num_retries=num_retries, strict=False)
+        assert sum(tile.success for tile in pm.tiles) == num_tiles - 1
+
+    def test_download_tiles_total_failure_raises_when_not_strict(
+        self, httpx_mock: HTTPXMock
+    ) -> None:
+        """A map without any downloaded tile is never returned, even when not strict."""
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+
+        for _ in range(len(pm.tiles) * 2):
+            httpx_mock.add_response(status_code=500)
+
+        with pytest.raises(RuntimeError, match="Could not download"):
+            pm.download_tiles(num_retries=1, strict=False)
+
+    def test_download_tiles_does_not_retry_client_errors(
+        self, httpx_mock: HTTPXMock
+    ) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+
+        for _ in pm.tiles:
+            httpx_mock.add_response(status_code=401)
+
+        with pytest.raises(RuntimeError, match="HTTP 401"):
+            pm.download_tiles(num_retries=3)
+        assert len(httpx_mock.get_requests()) == len(pm.tiles)
+
+    @pytest.mark.parametrize("status_code", [408, 429])
+    def test_download_tiles_retries_timeouts_and_rate_limiting(
+        self, httpx_mock: HTTPXMock, tile_image_content: bytes, status_code: int
+    ) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+
+        for _ in pm.tiles:
+            httpx_mock.add_response(status_code=status_code)
+        for _ in pm.tiles:
+            httpx_mock.add_response(content=tile_image_content)
+
+        pm.download_tiles(num_retries=1)
+
+        assert all(tile.success for tile in pm.tiles)
 
     @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
     def test_download_tiles_strict_failure(self, httpx_mock: HTTPXMock) -> None:
@@ -691,31 +837,60 @@ class TestPaperMapHttpErrors:
         with pytest.raises(RuntimeError, match="Could not download"):
             pm.download_tiles(num_retries=1, strict=True)
 
-    @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
-    def test_download_tiles_empty_response(self, httpx_mock: HTTPXMock) -> None:
-        """Test handling of empty response body."""
+    @pytest.mark.parametrize(
+        "content", [b"", b"This is not a valid PNG image"], ids=["empty", "invalid"]
+    )
+    def test_download_tiles_invalid_image_data_warns(
+        self, httpx_mock: HTTPXMock, tile_image_content: bytes, content: bytes
+    ) -> None:
+        """Undecodable bodies fail the tile instead of aborting the download."""
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
-        # Return empty content (one per tile)
-        for _ in pm.tiles:
-            httpx_mock.add_response(content=b"")
+        # One tile is undecodable on both attempts, the others succeed
+        httpx_mock.add_response(content=content)
+        for _ in range(len(pm.tiles) - 1):
+            httpx_mock.add_response(content=tile_image_content)
+        httpx_mock.add_response(content=content)
 
-        # Should raise UnidentifiedImageError when trying to parse empty content
-        with pytest.raises(UnidentifiedImageError):
+        with pytest.warns(UserWarning, match="invalid image data: 1"):
             pm.download_tiles(num_retries=1)
+        assert sum(tile.success for tile in pm.tiles) == len(pm.tiles) - 1
 
-    @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
-    def test_download_tiles_invalid_image_data(self, httpx_mock: HTTPXMock) -> None:
-        """Test handling of invalid/corrupted image data."""
+    def test_download_tiles_invalid_image_data_strict(
+        self, httpx_mock: HTTPXMock
+    ) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)
 
-        # Return invalid image data (one per tile)
-        for _ in pm.tiles:
-            httpx_mock.add_response(content=b"This is not a valid PNG image")
+        for _ in range(len(pm.tiles) * 2):
+            httpx_mock.add_response(content=b"<html>rate limited</html>")
 
-        # Should raise UnidentifiedImageError when PIL tries to open invalid image
-        with pytest.raises(UnidentifiedImageError):
-            pm.download_tiles(num_retries=1)
+        with pytest.raises(RuntimeError, match="invalid image data"):
+            pm.download_tiles(num_retries=1, strict=True)
+
+    def test_download_tiles_retries_transport_errors(
+        self, httpx_mock: HTTPXMock, tile_image_content: bytes
+    ) -> None:
+        """Timeouts and connection errors are retried rather than propagated."""
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+
+        httpx_mock.add_exception(httpx.ConnectTimeout("timed out"))
+        for _ in pm.tiles:
+            httpx_mock.add_response(content=tile_image_content)
+
+        pm.download_tiles(num_retries=1)
+
+        assert all(tile.success for tile in pm.tiles)
+
+    def test_download_tiles_transport_errors_strict(
+        self, httpx_mock: HTTPXMock
+    ) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+
+        for _ in range(len(pm.tiles) * 2):
+            httpx_mock.add_exception(httpx.ConnectError("connection refused"))
+
+        with pytest.raises(RuntimeError, match="ConnectError"):
+            pm.download_tiles(num_retries=1, strict=True)
 
     def test_download_tiles_partial_success(
         self,
@@ -784,18 +959,21 @@ class TestPaperMapRenderBaseLayer:
         with pytest.raises(RuntimeError, match="Could not download"):
             pm.render_base_layer()
 
-    @pytest.mark.httpx_mock(assert_all_responses_were_requested=False)
     def test_render_base_layer_with_graceful_download_failure(
         self,
         httpx_mock: HTTPXMock,
+        tile_image_content: bytes,
     ) -> None:
         """Test that render_base_layer allows graceful degradation with strict_download=False."""
         pm = PaperMap(lat=40.7128, lon=-74.0060, strict_download=False)
 
         num_tiles = len(pm.tiles)
 
-        # All attempts fail
-        for _ in range(num_tiles * 4):
+        # One tile fails on every attempt (1 + 3 retries), the others succeed
+        httpx_mock.add_response(status_code=500)
+        for _ in range(num_tiles - 1):
+            httpx_mock.add_response(content=tile_image_content)
+        for _ in range(3):
             httpx_mock.add_response(status_code=500)
 
         # Should warn but not raise
