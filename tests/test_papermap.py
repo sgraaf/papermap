@@ -29,6 +29,7 @@ from papermap.papermap import (
     PaperMap,
     _compute_auto_scale,
 )
+from papermap.tile import TILE_SIZE
 
 
 class TestPaperMapInit:
@@ -531,6 +532,27 @@ class TestPaperMapTileCalculations:
 
         for i in range(len(y_values) - 1):
             assert y_values[i + 1] - y_values[i] == 1
+
+    @pytest.mark.parametrize("lon", [179.99, -179.99])
+    def test_tiles_placed_seamlessly_across_antimeridian(self, lon: float) -> None:
+        pm = PaperMap(lat=0.0, lon=lon)
+        max_tile = 2**pm.zoom_scaled
+
+        # The map spans both sides of the ±180° meridian...
+        assert {0, max_tile - 1} <= {t.x for t in pm.tiles}
+        # ...yet every tile lands on the map image, without gaps
+        lefts = sorted({t.bbox[0] for t in pm.tiles})
+        assert lefts[0] <= 0
+        assert lefts[-1] + TILE_SIZE >= pm.image_width_scaled_px
+        assert all(b - a == TILE_SIZE for a, b in itertools.pairwise(lefts))
+
+    def test_no_tiles_beyond_web_mercator_bounds(self) -> None:
+        pm = PaperMap(lat=85.05, lon=0.0)
+        assert pm.y_min < 0  # the map extends beyond the top of the projection
+
+        assert pm.tiles
+        # No rows wrapped around from the opposite pole are used
+        assert all(0 <= t.y < pm.y_max for t in pm.tiles)
 
     def test_tile_zoom_matches_computed_zoom(self) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060)

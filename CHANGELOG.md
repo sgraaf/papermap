@@ -23,6 +23,7 @@ The **third number** is for emergencies when we need to start branches for older
 - Fixed tile downloads aborting the whole map when a single request failed with a network error (e.g. a timeout) or returned data that is not a valid image. Such tiles are now retried and, if they keep failing, reported like any other failed tile (a warning, or a `RuntimeError` with `strict_download=True`). The failure message now also includes the failure reasons.
 - Fixed horizontal (northing) grid lines being drawn mirrored about the map centre, placing them up to one grid square away from the northing their label names.
 - Fixed wrong grid labels for any `grid_size` other than 1000m: labels always stepped by 1km per line. Grid lines now lie on multiples of `grid_size`, and are labelled with their UTM coordinate in kilometres (e.g. `583.5` for a 500m grid).
+- Fixed maps crossing the ±180° meridian rendering the far side of the meridian blank: its tiles were downloaded but pasted outside the map image. Maps extending beyond the latitude limits of the Web Mercator projection (±85.05°) no longer download tiles from the opposite pole.
 
 ## [2026.2.0](https://github.com/sgraaf/papermap/compare/2026.1.0...2026.2.0) (2026-05-17)
 

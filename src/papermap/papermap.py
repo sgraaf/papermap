@@ -778,35 +778,37 @@ class PaperMap:
         )
 
     def _initialize_tiles(self) -> None:
-        """Initialize the list of tiles required for the map."""
-        self.tiles = []
-        for x in range(self.x_min, self.x_max):
-            for y in range(self.y_min, self.y_max):
-                # x and y may have crossed the date line
-                max_tile = 2**self.zoom_scaled
-                x_tile = (x + max_tile) % max_tile
-                y_tile = (y + max_tile) % max_tile
+        """Initialize the list of tiles required for the map.
 
+        Each tile is placed on the map image at its unwrapped position, so a
+        map crossing the ±180° meridian is stitched together seamlessly, but
+        is downloaded using its x coordinate wrapped into the valid range.
+        Rows beyond the latitude limits of the Web Mercator projection
+        (±85.05°) have no tiles and are left as background.
+        """
+        self.tiles = []
+        max_tile = 2**self.zoom_scaled
+        for x in range(self.x_min, self.x_max):
+            for y in range(max(self.y_min, 0), min(self.y_max, max_tile)):
                 bbox = (
                     round(
-                        (x_tile - self.x_center) * TILE_SIZE
-                        + self.image_width_scaled_px / 2
+                        (x - self.x_center) * TILE_SIZE + self.image_width_scaled_px / 2
                     ),
                     round(
-                        (y_tile - self.y_center) * TILE_SIZE
+                        (y - self.y_center) * TILE_SIZE
                         + self.image_height_scaled_px / 2
                     ),
                     round(
-                        (x_tile + 1 - self.x_center) * TILE_SIZE
+                        (x + 1 - self.x_center) * TILE_SIZE
                         + self.image_width_scaled_px / 2
                     ),
                     round(
-                        (y_tile + 1 - self.y_center) * TILE_SIZE
+                        (y + 1 - self.y_center) * TILE_SIZE
                         + self.image_height_scaled_px / 2
                     ),
                 )
 
-                self.tiles.append(Tile(x_tile, y_tile, self.zoom_scaled, bbox))
+                self.tiles.append(Tile(x % max_tile, y, self.zoom_scaled, bbox))
 
     def _initialize_pdf(self) -> None:
         """Initialize the PDF document with margins and settings."""
