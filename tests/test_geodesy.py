@@ -559,6 +559,18 @@ class TestMGRSToLatLon:
             assert math.isclose(lat, lat2, abs_tol=0.0001)
             assert math.isclose(lon, lon2, abs_tol=0.0001)
 
+    @pytest.mark.parametrize("band_lat_south", range(-80, 84, 8))
+    def test_roundtrip_across_latitude_band(self, band_lat_south: int) -> None:
+        """Round trip near the edges and middle of a band, on and off central meridians."""
+        lons = [cm + d for cm in range(-177, 180, 6) for d in (-2.9, 0, 2.9)]
+        lats = [band_lat_south + d for d in (0.0001, 0.02, 4, 7.9999)]
+        for lat in (lat for lat in lats if lat < 84):  # MGRS/UTM ends at 84°N
+            for lon in lons:
+                mgrs = format_mgrs(latlon_to_mgrs(lat, lon))
+                lat2, lon2, _ = mgrs_to_latlon(mgrs)
+                assert math.isclose(lat, lat2, abs_tol=0.0001), mgrs
+                assert math.isclose(lon, lon2, abs_tol=0.0001), mgrs
+
     def test_parse_invalid_too_short(self) -> None:
         with pytest.raises(ValueError, match="too short"):
             mgrs_to_latlon("18T")

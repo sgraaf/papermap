@@ -1317,35 +1317,33 @@ def mgrs_to_latlon(
     northing_100km = row_index * 100_000
 
     # -------------------------------------------------------------------------
-    # Step 5: Determine the correct 2,000km band for the northing
-    # -------------------------------------------------------------------------
-    # The row letters repeat every 2,000km, so we need to figure out which
-    # 2,000km band we're in based on the latitude band.
-
-    # Convert the southern edge of the band to UTM to get the approximate
-    # northing in UTM-stored form (i.e. with false northing applied for
-    # southern bands). `latlon_to_utm` already encodes both hemispheres
-    # consistently, so we can use the value directly.
-    band_index = MGRS_LATITUDE_BANDS.index(mgrs.band)
-    band_lat_south = -80 + band_index * 8
-    approx_northing = latlon_to_utm(band_lat_south, 0, ellipsoid=ellipsoid).northing
-
-    # Determine which 2,000km block we're in
-    base_northing = (approx_northing // 2_000_000) * 2_000_000
-
-    # Add the 100km northing within the 2,000km block
-    northing = base_northing + northing_100km
-
-    # Adjust if we've crossed into the next 2,000km block
-    # This handles cases at the boundary of latitude bands
-    while northing < approx_northing - 100_000:
-        northing += 2_000_000
-
-    # -------------------------------------------------------------------------
-    # Step 6: Add coordinates within 100km square
+    # Step 5: Add coordinates within 100km square
     # -------------------------------------------------------------------------
     easting = easting_100km + mgrs.easting
-    northing = northing + mgrs.northing
+    northing_in_block = northing_100km + mgrs.northing
+
+    # -------------------------------------------------------------------------
+    # Step 6: Determine the correct 2,000km block for the northing
+    # -------------------------------------------------------------------------
+    # The row letters repeat every 2,000km, so we need the latitude band to
+    # figure out which 2,000km block the northing lies in. Every band spans
+    # well under 2,000km of northing (8°, or 12° for band X), so the correct
+    # block is the one that puts the northing within 1,000km of the band's
+    # centre.
+    #
+    # The northing of the band's centre is computed in UTM-stored form (i.e.
+    # with false northing applied for southern bands) on a central meridian.
+    # Points off the central meridian lie at most a few tens of kilometres
+    # north or south of it, well within the 1,000km margin.
+    band_lat_south = -80 + MGRS_LATITUDE_BANDS.index(mgrs.band) * 8
+    band_lat_north = 84 if mgrs.band == "X" else band_lat_south + 8
+    band_center_northing = latlon_to_utm(
+        (band_lat_south + band_lat_north) / 2, -177, ellipsoid=ellipsoid
+    ).northing
+    northing = (
+        northing_in_block
+        + round((band_center_northing - northing_in_block) / 2_000_000) * 2_000_000
+    )
 
     # -------------------------------------------------------------------------
     # Step 7: Convert UTM to lat/lon
