@@ -594,6 +594,16 @@ class TestFeatureRendering:
         assert output_file.exists()
         assert output_file.stat().st_size > 0
 
+    def test_render_missing_icon_fails_before_downloading_tiles(
+        self, tmp_path: Path, httpx_mock: HTTPXMock
+    ) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        pm.add_icon_marker(40.7128, -74.0060, icon=tmp_path / "missing.png")
+
+        with pytest.raises(FileNotFoundError):
+            pm.render()
+        assert not httpx_mock.get_requests()
+
     def test_render_icon_marker_from_pil_image(
         self,
         tmp_path: Path,

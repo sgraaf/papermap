@@ -1191,12 +1191,7 @@ class PaperMap:
 
     def _render_icon_marker(self, marker: IconMarker) -> None:
         """Render a single :class:`IconMarker` to the PDF."""
-        if marker._loaded_icon is None:  # noqa: SLF001
-            if isinstance(marker.icon, Image.Image):
-                marker._loaded_icon = marker.icon  # noqa: SLF001
-            else:
-                marker._loaded_icon = Image.open(marker.icon)  # noqa: SLF001
-        img = marker._loaded_icon  # noqa: SLF001
+        img = marker.load_icon()
         width = marker.width
         if marker.height is None:
             height = width * img.height / img.width
@@ -1480,6 +1475,12 @@ class PaperMap:
 
     def render(self) -> None:
         """Render the paper map, consisting of the map image, features (if any), grid (if applicable), attribution and scale."""
+        # load any icons first, so that e.g. a missing icon file fails before
+        # downloading all tiles
+        for feature in self.features:
+            if isinstance(feature, IconMarker):
+                feature.load_icon()
+
         # render the base layer
         self.render_base_layer()
 

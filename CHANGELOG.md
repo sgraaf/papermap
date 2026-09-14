@@ -13,6 +13,7 @@ The **third number** is for emergencies when we need to start branches for older
 ### Added
 
 - Added shared styling options to the `geojson` and `gpx` CLI sub-commands: `--stroke`, `--stroke-width`, `--stroke-opacity`, `--fill`, `--fill-opacity`, `--opacity` and `--marker-radius`. These apply as defaults to every parsed feature; per-feature GeoJSON `simplestyle-spec` properties still take precedence.
+- Added `IconMarker.load_icon()`, which returns the icon image, reading it from disk (once) if the icon is a path.
 
 ### Changed
 
@@ -38,6 +39,7 @@ The **third number** is for emergencies when we need to start branches for older
 - Fixed the `geojson` and `gpx` CLI sub-commands silently ignoring an explicit `--scale` when combined with `--auto-scale`; this combination is now rejected with a usage error, like it is in `PaperMap.from_geojson()` and `PaperMap.from_gpx()`.
 - Fixed the CLI accepting a non-positive `--scale` or `--dpi`, or a negative margin or `--padding`, which crashed with a traceback (e.g. a `ZeroDivisionError`); these are now rejected with a usage error.
 - Fixed the MtbMap and Geofabrik Topo tile providers downloading tiles over plain HTTP; they now use HTTPS.
+- Fixed a missing or invalid icon file of an `IconMarker` only raising an error after all tiles had been downloaded; icons are now loaded before downloading tiles. Icon files are also no longer kept open after rendering.
 
 ## [2026.2.0](https://github.com/sgraaf/papermap/compare/2026.1.0...2026.2.0) (2026-05-17)
 

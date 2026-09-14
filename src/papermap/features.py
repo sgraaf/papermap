@@ -16,11 +16,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, TypeAlias
 
+from PIL import Image
+
 if TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
     from pathlib import Path
-
-    from PIL import Image
 
 
 @dataclass(slots=True)
@@ -85,6 +85,26 @@ class IconMarker:
     _loaded_icon: Image.Image | None = field(
         init=False, default=None, repr=False, compare=False
     )
+
+    def load_icon(self) -> Image.Image:
+        """Return the icon image, reading it from disk (once) if ``icon`` is a path.
+
+        Returns:
+            The icon image.
+
+        Raises:
+            FileNotFoundError: If ``icon`` is a path that does not exist.
+            PIL.UnidentifiedImageError: If ``icon`` is a path to a file that is
+                not a valid image.
+        """
+        if self._loaded_icon is None:
+            if isinstance(self.icon, Image.Image):
+                self._loaded_icon = self.icon
+            else:
+                image = Image.open(self.icon)
+                image.load()  # read the image data now, which closes the file
+                self._loaded_icon = image
+        return self._loaded_icon
 
 
 @dataclass(slots=True)
