@@ -305,7 +305,7 @@ def utm(
 
 
 @cli.command()
-@click.argument("zone", type=int, metavar="ZONE-NUMBER")
+@click.argument("zone", type=click.IntRange(1, 60), metavar="ZONE-NUMBER")
 @click.argument("band", type=str, metavar="BAND")
 @click.argument("square", type=str, metavar="SQUARE")
 @click.argument("easting", type=float, metavar="EASTING")
@@ -323,7 +323,8 @@ def mgrs(  # noqa: PLR0913, PLR0917
     """Generates a paper map for the given MGRS (Military Grid Reference System) coordinates and outputs it to file."""
     _render_and_save(
         PaperMap.from_mgrs(
-            MGRSCoordinate(zone, band, square, easting, northing), **kwargs
+            MGRSCoordinate(zone, band.upper(), square.upper(), easting, northing),
+            **kwargs,
         ),
         file,
     )

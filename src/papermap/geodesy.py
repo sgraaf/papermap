@@ -657,6 +657,38 @@ def _parse_utm_string(utm_str: str) -> UTMCoordinate:
     )
 
 
+def _validate_mgrs_coordinate(mgrs: MGRSCoordinate) -> None:
+    """Validate the components of an MGRS coordinate.
+
+    Args:
+        mgrs: MGRS coordinate to validate.
+
+    Raises:
+        ValueError: If the zone is not 1-60, the latitude band or 100km square
+            identifier is invalid (for the zone), or the easting or northing is
+            outside the 100km square.
+    """
+    if not 1 <= mgrs.zone <= 60:
+        msg = f"Zone must be 1-60, got {mgrs.zone}"
+        raise ValueError(msg)
+
+    if len(mgrs.band) != 1 or mgrs.band not in MGRS_LATITUDE_BANDS:
+        msg = f"Invalid latitude band {mgrs.band!r}"
+        raise ValueError(msg)
+
+    if (
+        len(mgrs.square) != 2
+        or mgrs.square[0] not in _column_letter_set(mgrs.zone)
+        or mgrs.square[1] not in _row_letter_set(mgrs.zone)
+    ):
+        msg = f"Invalid 100km square identifier {mgrs.square!r} for zone {mgrs.zone}"
+        raise ValueError(msg)
+
+    if not (0 <= mgrs.easting < 100_000 and 0 <= mgrs.northing < 100_000):
+        msg = f"Easting and northing must be in [0, 100000), got {mgrs.easting}, {mgrs.northing}"
+        raise ValueError(msg)
+
+
 def _parse_mgrs_string(mgrs_str: str) -> MGRSCoordinate:
     """Parse an MGRS string into its components.
 
@@ -1281,7 +1313,8 @@ def mgrs_to_latlon(
         Tuple of (latitude, longitude) in degrees.
 
     Raises:
-        ValueError: If the MGRS string is malformed.
+        ValueError: If the MGRS string is malformed, or the MGRS coordinate is
+            invalid (e.g. an unknown latitude band or 100km square identifier).
 
     Examples:
         >>> latlon = mgrs_to_latlon("18TWK8395907523")
@@ -1294,10 +1327,11 @@ def mgrs_to_latlon(
         39.81354433765199 -74.01908091495618
     """
     # -------------------------------------------------------------------------
-    # Step 1: Parse MGRS string if necessary
+    # Step 1: Parse MGRS string if necessary, and validate its components
     # -------------------------------------------------------------------------
     if isinstance(mgrs, str):
         mgrs = _parse_mgrs_string(mgrs)
+    _validate_mgrs_coordinate(mgrs)
 
     # -------------------------------------------------------------------------
     # Step 2: Determine hemisphere from latitude band

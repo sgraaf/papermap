@@ -594,6 +594,28 @@ class TestMGRSToLatLon:
                 assert math.isclose(lat, lat2, abs_tol=0.0001), mgrs
                 assert math.isclose(lon, lon2, abs_tol=0.0001), mgrs
 
+    @pytest.mark.parametrize(
+        ("mgrs", "match"),
+        [
+            (MGRSCoordinate(0, "T", "WK", 0, 0), "Zone must be 1-60"),
+            (MGRSCoordinate(18, "t", "WK", 0, 0), "Invalid latitude band"),
+            (MGRSCoordinate(18, "", "WK", 0, 0), "Invalid latitude band"),
+            (MGRSCoordinate(18, "T", "W", 0, 0), "Invalid 100km square"),
+            (MGRSCoordinate(18, "T", "AK", 0, 0), "Invalid 100km square"),
+            (MGRSCoordinate(18, "T", "WW", 0, 0), "Invalid 100km square"),
+            (MGRSCoordinate(18, "T", "WK", 100_000, 0), "Easting and northing"),
+            (MGRSCoordinate(18, "T", "WK", 0, -1), "Easting and northing"),
+        ],
+    )
+    def test_invalid_mgrs_coordinate(self, mgrs: MGRSCoordinate, match: str) -> None:
+        with pytest.raises(ValueError, match=match):
+            mgrs_to_latlon(mgrs)
+
+    def test_parse_invalid_square_letters(self) -> None:
+        # I and O are never used; zone 18 columns are S-Z
+        with pytest.raises(ValueError, match="Invalid 100km square"):
+            mgrs_to_latlon("18TIO12345678")
+
     def test_parse_invalid_too_short(self) -> None:
         with pytest.raises(ValueError, match="too short"):
             mgrs_to_latlon("18T")

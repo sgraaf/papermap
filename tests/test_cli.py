@@ -686,6 +686,29 @@ class TestMgrsCommand:
         )
         assert result.exit_code != 0
 
+    def test_mgrs_out_of_range_zone(self, runner: CliRunner, tmp_path: Path) -> None:
+        output_file = tmp_path / "test.pdf"
+        result = runner.invoke(
+            cli, ["mgrs", "61", "T", "WL", "85000", "50000", str(output_file)]
+        )
+        assert result.exit_code == 2
+
+    def test_mgrs_lowercase_band_and_square(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        mock_class, _mock_instance = mock_papermap
+        output_file = tmp_path / "test.pdf"
+
+        result = runner.invoke(
+            cli, ["mgrs", "18", "t", "wl", "85000", "50000", str(output_file)]
+        )
+
+        assert result.exit_code == 0
+        assert mock_class.from_mgrs.call_args.args[0][1:3] == ("T", "WL")
+
     def test_mgrs_basic_execution(
         self,
         runner: CliRunner,
