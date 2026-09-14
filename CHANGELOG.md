@@ -37,6 +37,7 @@ The **third number** is for emergencies when we need to start branches for older
 - Fixed two identical `TileProvider` instances comparing unequal, as their internal subdomain cycles were compared by identity. The subdomain cycle is also no longer included in the `repr()`.
 - Fixed the `geojson` and `gpx` CLI sub-commands silently ignoring an explicit `--scale` when combined with `--auto-scale`; this combination is now rejected with a usage error, like it is in `PaperMap.from_geojson()` and `PaperMap.from_gpx()`.
 - Fixed the CLI accepting a non-positive `--scale` or `--dpi`, or a negative margin or `--padding`, which crashed with a traceback (e.g. a `ZeroDivisionError`); these are now rejected with a usage error.
+- Fixed the MtbMap and Geofabrik Topo tile providers downloading tiles over plain HTTP; they now use HTTPS.
 
 ## [2026.2.0](https://github.com/sgraaf/papermap/compare/2026.1.0...2026.2.0) (2026-05-17)
 

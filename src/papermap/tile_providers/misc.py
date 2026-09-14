@@ -31,7 +31,7 @@ TILE_PROVIDERS: list[TileProvider] = [
             f"Map data: {OSM_HTML_ATTRIBUTION} & USGS. "
             'Map style: © <a href="https://mtbmap.cz/">mtbmap.cz</a>'
         ),
-        url_template="http://tile.mtbmap.cz/mtbmap_tiles/{z}/{x}/{y}.png",
+        url_template="https://tile.mtbmap.cz/mtbmap_tiles/{z}/{x}/{y}.png",
         subdomains=None,
         zoom_min=0,
         zoom_max=18,
@@ -64,7 +64,7 @@ TILE_PROVIDERS: list[TileProvider] = [
         name="Geofabrik Topo",
         attribution=f"Map data: {OSM_ATTRIBUTION}",
         html_attribution=f"Map data: {OSM_HTML_ATTRIBUTION}",
-        url_template="http://{s}.tile.geofabrik.de/15173cf79060ee4a66573954f6017ab0/{z}/{x}/{y}.png",
+        url_template="https://{s}.tile.geofabrik.de/15173cf79060ee4a66573954f6017ab0/{z}/{x}/{y}.png",
         subdomains=["a", "b", "c"],
         zoom_min=0,
         zoom_max=19,

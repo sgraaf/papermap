@@ -336,6 +336,13 @@ class TestRealTileProviders:
         args = get_string_formatting_arguments(tf.url_template)
         assert "a" in args
 
+    def test_tile_providers_use_https(self) -> None:
+        # These providers have no working HTTPS endpoint (as of 2026-09)
+        plain_http_keys = {"komoot", "openfiremap"}
+        for key, tp in KEY_TO_TILE_PROVIDER.items():
+            if key not in plain_http_keys:
+                assert tp.url_template.startswith("https://"), key
+
     def test_all_tile_providers_have_required_fields(self) -> None:
         for key, ts in KEY_TO_TILE_PROVIDER.items():
             assert ts.key, f"{key} missing key"
