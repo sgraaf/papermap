@@ -544,6 +544,34 @@ class TestUtmCommand:
         )
         assert result.exit_code != 0
 
+    @pytest.mark.parametrize(
+        ("zone", "hemisphere"), [("61", "N"), ("0", "N"), ("56", "X")]
+    )
+    def test_utm_out_of_range_zone_or_hemisphere(
+        self, runner: CliRunner, tmp_path: Path, zone: str, hemisphere: str
+    ) -> None:
+        output_file = tmp_path / "test.pdf"
+        result = runner.invoke(
+            cli, ["utm", "334000", "6252000", zone, hemisphere, str(output_file)]
+        )
+        assert result.exit_code == 2
+
+    def test_utm_lowercase_hemisphere(
+        self,
+        runner: CliRunner,
+        mock_papermap: tuple[MagicMock, MagicMock],
+        tmp_path: Path,
+    ) -> None:
+        mock_class, _mock_instance = mock_papermap
+        output_file = tmp_path / "test.pdf"
+
+        result = runner.invoke(
+            cli, ["utm", "334000", "6252000", "56", "s", str(output_file)]
+        )
+
+        assert result.exit_code == 0
+        assert mock_class.from_utm.call_args.args[0][-1] == "S"
+
     def test_utm_basic_execution(
         self,
         runner: CliRunner,

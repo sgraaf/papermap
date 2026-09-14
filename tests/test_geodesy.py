@@ -312,6 +312,16 @@ class TestUTMToLatLon:
         assert math.isclose(lat, original_lat, abs_tol=0.0001)
         assert math.isclose(lon, original_lon, abs_tol=0.0001)
 
+    @pytest.mark.parametrize("hemisphere", ["s", "X", ""])
+    def test_invalid_hemisphere(self, hemisphere: str) -> None:
+        with pytest.raises(ValueError, match="Hemisphere must be 'N' or 'S'"):
+            utm_to_latlon(UTMCoordinate(334786, 6252182, 56, hemisphere))
+
+    @pytest.mark.parametrize("zone", [0, 61])
+    def test_invalid_zone(self, zone: int) -> None:
+        with pytest.raises(ValueError, match="Zone must be 1-60"):
+            utm_to_latlon(UTMCoordinate(334786, 6252182, zone, "S"))
+
     def test_equator(self) -> None:
         utm = UTMCoordinate(166021, 0, 31, "N")
         lat, lon, _ = utm_to_latlon(utm)

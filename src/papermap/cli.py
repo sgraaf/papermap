@@ -264,8 +264,12 @@ def latlon(
 @cli.command()
 @click.argument("easting", type=float, metavar="EASTING")
 @click.argument("northing", type=float, metavar="NORTHING")
-@click.argument("zone", type=int, metavar="ZONE-NUMBER")
-@click.argument("hemisphere", type=str, metavar="HEMISPHERE")
+@click.argument("zone", type=click.IntRange(1, 60), metavar="ZONE-NUMBER")
+@click.argument(
+    "hemisphere",
+    type=click.Choice(["N", "S"], case_sensitive=False),
+    metavar="HEMISPHERE",
+)
 @common_parameters
 def utm(
     easting: float,

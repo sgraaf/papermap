@@ -1008,6 +1008,7 @@ def utm_to_latlon(
 
     Raises:
         ValueError: If the UTM string is malformed.
+        ValueError: If the zone is not 1-60, or the hemisphere is not 'N' or 'S'.
 
     Examples:
         >>> utm = UTMCoordinate(583960, 4507523, 18, "N")
@@ -1018,10 +1019,17 @@ def utm_to_latlon(
         40.71435, -74.00597
     """
     # -------------------------------------------------------------------------
-    # Step 1: Parse UTM string if necessary
+    # Step 1: Parse UTM string if necessary, and validate zone and hemisphere
     # -------------------------------------------------------------------------
     if isinstance(utm, str):
         utm = _parse_utm_string(utm)
+
+    if not 1 <= utm.zone <= 60:
+        msg = f"Zone must be 1-60, got {utm.zone}"
+        raise ValueError(msg)
+    if utm.hemisphere not in {"N", "S"}:
+        msg = f"Hemisphere must be 'N' or 'S', got {utm.hemisphere!r}"
+        raise ValueError(msg)
 
     # -------------------------------------------------------------------------
     # Step 2: Remove false origin offsets
