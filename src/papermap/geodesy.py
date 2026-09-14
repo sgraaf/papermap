@@ -1217,11 +1217,8 @@ def latlon_to_mgrs(
         >>> print(mgrs)
         MGRSCoordinate(zone=18, band='T', square='WL', easting=83959.37232408463, northing=7350.998243321665)
 
-        >>> mgrs = latlon_to_mgrs(40.7128, -74.0060)
         >>> print(format_mgrs(mgrs))
         18TWL8395907350
-
-        >>> mgrs = latlon_to_mgrs(40.7128, -74.0060, precision=3)
         >>> print(format_mgrs(mgrs, precision=3))
         18TWL839073
     """
