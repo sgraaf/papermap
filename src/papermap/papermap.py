@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any, Self
 
 import httpx
 from fpdf import FPDF
-from PIL import Image
+from PIL import Image, ImageColor
 
 from .features import (
     CircleMarker,
@@ -258,6 +258,8 @@ class PaperMap:
         ValueError: If no API key is specified (when applicable).
         ValueError: If the paper size is invalid.
         ValueError: If the grid size is not positive.
+        ValueError: If a grid is added outside the UTM coverage area.
+        ValueError: If the background color is invalid.
         ScaleOutOfBoundsError: If the scale is "out of bounds" for the chosen
             tile provider.
     """
@@ -312,8 +314,9 @@ class PaperMap:
         # Store basic parameters
         self._validate_coordinates()
 
-        # Validate grid parameters
+        # Validate grid parameters and background color
         self._validate_grid()
+        self._validate_background_color()
 
         # Validate and initialize tile provider
         self._validate_and_set_tile_provider(tile_provider_key)
@@ -688,10 +691,27 @@ class PaperMap:
 
         Raises:
             ValueError: If the grid size is not positive.
+            ValueError: If a grid is added, but the latitude is outside the
+                UTM coverage area.
         """
         if self.grid_size <= 0:
             msg = f"Grid size must be positive, got {self.grid_size}"
             raise ValueError(msg)
+        if self.add_grid and not -80 <= self.lat <= 84:  # noqa: PLR2004
+            msg = f"Cannot add a UTM grid: latitude {self.lat} is outside the UTM coverage area [-80, 84]"
+            raise ValueError(msg)
+
+    def _validate_background_color(self) -> None:
+        """Validate ``self.background_color`` is a color understood by Pillow.
+
+        Raises:
+            ValueError: If the background color is invalid.
+        """
+        try:
+            ImageColor.getrgb(self.background_color)
+        except ValueError as e:
+            msg = f"Invalid background color {self.background_color!r}"
+            raise ValueError(msg) from e
 
     def _validate_and_set_tile_provider(self, tile_provider_key: str) -> None:
         """Validate tile provider key and check API key requirements.

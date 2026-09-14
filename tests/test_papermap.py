@@ -155,6 +155,19 @@ class TestPaperMapValidation:
         with pytest.raises(ValueError, match="Grid size must be positive"):
             PaperMap(lat=40.7128, lon=-74.0060, add_grid=True, grid_size=grid_size)
 
+    @pytest.mark.parametrize("lat", [-80.5, 84.5])
+    def test_grid_outside_utm_coverage_raises_error(self, lat: float) -> None:
+        with pytest.raises(ValueError, match="outside the UTM coverage area"):
+            PaperMap(lat=lat, lon=0.0, add_grid=True)
+
+    def test_no_grid_outside_utm_coverage(self) -> None:
+        pm = PaperMap(lat=84.5, lon=0.0)
+        assert not pm.add_grid
+
+    def test_invalid_background_color_raises_error(self) -> None:
+        with pytest.raises(ValueError, match="Invalid background color"):
+            PaperMap(lat=40.7128, lon=-74.0060, background_color="not-a-color")
+
     def test_valid_paper_sizes(self) -> None:
         for size in PAPER_SIZES:
             pm = PaperMap(lat=40.7128, lon=-74.0060, paper_size=size)
