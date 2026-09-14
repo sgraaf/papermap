@@ -9,11 +9,10 @@ from io import BytesIO
 from itertools import count
 from math import ceil, floor, log2, radians
 from pathlib import Path
-from typing import Any, Self
+from typing import TYPE_CHECKING, Any, Self
 
 import httpx
 from fpdf import FPDF
-from gpx import GeoGPXModel
 from PIL import Image
 
 from .features import (
@@ -54,6 +53,9 @@ from .utils import (
     scale_to_zoom,
     zoom_to_scale,
 )
+
+if TYPE_CHECKING:
+    from gpx import GeoGPXModel
 
 NAME: str = "papermap"
 """Name of the application."""
@@ -593,7 +595,7 @@ class PaperMap:
     @classmethod
     def from_gpx(
         cls,
-        gpx_source: str | Path | GeoGPXModel,
+        gpx_source: "str | Path | GeoGPXModel",
         style: dict[str, Any] | None = None,
         *,
         auto_scale: bool = False,
@@ -953,7 +955,7 @@ class PaperMap:
 
     def add_gpx(
         self,
-        gpx_source: str | Path | GeoGPXModel,
+        gpx_source: "str | Path | GeoGPXModel",
         style: dict[str, Any] | None = None,
     ) -> list[MapFeature]:
         """Add geometries from a GPX file or GPX object.

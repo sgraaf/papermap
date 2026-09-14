@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import builtins
+import subprocess
+import sys
 from typing import TYPE_CHECKING
 
 import pytest
@@ -158,6 +160,14 @@ class TestGpxParsing:
 
 class TestGpxImportErrorOnMissingExtra:
     """The lazy import should surface a helpful ImportError when gpx is missing."""
+
+    def test_package_imports_without_gpx(self) -> None:
+        # Run in a fresh interpreter: `papermap` is already imported here.
+        code = "import sys; sys.modules['gpx'] = None; import papermap, papermap.cli"
+        result = subprocess.run(  # noqa: S603
+            [sys.executable, "-c", code], capture_output=True, text=True, check=False
+        )
+        assert result.returncode == 0, result.stderr
 
     @pytest.mark.usefixtures("no_gpx")
     def test_import_error_when_gpx_unavailable(self, sample_gpx_string: str) -> None:
