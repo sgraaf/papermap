@@ -12,7 +12,13 @@ import pytest
 from pytest_httpx import HTTPXMock
 
 from papermap.features import CircleMarker, IconMarker, Line, Polygon
-from papermap.geodesy import ECEFCoordinate, MGRSCoordinate, UTMCoordinate
+from papermap.geodesy import (
+    ECEFCoordinate,
+    MGRSCoordinate,
+    UTMCoordinate,
+    latlon_to_utm,
+    utm_to_latlon,
+)
 from papermap.papermap import (
     COMMON_SCALES,
     DEFAULT_DPI,
@@ -458,6 +464,28 @@ class TestPaperMapComputeGridCoordinates:
         # All y coordinates should be within image height
         for y, _ in y_coords:
             assert 0 <= float(y) <= pm.image_height
+
+    @pytest.mark.parametrize(
+        ("lat", "lon"),
+        [(52.0037, 5.0061), (40.7128, -74.0060), (-33.8688, 151.2093)],
+    )
+    def test_compute_grid_coordinates_match_utm_positions(
+        self, lat: float, lon: float
+    ) -> None:
+        """Each grid line is drawn where its labelled UTM coordinate lies on the map."""
+        pm = PaperMap(lat=lat, lon=lon, add_grid=True)
+        easting, northing, zone, hemisphere = latlon_to_utm(lat, lon)
+        easting_lines, northing_lines = pm.compute_grid_coordinates()
+
+        for x, label in easting_lines:
+            utm = UTMCoordinate(float(label) * 1000, northing, zone, hemisphere)
+            expected_x, _ = pm.latlon_to_pdf_mm(*utm_to_latlon(utm)[:2])
+            assert isclose(float(x) + pm.margin_left, expected_x, abs_tol=0.5)
+
+        for y, label in northing_lines:
+            utm = UTMCoordinate(easting, float(label) * 1000, zone, hemisphere)
+            _, expected_y = pm.latlon_to_pdf_mm(*utm_to_latlon(utm)[:2])
+            assert isclose(float(y) + pm.margin_top, expected_y, abs_tol=0.5)
 
     def test_compute_grid_coordinates_spacing(self) -> None:
         pm = PaperMap(lat=40.7128, lon=-74.0060, add_grid=True, grid_size=1000)

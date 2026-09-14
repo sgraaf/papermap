@@ -21,6 +21,7 @@ The **third number** is for emergencies when we need to start branches for older
 ### Fixed
 
 - Fixed tile downloads aborting the whole map when a single request failed with a network error (e.g. a timeout) or returned data that is not a valid image. Such tiles are now retried and, if they keep failing, reported like any other failed tile (a warning, or a `RuntimeError` with `strict_download=True`). The failure message now also includes the failure reasons.
+- Fixed horizontal (northing) grid lines being drawn mirrored about the map centre, placing them up to one grid square away from the northing their label names.
 
 ## [2026.2.0](https://github.com/sgraaf/papermap/compare/2026.1.0...2026.2.0) (2026-05-17)
 

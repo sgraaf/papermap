@@ -1010,9 +1010,10 @@ class PaperMap:
         d_easting = Decimal(easting - easting_rnd) / Decimal(self.scale) * 1000
         d_northing = Decimal(northing - northing_rnd) / Decimal(self.scale) * 1000
 
-        # determine center grid coordinate (in mm)
+        # determine center grid coordinate (in mm); page y grows southward, so a
+        # rounded northing south of the centre (d_northing > 0) lies below it
         easting_grid_center = Decimal(self.image_width) / 2 - d_easting
-        northing_grid_center = Decimal(self.image_height) / 2 - d_northing
+        northing_grid_center = Decimal(self.image_height) / 2 + d_northing
 
         # determine start grid coordinate (in mm)
         easting_grid_start = easting_grid_center % self.grid_size_scaled
