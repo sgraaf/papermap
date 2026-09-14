@@ -5,6 +5,7 @@ import zlib
 from decimal import Decimal
 from math import isclose
 from pathlib import Path
+from typing import Any
 
 import pytest
 from PIL import UnidentifiedImageError
@@ -1302,8 +1303,9 @@ class TestPaperMapFromGeoJSON:
 
     def test_from_geojson_geo_interface_object(self) -> None:
         class FakeGeo:
-            def __init__(self) -> None:
-                self.__geo_interface__ = {
+            @property
+            def __geo_interface__(self) -> dict[str, Any]:
+                return {
                     "type": "Point",
                     "coordinates": [-74.0060, 40.7128],
                 }

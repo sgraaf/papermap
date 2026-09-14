@@ -289,7 +289,7 @@ def utm(
 @click.argument("easting", type=float, metavar="EASTING")
 @click.argument("northing", type=float, metavar="NORTHING")
 @common_parameters
-def mgrs(  # noqa: PLR0913
+def mgrs(  # noqa: PLR0913, PLR0917
     zone: int,
     band: str,
     square: str,

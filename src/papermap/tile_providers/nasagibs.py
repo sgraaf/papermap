@@ -19,7 +19,7 @@ NASA_HTML_ATTRIBUTION = (
 )
 
 
-def _nasa_provider(  # noqa: PLR0913
+def _nasa_provider(  # noqa: PLR0913, PLR0917
     key: str,
     name: str,
     variant: str,

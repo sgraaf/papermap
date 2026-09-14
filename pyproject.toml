@@ -1,5 +1,5 @@
 [build-system]
-requires = ["uv_build>=0.9.11,<0.10.0"]
+requires = ["uv_build>=0.12.13,<0.13"]
 build-backend = "uv_build"
 
 [project]
@@ -8,12 +8,12 @@ version = "2026.2.0"
 description = "papermap is a Python library and CLI tool for creating ready-to-print paper maps."
 authors = [{name = "Steven van de Graaf", email = "steven@vandegraaf.xyz"}]
 readme = "README.md"
-license = {file = "LICENSE"}
+license = "GPL-3.0-or-later"
+license-files = ["LICENSE"]
 keywords = ["map", "maps", "paper", "cartography", "openstreetmap", "osm", "topography", "geodesy", "utm", "topography", "mgrs"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
@@ -54,8 +54,10 @@ tests = [
 typing = [
     "mypy",
     "pyrefly",
+    "pyright[nodejs]",
     "ty",
     "types-click-default-group",
+    "zuban",
 ]
 dev = [
     { include-group = "docs" },
@@ -77,6 +79,7 @@ papermap = "papermap.cli:cli"
 select = ["ALL"]
 ignore = [
     "COM812",  # missing-trailing-comma (flake8-commas), handled by the formatter
+    "CPY001",  # missing-copyright-notice (flake8-copyright)
     "D100",  # undocumented-public-module (pydocstyle)
     "D102",  # undocumented-public-method (pydocstyle)
     "D105",  # undocumented-magic-method (pydocstyle)
@@ -123,5 +126,21 @@ pydocstyle.convention = "google"
     "S101",  # assert (flake8-bandit)
 ]
 
+[tool.ty.src]
+include = ["src", "tests"]
+
 [tool.mypy]
 python_version = "3.11"
+files = ["tests"]
+
+[tool.pyrefly]
+project-includes = ["tests"]
+search-path = ["tests"]
+
+[tool.pyright]
+include = ["tests"]
+pythonVersion = "3.11"
+
+[tool.zuban]
+python_version = "3.11"
+files = ["tests"]

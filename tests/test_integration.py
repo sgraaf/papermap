@@ -158,7 +158,7 @@ class TestDifferentLocations:
             (-45.0, 170.0, "new_zealand"),
         ],
     )
-    def test_map_at_location(  # noqa: PLR0913
+    def test_map_at_location(  # noqa: PLR0913, PLR0917
         self,
         tmp_path: Path,
         lat: float,

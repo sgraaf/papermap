@@ -1044,7 +1044,7 @@ class PaperMap:
 
         return easting_grid_cs_and_labels, northing_grid_cs_and_labels
 
-    def _draw_grid_line(  # noqa: PLR0913
+    def _draw_grid_line(  # noqa: PLR0913, PLR0917
         self,
         start_x: float,
         start_y: float,
@@ -1113,7 +1113,7 @@ class PaperMap:
         return "D"
 
     @staticmethod
-    def _local_context_kwargs(  # noqa: PLR0913
+    def _local_context_kwargs(  # noqa: PLR0913, PLR0917
         stroke_color: str | None,
         stroke_width: float,
         fill_color: str | None,

@@ -70,7 +70,7 @@ html_theme_options: dict[str, Any] = {
 
 # -- Hacky fix for autodocumenting `collections.NamedTuple` ------------------
 # https://stackoverflow.com/a/70459782
-def remove_namedtuple_attrib_docstring(  # noqa: PLR0913, D103
+def remove_namedtuple_attrib_docstring(  # noqa: PLR0913, PLR0917, D103
     app: Sphinx,  # noqa: ARG001
     what: _AutodocObjType,  # noqa: ARG001
     name: str,  # noqa: ARG001
