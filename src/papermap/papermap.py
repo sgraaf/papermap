@@ -7,7 +7,6 @@ from dataclasses import KW_ONLY, InitVar, dataclass, field
 from decimal import Decimal
 from importlib import metadata
 from io import BytesIO
-from itertools import count
 from math import ceil, floor, log2, radians
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Self
@@ -103,6 +102,10 @@ class ScaleOutOfBoundsError(ValueError):
 
 class _TileDownloadError(Exception):
     """Raised when a single tile cannot be downloaded; the message is the reason."""
+
+    def __init__(self, reason: str, *, retryable: bool = True) -> None:
+        super().__init__(reason)
+        self.retryable = retryable
 
 
 COMMON_SCALES: tuple[int, ...] = (
@@ -1300,7 +1303,8 @@ class PaperMap:
         Raises:
             _TileDownloadError: If the request errors (e.g. a timeout),
                 returns a non-success status, or returns data that is not a
-                valid image.
+                valid image. Its ``retryable`` attribute is ``False`` for
+                client errors that will not succeed on retry.
         """
         try:
             response = client.get(url)
@@ -1308,7 +1312,14 @@ class PaperMap:
             raise _TileDownloadError(type(e).__name__) from e
         if not response.is_success:
             msg = f"HTTP {response.status_code}"
-            raise _TileDownloadError(msg)
+            # Client errors (e.g. an invalid API key, or a tile outside the
+            # provider's coverage) persist on retry, unless the provider timed
+            # out or is rate limiting.
+            retryable = not response.is_client_error or response.status_code in {
+                httpx.codes.REQUEST_TIMEOUT,
+                httpx.codes.TOO_MANY_REQUESTS,
+            }
+            raise _TileDownloadError(msg, retryable=retryable)
         try:
             return Image.open(BytesIO(response.content)).convert("RGBA")
         except OSError as e:  # includes PIL.UnidentifiedImageError
@@ -1325,21 +1336,28 @@ class PaperMap:
 
         Tiles that have already been downloaded are skipped. A tile fails
         when its request errors (e.g. a timeout), returns a non-success
-        status, or returns data that is not a valid image. Failed tiles
-        are retried up to ``num_retries`` times. When ``strict`` is ``False``
-        and tiles still fail after all retries, a warning is emitted; when
-        ``strict`` is ``True``, a ``RuntimeError`` is raised instead.
+        status, or returns data that is not a valid image. Failed tiles are
+        retried up to ``num_retries`` times, except for client errors that
+        will not succeed on retry (HTTP 4xx other than 408 and 429).
+
+        If no tile at all can be downloaded, a ``RuntimeError`` is raised.
+        If only some tiles cannot be downloaded, a warning is emitted when
+        ``strict`` is ``False``, and a ``RuntimeError`` is raised when
+        ``strict`` is ``True``.
 
         Args:
-            num_retries: Maximum number of retry passes before giving up.
+            num_retries: Maximum number of times a failed tile is retried.
             sleep_between_retries: Optional delay (in seconds) between retry
                 passes.
             strict: Raise on persistent failures instead of warning.
 
         Raises:
-            RuntimeError: If ``strict`` is ``True`` and one or more tiles
-                cannot be downloaded after ``num_retries`` retries.
+            RuntimeError: If no tile can be downloaded, or if ``strict`` is
+                ``True`` and one or more tiles cannot be downloaded.
         """
+        failures: dict[int, _TileDownloadError] = {}
+        pending = [i for i, tile in enumerate(self.tiles) if not tile.success]
+
         # download the tile images
         with (
             ThreadPoolExecutor() as executor,
@@ -1355,48 +1373,43 @@ class PaperMap:
                 ),
             ) as client,
         ):
-            failures: Counter[str] = Counter()
-            for num_retry in count():
-                # get the unsuccessful tiles
-                tiles = [tile for tile in self.tiles if not tile.success]
-
-                # break if all tiles successful
-                if not tiles:
-                    break
-
+            for num_retry in range(num_retries + 1):
                 # possibly sleep between retries
                 if num_retry > 0 and sleep_between_retries is not None:
                     time.sleep(sleep_between_retries)
 
-                # break if max number of retries exceeded
-                if num_retry >= num_retries:
-                    msg = f"Could not download {len(tiles)}/{len(self.tiles)} tiles after {num_retries} retries"
-                    if failures:
-                        msg += f" ({', '.join(f'{reason}: {n}' for reason, n in failures.most_common())})"
-                    if strict:
-                        raise RuntimeError(msg)
-                    warnings.warn(msg, stacklevel=2)
-                    break
-
-                futures = [
-                    executor.submit(
+                futures = {
+                    i: executor.submit(
                         self._fetch_tile_image,
                         client,
                         self.tile_provider.format_url_template(
-                            tile=tile, api_key=self.api_key
+                            tile=self.tiles[i], api_key=self.api_key
                         ),
                     )
-                    for tile in tiles
-                ]
-
-                failures = Counter()
-                for tile, future in zip(tiles, futures, strict=True):
+                    for i in pending
+                }
+                for i, future in futures.items():
                     try:
-                        tile.image = future.result()
+                        self.tiles[i].image = future.result()
+                        failures.pop(i, None)
                     except _TileDownloadError as e:
-                        # Only this tile failed: it is retried and, if it keeps
-                        # failing, reported above (warning or RuntimeError).
-                        failures[str(e)] += 1
+                        # Only this tile failed: it is retried (if retryable)
+                        # and, if it keeps failing, reported below.
+                        failures[i] = e
+
+                pending = [i for i, e in failures.items() if e.retryable]
+                if not pending:
+                    break
+
+        if failures:
+            reasons = Counter(str(e) for e in failures.values())
+            msg = (
+                f"Could not download {len(failures)}/{len(self.tiles)} tiles "
+                f"({', '.join(f'{reason}: {n}' for reason, n in reasons.most_common())})"
+            )
+            if strict or not any(tile.success for tile in self.tiles):
+                raise RuntimeError(msg)
+            warnings.warn(msg, stacklevel=2)
 
     def render_base_layer(self) -> None:
         """Download all tiles and assemble the map image.

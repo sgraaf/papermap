@@ -17,6 +17,7 @@ The **third number** is for emergencies when we need to start branches for older
 ### Changed
 
 - Bumped the minimum version of the optional `gpx` dependency to `2026.3.0`, and narrowed the accepted `gpx_source` type on `PaperMap.from_gpx()`, `PaperMap.add_gpx()` and `gpx_to_features()` from any object exposing `__geo_interface__` to a path-like or a `gpx.GeoGPXModel` instance. As a consequence, parsing an already-loaded GPX object now also requires the optional `gpx` package (previously only reading from disk did); install it with `uv add --extra gpx papermap`.
+- `PaperMap.render()` and `PaperMap.download_tiles()` now raise a `RuntimeError` when no tile at all can be downloaded (e.g. due to an invalid API key), even with `strict_download=False`, instead of producing a blank map with only a warning. Tiles failing with a client error that will not succeed on retry (HTTP 4xx other than 408 and 429) are no longer retried.
 
 ### Fixed
 
@@ -25,6 +26,7 @@ The **third number** is for emergencies when we need to start branches for older
 - Fixed wrong grid labels for any `grid_size` other than 1000m: labels always stepped by 1km per line. Grid lines now lie on multiples of `grid_size`, and are labelled with their UTM coordinate in kilometres (e.g. `583.5` for a 500m grid).
 - Fixed maps crossing the ±180° meridian rendering the far side of the meridian blank: its tiles were downloaded but pasted outside the map image. Maps extending beyond the latitude limits of the Web Mercator projection (±85.05°) no longer download tiles from the opposite pole.
 - Fixed `mgrs_to_latlon()` (and thereby `PaperMap.from_mgrs()` and the `mgrs` CLI sub-command) placing MGRS coordinates in a narrow strip just north of 64°N about 2,000km too far north.
+- Fixed `PaperMap.download_tiles(num_retries=n)` retrying failed tiles only `n - 1` times.
 
 ## [2026.2.0](https://github.com/sgraaf/papermap/compare/2026.1.0...2026.2.0) (2026-05-17)
 
