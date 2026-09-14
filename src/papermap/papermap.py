@@ -868,6 +868,9 @@ class PaperMap:
             unit="mm",
             format=(self.width, self.height),
         )
+        # The built-in fonts are embedded with the WinAnsiEncoding, which
+        # (unlike fpdf2's default Latin-1) supports e.g. dashes and curly quotes
+        self.pdf.core_fonts_encoding = "windows-1252"
         self.pdf.set_font("Helvetica")
         self.pdf.set_fill_color(255, 255, 255)
         self.pdf.set_top_margin(self.margin_top)
@@ -1324,14 +1327,31 @@ class PaperMap:
     def render_attribution_and_scale(self) -> None:
         """Draw the tile provider attribution and map scale on the PDF.
 
-        The text is anchored to the bottom-right of the image area.
+        The text is anchored to the bottom-right of the image area. Text that
+        is wider than the image area is wrapped onto multiple lines.
         """
         text = f"{self.tile_provider.attribution}. Created with {NAME}. Scale: 1:{self.scale}"
-        self.pdf.set_xy(
-            self.margin_left + self.pdf.epw - self.pdf.get_string_width(text),
-            self.margin_top + self.pdf.eph - pt_to_mm(self.pdf.font_size_pt),
-        )
-        self.pdf.cell(w=0, text=text, align="R", fill=True)
+        max_text_width = self.pdf.epw - 2 * self.pdf.c_margin
+        line_height = pt_to_mm(self.pdf.font_size_pt)
+
+        # greedily wrap the words of the text onto lines
+        lines: list[str] = []
+        for word in text.split():
+            if lines and (
+                self.pdf.get_string_width(f"{lines[-1]} {word}") <= max_text_width
+            ):
+                lines[-1] = f"{lines[-1]} {word}"
+            else:
+                lines.append(word)
+
+        # draw the lines, each right-aligned with its own background
+        for i, line in enumerate(lines):
+            width = self.pdf.get_string_width(line) + 2 * self.pdf.c_margin
+            self.pdf.set_xy(
+                self.margin_left + self.pdf.epw - width,
+                self.margin_top + self.pdf.eph - (len(lines) - i) * line_height,
+            )
+            self.pdf.cell(w=width, h=line_height, text=line, align="R", fill=True)
 
     @staticmethod
     def _fetch_tile_image(client: httpx2.Client, url: str) -> Image.Image:
@@ -1342,7 +1362,8 @@ class PaperMap:
             url: The URL of the tile.
 
         Returns:
-            The decoded tile image, in RGBA mode.
+            The decoded tile image, in RGBA mode and resized to
+            ``TILE_SIZE`` x ``TILE_SIZE`` pixels (if needed).
 
         Raises:
             _TileDownloadError: If the request errors (e.g. a timeout),
@@ -1365,10 +1386,15 @@ class PaperMap:
             }
             raise _TileDownloadError(msg, retryable=retryable)
         try:
-            return Image.open(BytesIO(response.content)).convert("RGBA")
+            image = Image.open(BytesIO(response.content)).convert("RGBA")
         except OSError as e:  # includes PIL.UnidentifiedImageError
             msg = "invalid image data"
             raise _TileDownloadError(msg) from e
+        # Some tile providers serve high-resolution (e.g. 512x512) tiles, which
+        # cover the same area as regular tiles.
+        if image.size != (TILE_SIZE, TILE_SIZE):
+            image = image.resize((TILE_SIZE, TILE_SIZE), Image.Resampling.LANCZOS)
+        return image
 
     def download_tiles(
         self,

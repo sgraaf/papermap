@@ -50,7 +50,7 @@ def _stadia_provider(  # noqa: PLR0913, PLR0917
         name=name,
         attribution=attribution,
         html_attribution=html_attribution,
-        url_template=f"https://tiles.stadiamaps.com/tiles/{variant}/{{z}}/{{x}}/{{y}}.{ext}",
+        url_template=f"https://tiles.stadiamaps.com/tiles/{variant}/{{z}}/{{x}}/{{y}}.{ext}?api_key={{a}}",
         subdomains=None,
         zoom_min=0,
         zoom_max=zoom_max,

@@ -29,13 +29,15 @@ def _nasa_provider(  # noqa: PLR0913, PLR0917
     ext: str = "jpg",
 ) -> TileProvider:
     """Create a NASA GIBS tile provider configuration."""
-    time_param = f"&TIME={time}" if time else ""
+    # the (optional) time is a path segment, and the name of the tile matrix set
+    # ends with the maximum zoom level of the layer (e.g. GoogleMapsCompatible_Level9)
+    time_segment = f"{time}/" if time else ""
     return TileProvider(
         key=key,
         name=name,
         attribution=NASA_ATTRIBUTION,
         html_attribution=NASA_HTML_ATTRIBUTION,
-        url_template=f"https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/{variant}/default/{time_param}{tilematrixset}/{{z}}/{{y}}/{{x}}.{ext}",
+        url_template=f"https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/{variant}/default/{time_segment}{tilematrixset}{zoom_max}/{{z}}/{{y}}/{{x}}.{ext}",
         subdomains=None,
         zoom_min=0,
         zoom_max=zoom_max,
@@ -84,7 +86,7 @@ TILE_PROVIDERS: list[TileProvider] = [
     _nasa_provider(
         "nasagibs-modisterrachlorophyll",
         "NASAGIBS ModisTerraChlorophyll",
-        "MODIS_Terra_Chlorophyll_A",
+        "MODIS_Terra_L2_Chlorophyll_A",
         zoom_max=7,
         ext="png",
     ),

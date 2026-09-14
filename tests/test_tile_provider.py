@@ -336,6 +336,55 @@ class TestRealTileProviders:
         args = get_string_formatting_arguments(tf.url_template)
         assert "a" in args
 
+    @pytest.mark.parametrize(
+        "key",
+        [
+            key
+            for key in KEY_TO_TILE_PROVIDER
+            if key.startswith(("cartodb-", "here-", "stadia-")) or key == "openaip"
+        ],
+    )
+    def test_tile_providers_require_api_key(self, key: str) -> None:
+        # These tile providers reject (or watermark) requests without an API key
+        tp = KEY_TO_TILE_PROVIDER[key]
+        assert "a" in get_string_formatting_arguments(tp.url_template)
+
+    @pytest.mark.parametrize(
+        "key", [key for key in KEY_TO_TILE_PROVIDER if key.startswith("here-")]
+    )
+    def test_here_tile_providers_use_raster_tile_api_v3(self, key: str) -> None:
+        # The HERE Map Tile API v2 (maps.ls.hereapi.com) has been retired
+        tp = KEY_TO_TILE_PROVIDER[key]
+        assert tp.url_template.startswith(
+            ("https://maps.hereapi.com/v3/", "https://traffic.maps.hereapi.com/v3/")
+        )
+
+    def test_here_tile_provider_with_public_transit_and_large_labels(
+        self, tile: Tile
+    ) -> None:
+        tp = KEY_TO_TILE_PROVIDER["here-normaldaytransitmobile"]
+        url = tp.format_url_template(tile, api_key="my_key")
+        assert url == (
+            f"https://maps.hereapi.com/v3/base/mc/{tile.zoom}/{tile.x}/{tile.y}/png8"
+            "?style=explore.day&features=public_transit:all_systems&ppi=400&apiKey=my_key"
+        )
+
+    @pytest.mark.parametrize(
+        "key", [key for key in KEY_TO_TILE_PROVIDER if key.startswith("nasagibs-")]
+    )
+    def test_nasagibs_tile_matrix_set_matches_zoom_max(self, key: str) -> None:
+        tp = KEY_TO_TILE_PROVIDER[key]
+        assert f"/GoogleMapsCompatible_Level{tp.zoom_max}/" in tp.url_template
+
+    def test_maptiler_satellite_tile_provider(self, tile: Tile) -> None:
+        # The MapTiler satellite map is `satellite` (`satellite-v2` is a tileset)
+        tp = KEY_TO_TILE_PROVIDER["maptiler-satellite"]
+        url = tp.format_url_template(tile, api_key="my_key")
+        assert url == (
+            f"https://api.maptiler.com/maps/satellite/{tile.zoom}/{tile.x}/{tile.y}.jpg"
+            "?key=my_key"
+        )
+
     def test_tile_providers_use_https(self) -> None:
         for key, tp in KEY_TO_TILE_PROVIDER.items():
             assert tp.url_template.startswith("https://"), key

@@ -3,7 +3,11 @@
 HERE provides high-quality map tiles including various base maps,
 satellite imagery, and terrain data. Requires an API key.
 
-See: https://developer.here.com/
+The tile providers use the HERE Raster Tile API v3. The styles of the tile
+providers that originate from the retired HERE Map Tile API v2 follow the
+official migration guide.
+
+See: https://docs.here.com/map-rendering/docs/migration-guide-raster-tile-api
 """
 
 from __future__ import annotations
@@ -14,95 +18,150 @@ HERE_ATTRIBUTION = "Map data: © HERE"
 HERE_HTML_ATTRIBUTION = 'Map data: © <a href="https://www.here.com/">HERE</a>'
 
 
-def _here_provider(
+def _here_provider(  # noqa: PLR0913
     key: str,
     name: str,
-    scheme: str,
-    base: str = "base",
-    zoom_max: int = 20,
+    style: str,
+    *,
+    resource: str = "base",
+    ext: str = "png8",
+    public_transit: bool = False,
+    large_labels: bool = False,
 ) -> TileProvider:
-    """Create a HERE Maps tile provider configuration."""
+    """Create a HERE Raster Tile API v3 tile provider configuration.
+
+    Args:
+        key: The key of the tile provider.
+        name: The name of the tile provider.
+        style: The style of the map tiles (e.g. `explore.day`).
+        resource: The type of map tiles (`base`, `background` or `label`).
+        ext: The image format of the map tiles.
+        public_transit: Show public transit (formerly the `*.transit` schemes).
+        large_labels: Show large labels and icons (formerly the `*.mobile` schemes).
+    """
+    query = f"style={style}"
+    if public_transit:
+        query += "&features=public_transit:all_systems"
+    if large_labels:
+        query += "&ppi=400"
     return TileProvider(
         key=key,
         name=name,
         attribution=HERE_ATTRIBUTION,
         html_attribution=HERE_HTML_ATTRIBUTION,
-        url_template=f"https://{{s}}.{base}.maps.ls.hereapi.com/maptile/2.1/maptile/newest/{scheme}/{{z}}/{{x}}/{{y}}/256/png8?apiKey={{a}}",
-        subdomains=[1, 2, 3, 4],
+        url_template=f"https://maps.hereapi.com/v3/{resource}/mc/{{z}}/{{x}}/{{y}}/{ext}?{query}&apiKey={{a}}",
+        subdomains=None,
         zoom_min=0,
-        zoom_max=zoom_max,
+        zoom_max=20,
     )
 
 
 TILE_PROVIDERS: list[TileProvider] = [
-    _here_provider("here-normalday", "HERE normalDay", "normal.day"),
-    _here_provider("here-normaldaycustom", "HERE normalDayCustom", "normal.day.custom"),
-    _here_provider("here-normaldaygrey", "HERE normalDayGrey", "normal.day.grey"),
-    _here_provider("here-normaldaymobile", "HERE normalDayMobile", "normal.day.mobile"),
+    _here_provider("here-normalday", "HERE normalDay", "explore.day"),
+    _here_provider("here-normaldaygrey", "HERE normalDayGrey", "lite.day"),
     _here_provider(
-        "here-normaldaygreymobile", "HERE normalDayGreyMobile", "normal.day.grey.mobile"
+        "here-normaldaymobile", "HERE normalDayMobile", "explore.day", large_labels=True
     ),
     _here_provider(
-        "here-normaldaytransit", "HERE normalDayTransit", "normal.day.transit"
+        "here-normaldaygreymobile",
+        "HERE normalDayGreyMobile",
+        "lite.day",
+        large_labels=True,
+    ),
+    _here_provider(
+        "here-normaldaytransit",
+        "HERE normalDayTransit",
+        "explore.day",
+        public_transit=True,
     ),
     _here_provider(
         "here-normaldaytransitmobile",
         "HERE normalDayTransitMobile",
-        "normal.day.transit.mobile",
+        "explore.day",
+        public_transit=True,
+        large_labels=True,
     ),
-    _here_provider("here-normalnight", "HERE normalNight", "normal.night"),
+    _here_provider("here-normalnight", "HERE normalNight", "explore.night"),
     _here_provider(
-        "here-normalnightmobile", "HERE normalNightMobile", "normal.night.mobile"
+        "here-normalnightmobile",
+        "HERE normalNightMobile",
+        "explore.night",
+        large_labels=True,
     ),
-    _here_provider("here-normalnightgrey", "HERE normalNightGrey", "normal.night.grey"),
+    _here_provider("here-normalnightgrey", "HERE normalNightGrey", "lite.night"),
     _here_provider(
         "here-normalnightgreymobile",
         "HERE normalNightGreyMobile",
-        "normal.night.grey.mobile",
+        "lite.night",
+        large_labels=True,
     ),
     _here_provider(
-        "here-normalnighttransit", "HERE normalNightTransit", "normal.night.transit"
+        "here-normalnighttransit",
+        "HERE normalNightTransit",
+        "explore.night",
+        public_transit=True,
     ),
     _here_provider(
         "here-normalnighttransitmobile",
         "HERE normalNightTransitMobile",
-        "normal.night.transit.mobile",
+        "explore.night",
+        public_transit=True,
+        large_labels=True,
     ),
-    _here_provider("here-reducedday", "HERE reducedDay", "reduced.day"),
-    _here_provider("here-reducednight", "HERE reducedNight", "reduced.night"),
-    _here_provider("here-basicmap", "HERE basicMap", "normal.day", base="base"),
-    _here_provider("here-maplabels", "HERE mapLabels", "normal.day", base="base"),
     _here_provider(
-        "here-trafficflow", "HERE trafficFlow", "normal.day", base="traffic"
+        "here-basicmap", "HERE basicMap", "explore.day", resource="background"
     ),
-    _here_provider("here-carnavdaygrey", "HERE carnavDayGrey", "carnav.day.grey"),
-    _here_provider("here-hybridday", "HERE hybridDay", "hybrid.day", base="aerial"),
+    _here_provider(
+        "here-maplabels", "HERE mapLabels", "explore.day", resource="label", ext="png"
+    ),
+    TileProvider(
+        key="here-trafficflow",
+        name="HERE trafficFlow",
+        attribution=HERE_ATTRIBUTION,
+        html_attribution=HERE_HTML_ATTRIBUTION,
+        url_template="https://traffic.maps.hereapi.com/v3/flow/mc/{z}/{x}/{y}/png?apiKey={a}",
+        subdomains=None,
+        zoom_min=0,
+        zoom_max=20,
+    ),
+    _here_provider(
+        "here-hybridday", "HERE hybridDay", "explore.satellite.day", ext="jpeg"
+    ),
     _here_provider(
         "here-hybriddaymobile",
         "HERE hybridDayMobile",
-        "hybrid.day.mobile",
-        base="aerial",
+        "explore.satellite.day",
+        ext="jpeg",
+        large_labels=True,
     ),
     _here_provider(
         "here-hybriddaytransit",
         "HERE hybridDayTransit",
-        "hybrid.day.transit",
-        base="aerial",
+        "explore.satellite.day",
+        ext="jpeg",
+        public_transit=True,
     ),
     _here_provider(
-        "here-hybriddaygrey", "HERE hybridDayGrey", "hybrid.grey.day", base="aerial"
+        "here-hybriddaygrey", "HERE hybridDayGrey", "lite.satellite.day", ext="jpeg"
     ),
-    _here_provider("here-pedestrianday", "HERE pedestrianDay", "pedestrian.day"),
-    _here_provider("here-pedestriannight", "HERE pedestrianNight", "pedestrian.night"),
+    _here_provider("here-pedestrianday", "HERE pedestrianDay", "explore.day"),
+    _here_provider("here-pedestriannight", "HERE pedestrianNight", "explore.night"),
     _here_provider(
-        "here-satelliteday", "HERE satelliteDay", "satellite.day", base="aerial"
+        "here-satelliteday", "HERE satelliteDay", "satellite.day", ext="jpeg"
     ),
-    _here_provider("here-terrainday", "HERE terrainDay", "terrain.day", base="aerial"),
+    _here_provider("here-terrainday", "HERE terrainDay", "topo.day"),
     _here_provider(
-        "here-terraindaymobile",
-        "HERE terrainDayMobile",
-        "terrain.day.mobile",
-        base="aerial",
+        "here-terraindaymobile", "HERE terrainDayMobile", "topo.day", large_labels=True
+    ),
+    # Styles that were introduced in the HERE Raster Tile API v3
+    _here_provider("here-toponight", "HERE topoNight", "topo.night"),
+    _here_provider("here-logisticsday", "HERE logisticsDay", "logistics.day"),
+    _here_provider("here-logisticsnight", "HERE logisticsNight", "logistics.night"),
+    _here_provider(
+        "here-logisticssatelliteday",
+        "HERE logisticsSatelliteDay",
+        "logistics.satellite.day",
+        ext="jpeg",
     ),
 ]
 """HERE tile providers."""

@@ -46,7 +46,7 @@ TILE_PROVIDERS: list[TileProvider] = [
     _maptiler_provider("maptiler-positron", "MapTiler Positron", "positron"),
     _maptiler_provider("maptiler-hybrid", "MapTiler Hybrid", "hybrid", ext="jpg"),
     _maptiler_provider(
-        "maptiler-satellite", "MapTiler Satellite", "satellite-v2", ext="jpg"
+        "maptiler-satellite", "MapTiler Satellite", "satellite", ext="jpg"
     ),
     _maptiler_provider("maptiler-toner", "MapTiler Toner", "toner-v2"),
     _maptiler_provider("maptiler-topo", "MapTiler Topo", "topo-v2"),

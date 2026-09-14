@@ -3,13 +3,17 @@
 import itertools
 import re
 import zlib
+from dataclasses import replace
 from decimal import Decimal
+from io import BytesIO
 from math import isclose
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
 
 import httpx2
 import pytest
+from PIL import Image
 from pytest_httpx2 import HTTPXMock
 
 from papermap.features import CircleMarker, IconMarker, Line, Polygon
@@ -30,6 +34,8 @@ from papermap.papermap import (
     _compute_auto_scale,
 )
 from papermap.tile import TILE_SIZE
+from papermap.tile_provider import TileProvider
+from papermap.tile_providers import TILE_PROVIDERS
 
 
 class TestPaperMapInit:
@@ -941,6 +947,28 @@ class TestPaperMapRenderBaseLayer:
         assert hasattr(pm, "map_image")
         assert pm.map_image.size == (pm.image_width_px, pm.image_height_px)
 
+    @pytest.mark.parametrize("size", [(512, 512), (128, 128)], ids=["512", "128"])
+    def test_render_base_layer_with_differently_sized_tiles(
+        self, httpx2_mock: HTTPXMock, size: tuple[int, int]
+    ) -> None:
+        """Tiles that are not TILE_SIZE x TILE_SIZE pixels are resized to fit."""
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+
+        buffer = BytesIO()
+        Image.new("RGBA", size, color="blue").save(buffer, format="PNG")
+        for _ in pm.tiles:
+            httpx2_mock.add_response(content=buffer.getvalue())
+
+        pm.render_base_layer()
+
+        assert all(tile.image is not None for tile in pm.tiles)
+        assert all(
+            tile.image.size == (TILE_SIZE, TILE_SIZE)
+            for tile in pm.tiles
+            if tile.image is not None
+        )
+        assert pm.map_image.size == (pm.image_width_px, pm.image_height_px)
+
     @pytest.mark.httpx2_mock(assert_all_responses_were_requested=False)
     def test_render_base_layer_with_strict_download_failure(
         self,
@@ -1715,6 +1743,83 @@ class TestLatLonToPdfMm:
         x, y = pm.latlon_to_pdf_mm(40.7128, -74.0060)
         assert isclose(x, 30 + pm.image_width / 2, abs_tol=1e-9)
         assert isclose(y, 20 + pm.image_height / 2, abs_tol=1e-9)
+
+
+class TestRenderAttributionAndScale:
+    """Tests for PaperMap.render_attribution_and_scale."""
+
+    @staticmethod
+    def render_lines(pm: PaperMap) -> list[tuple[float, float, float, float, str]]:
+        """Render the attribution and scale, returning the drawn lines.
+
+        Every line is returned as an ``(x, y, width, height, text)`` tuple.
+        """
+        with (
+            patch.object(pm.pdf, "set_xy", wraps=pm.pdf.set_xy) as set_xy,
+            patch.object(pm.pdf, "cell", wraps=pm.pdf.cell) as cell,
+        ):
+            pm.render_attribution_and_scale()
+        lines = []
+        for set_xy_call, cell_call in zip(
+            set_xy.call_args_list, cell.call_args_list, strict=True
+        ):
+            x, y = set_xy_call.args
+            # a zero width extends the cell to the right margin, and the height
+            # defaults to the font size
+            width = cell_call.kwargs["w"] or pm.margin_left + pm.pdf.epw - x
+            height = cell_call.kwargs.get("h") or pm.pdf.font_size
+            lines.append((x, y, width, height, cell_call.kwargs["text"]))
+        return lines
+
+    @staticmethod
+    def assert_lines_within_image_area(
+        pm: PaperMap, lines: list[tuple[float, float, float, float, str]]
+    ) -> None:
+        """Assert that the lines are stacked in the bottom-right of the image area."""
+        right = pm.margin_left + pm.pdf.epw
+        bottom = pm.margin_top + pm.pdf.eph
+        for i, (x, y, width, height, _) in enumerate(lines):
+            assert x >= pm.margin_left
+            assert isclose(x + width, right, abs_tol=1e-9)
+            assert isclose(
+                y + height, bottom - (len(lines) - 1 - i) * height, abs_tol=1e-9
+            )
+
+    def test_short_text_is_drawn_on_a_single_line(self) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        lines = self.render_lines(pm)
+        assert len(lines) == 1
+        assert lines[0][4] == (
+            f"{pm.tile_provider.attribution}. Created with papermap. Scale: 1:{pm.scale}"
+        )
+        self.assert_lines_within_image_area(pm, lines)
+
+    def test_long_text_is_wrapped_within_image_area(self) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        attribution = " ".join(f"Contributor {i}," for i in range(50))
+        pm.tile_provider = replace(pm.tile_provider, attribution=attribution)
+        lines = self.render_lines(pm)
+        assert len(lines) > 1
+        assert " ".join(line[4] for line in lines) == (
+            f"{attribution}. Created with papermap. Scale: 1:{pm.scale}"
+        )
+        self.assert_lines_within_image_area(pm, lines)
+
+    def test_text_with_windows_1252_characters(self, tmp_path: Path) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        attribution = "Tiles © Esri — Source: “Esri” – ‘USGS’ • €"  # noqa: RUF001
+        pm.tile_provider = replace(pm.tile_provider, attribution=attribution)
+        lines = self.render_lines(pm)
+        assert lines[0][4].startswith(attribution)
+        pm.save(tmp_path / "map.pdf")
+
+    @pytest.mark.parametrize(
+        "tile_provider", TILE_PROVIDERS, ids=[tp.key for tp in TILE_PROVIDERS]
+    )
+    def test_every_tile_provider(self, tile_provider: TileProvider) -> None:
+        pm = PaperMap(lat=40.7128, lon=-74.0060)
+        pm.tile_provider = tile_provider
+        self.assert_lines_within_image_area(pm, self.render_lines(pm))
 
 
 class TestCircleMarkerRendering:

@@ -10,6 +10,32 @@ The **third number** is for emergencies when we need to start branches for older
 
 ## [Unreleased](https://github.com/sgraaf/papermap/compare/2026.3.0...HEAD)
 
+### Added
+
+- Added the `here-toponight`, `here-logisticsday`, `here-logisticsnight` and `here-logisticssatelliteday` tile providers, for the styles introduced in the HERE Raster Tile API v3.
+
+### Changed
+
+- The `here-*` tile providers now use the HERE Raster Tile API v3, as the HERE Map Tile API v2 has been retired. Their styles follow HERE's [migration guide](https://docs.here.com/map-rendering/docs/migration-guide-raster-tile-api) (e.g. `here-normalday` now uses the `explore.day` style and `here-terrainday` the `topo.day` style). API keys of former HERE developer accounts do not work with this API; a [HERE platform](https://platform.here.com/) account is required.
+
+- The `cartodb-*`, `stadia-*` and `openaip` tile providers now require an API key (e.g. `api_key="..."` or `--api-key`). CARTO now watermarks tiles requested without an API key with "API KEY REQUIRED", while Stadia Maps and openAIP reject such requests altogether. Free API keys are available from [CARTO](https://carto.com/basemaps/apikey/), [Stadia Maps](https://client.stadiamaps.com/signup/) and [openAIP](https://www.openaip.net/).
+
+### Removed
+
+- Removed the `hikebike`, `alltrails` and `esri-delorme` tile providers, whose tile servers no longer exist: the HikeBike tile domain no longer resolves, AllTrails no longer serves its tiles (HTTP 410), and Esri has retired the DeLorme World Base Map.
+- Removed the `wikimedia` and `mapy-cz` tile providers, whose terms of use do not permit printed maps: Wikimedia Maps may only be used in support of the Wikimedia projects, and the Mapy.com API (which replaced the former Mapy.cz tile server) is only intended for applications in electronic form.
+- Removed the `here-normaldaycustom`, `here-reducedday`, `here-reducednight` and `here-carnavdaygrey` tile providers, whose styles have no equivalent in the HERE Raster Tile API v3.
+
+### Fixed
+
+- Fixed rendering maps with any of the `esri-*` tile providers failing with an `FPDFUnicodeEncodingException`, as their attribution contains an em dash (`—`). Text is now encoded with Windows-1252 (matching the encoding of the built-in PDF fonts) instead of Latin-1, which also supports characters such as en dashes, curly quotes and the euro sign.
+- Fixed the attribution and scale text running off the left edge of the page when it is wider than the map (e.g. for the `esri-worldimagery` tile provider). It is now wrapped onto multiple lines within the map area.
+- Fixed rendering maps failing with `ValueError: images do not match` for tile providers that serve tiles of a size other than 256x256 pixels (e.g. the high-resolution 512x512 tiles of the `safecast` and `basemapat-highdpi` tile providers). Such tiles are now resized to 256x256 pixels.
+- Fixed the `nasagibs-*` tile providers, for which every tile request failed (HTTP 400): the tile matrix set in their URL lacked the maximum zoom level of the layer, and the `nasagibs-modisterrachlorophyll` layer name was wrong.
+- Fixed the `maptiler-satellite` tile provider, for which every tile request failed (HTTP 404): its URL referred to the `satellite-v2` map, which does not exist (`satellite-v2` is a tileset, not a map).
+- Fixed the `basemapat-*` tile providers, which requested tiles from subdomains that no longer exist. Additionally, every tile request failed (HTTP 404) for `basemapat-terrain` and `basemapat-surface`, which now use the correct (grey) style, and for `basemapat-highdpi`, which now requests JPEG tiles. The `basemapat` and `basemapat-orthofoto` tile providers now support zoom levels up to 20.
+- Fixed the usage examples in the README, most of which failed with a `TypeError`: they now use the `paper_size` and `use_landscape` arguments of `PaperMap` (instead of `size` and `landscape`), and pass a `UTMCoordinate` to `PaperMap.from_utm()`.
+
 ## [2026.3.0](https://github.com/sgraaf/papermap/compare/2026.2.0...2026.3.0) (2026-09-14)
 
 This third release in the year 2026 focuses on correctness and robustness. It fixes a number of bugs that silently produced wrong maps: grid lines are no longer drawn mirrored about the map centre and are labelled correctly for any `grid_size`, maps crossing the ±180° meridian render both sides, and MGRS coordinates just north of 64°N are no longer placed about 2,000km too far north. Tile downloads are more resilient, retrying network errors and invalid images instead of aborting the whole map, while raising an error rather than producing a blank map when no tile can be downloaded at all (e.g. due to an invalid API key). Invalid input is now validated up front, before any tiles are downloaded, and the CLI reports errors as concise messages instead of tracebacks. The `geojson` and `gpx` CLI sub-commands gain styling options such as `--stroke` and `--fill`. Finally, `httpx` has been replaced by `httpx2`, the minimum version of the optional `gpx` dependency has been bumped (parsing already-loaded GPX objects now also requires it), and the defunct `komoot` and `openfiremap` tile providers have been removed.

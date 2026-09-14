@@ -37,16 +37,6 @@ TILE_PROVIDERS: list[TileProvider] = [
         zoom_max=18,
     ),
     TileProvider(
-        key="hikebike",
-        name="HikeBike",
-        attribution=f"Map data: {OSM_ATTRIBUTION}",
-        html_attribution=f"Map data: {OSM_HTML_ATTRIBUTION}",
-        url_template="https://tiles.wmflabs.org/hikebike/{z}/{x}/{y}.png",
-        subdomains=None,
-        zoom_min=0,
-        zoom_max=19,
-    ),
-    TileProvider(
         key="safecast",
         name="SafeCast",
         attribution="Map data: © OpenStreetMap contributors. Map style: © SafeCast",
@@ -68,29 +58,6 @@ TILE_PROVIDERS: list[TileProvider] = [
         subdomains=["a", "b", "c"],
         zoom_min=0,
         zoom_max=19,
-    ),
-    TileProvider(
-        key="mapy-cz",
-        name="Mapy.cz",
-        attribution="Map data: © OpenStreetMap contributors. Map style: © Seznam.cz",
-        html_attribution=(
-            f"Map data: {OSM_HTML_ATTRIBUTION}. "
-            'Map style: © <a href="https://www.seznam.cz/">Seznam.cz</a>'
-        ),
-        url_template="https://m{s}.mapserver.mapy.cz/turist-m/{z}-{x}-{y}.png",
-        subdomains=[1, 2, 3, 4],
-        zoom_min=0,
-        zoom_max=19,
-    ),
-    TileProvider(
-        key="alltrails",
-        name="AllTrails",
-        attribution=f"Map data: {OSM_ATTRIBUTION}",
-        html_attribution=f"Map data: {OSM_HTML_ATTRIBUTION}",
-        url_template="https://alltrails.com/tiles/alltrailsOutdoors/{z}/{x}/{y}.png",
-        subdomains=None,
-        zoom_min=0,
-        zoom_max=20,
     ),
     TileProvider(
         key="waymarkedtrails-hiking",
@@ -175,7 +142,7 @@ TILE_PROVIDERS: list[TileProvider] = [
         name="OpenAIP",
         attribution="© OpenAIP",
         html_attribution='© <a href="https://www.openaip.net/">OpenAIP</a>',
-        url_template="https://api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png",
+        url_template="https://api.tiles.openaip.net/api/data/openaip/{z}/{x}/{y}.png?apiKey={a}",
         subdomains=None,
         zoom_min=4,
         zoom_max=14,

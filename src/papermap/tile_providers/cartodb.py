@@ -29,7 +29,7 @@ def _carto_provider(
         name=name,
         attribution=CARTO_ATTRIBUTION,
         html_attribution=CARTO_HTML_ATTRIBUTION,
-        url_template=f"https://{{s}}.basemaps.cartocdn.com/{variant}/{{z}}/{{x}}/{{y}}.png",
+        url_template=f"https://{{s}}.basemaps.cartocdn.com/{variant}/{{z}}/{{x}}/{{y}}.png?key={{a}}",
         subdomains=["a", "b", "c", "d"],
         zoom_min=0,
         zoom_max=zoom_max,

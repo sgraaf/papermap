@@ -57,9 +57,9 @@ Create a landscape-oriented, A3-sized map with grid overlay:
 >>> pm = PaperMap(
 ...     lat=40.416775,
 ...     lon=-3.703790,  # Madrid, Spain
-...     tile_provider_key="stadia-stamenterrain",
-...     size="a3",
-...     landscape=True,
+...     tile_provider_key="esri-worldtopomap",
+...     paper_size="a3",
+...     use_landscape=True,
 ...     scale=50_000,
 ...     add_grid=True,
 ... )
@@ -77,7 +77,7 @@ Create a map using satellite imagery:
 ...     lat=51.5074,
 ...     lon=-0.1278,  # London, UK
 ...     tile_provider_key="esri-worldimagery",
-...     size="a4",
+...     paper_size="a4",
 ...     scale=10_000,
 ... )
 >>> pm.render()
@@ -94,8 +94,8 @@ Create a topographic map for hiking:
 ...     lat=46.5197,
 ...     lon=7.9577,  # Mürren, Switzerland
 ...     tile_provider_key="opentopomap",
-...     size="a3",
-...     landscape=True,
+...     paper_size="a3",
+...     use_landscape=True,
 ...     scale=25_000,
 ...     add_grid=True,
 ...     grid_size=500,  # 500m grid for easier navigation
@@ -114,8 +114,8 @@ Create a high-resolution map for professional printing:
 ...     lat=35.6762,
 ...     lon=139.6503,  # Tokyo, Japan
 ...     tile_provider_key="openstreetmap",
-...     size="a0",  # Large format
-...     landscape=True,
+...     paper_size="a0",  # Large format
+...     use_landscape=True,
 ...     scale=15_000,
 ...     dpi=600,  # High resolution
 ...     add_grid=True,
@@ -130,13 +130,16 @@ Create a map using UTM coordinates instead of latitude/longitude:
 
 ```python
 >>> from papermap import PaperMap
+>>> from papermap.geodesy import UTMCoordinate
 >>> pm = PaperMap.from_utm(
-...     easting=500000,
-...     northing=4649776,
-...     zone=30,
-...     hemisphere="N",  # Northern hemisphere
+...     UTMCoordinate(
+...         easting=500000,
+...         northing=4649776,
+...         zone=30,
+...         hemisphere="N",  # Northern hemisphere
+...     ),
 ...     tile_provider_key="openstreetmap",
-...     size="a4",
+...     paper_size="a4",
 ...     scale=25_000,
 ...     add_grid=True,
 ... )
@@ -154,7 +157,7 @@ Create a map with custom margins for binding:
 ...     lat=-33.8688,
 ...     lon=151.2093,  # Sydney, Australia
 ...     tile_provider_key="openstreetmap",
-...     size="letter",
+...     paper_size="letter",
 ...     margin_left=20,  # Extra margin for binding
 ...     margin_top=10,
 ...     margin_right=10,
@@ -176,8 +179,8 @@ Some tile providers require API keys. Here's how to use them:
 ...     lon=-122.4194,  # San Francisco, USA
 ...     tile_provider_key="thunderforest-outdoors",
 ...     api_key="your_api_key_here",  # Get from thunderforest.com
-...     size="a4",
-...     landscape=True,
+...     paper_size="a4",
+...     use_landscape=True,
 ...     scale=25_000,
 ...     add_grid=True,
 ... )
@@ -272,7 +275,7 @@ Create a landscape-oriented, A3-sized map with grid overlay:
 
 ```shell
 $ papermap latlon \
-    --tile-provider stadia-stamenterrain \
+    --tile-provider esri-worldtopomap \
     --paper-size a3 \
     --landscape \
     --scale 50000 \

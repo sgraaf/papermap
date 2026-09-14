@@ -44,13 +44,6 @@ TILE_PROVIDERS: list[TileProvider] = [
         zoom_max=17,
     ),
     _esri_provider(
-        "esri-delorme",
-        "Esri DeLorme",
-        "Specialty/DeLorme_World_Base_Map",
-        zoom_max=11,
-        extra_attribution=" — DeLorme",
-    ),
-    _esri_provider(
         "esri-worldtopomap",
         "Esri WorldTopoMap",
         "World_Topo_Map",

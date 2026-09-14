@@ -301,7 +301,7 @@ Mathematical implementations follow Karney (2011) paper on Transverse Mercator p
 Subpackage containing 100+ tile provider configurations organized by provider:
 
 - **`__init__.py`** - Exports `KEY_TO_TILE_PROVIDER`, `TILE_PROVIDER_KEYS`, `DEFAULT_TILE_PROVIDER_KEY`
-- **Provider modules:** `openstreetmap.py`, `google.py`, `esri.py`, `stadia.py`, `thunderforest.py`, `cartodb.py`, `here.py`, `maptiler.py`, `jawg.py`, `tomtom.py`, `cyclosm.py`, `openseamap.py`, `usgs.py`, `nasagibs.py`, `wikimedia.py`, `swiss.py`, `nlmaps.py`, `basemap_at.py`, `misc.py`
+- **Provider modules:** `openstreetmap.py`, `google.py`, `esri.py`, `stadia.py`, `thunderforest.py`, `cartodb.py`, `here.py`, `maptiler.py`, `jawg.py`, `tomtom.py`, `cyclosm.py`, `openseamap.py`, `usgs.py`, `nasagibs.py`, `swiss.py`, `nlmaps.py`, `basemap_at.py`, `misc.py`
 - Each module contains TileProvider configurations for that provider's tile services
 
 #### 7. Geodesy Module (`geodesy.py`)
@@ -374,6 +374,7 @@ Tests are located in the `tests/` directory and use pytest:
 - `test_cli.py` - CLI tests
 - `test_geodesy.py` - Geodesy module tests (coordinate conversions)
 - `test_integration.py` - Integration tests
+- `test_readme.py` - Runs the usage examples in `README.md` (with rendering stubbed out)
 
 ### Running Tests
 
