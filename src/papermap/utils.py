@@ -189,8 +189,8 @@ def dd_to_dms(dd: float) -> tuple[int, int, float]:
         The Degrees, Minutes, and Seconds.
     """
     is_positive = dd >= 0
-    dd = abs(dd)
-    m, s = divmod(dd * 3600, 60)
+    # round the total seconds first, so that rounding cannot yield 60 seconds
+    m, s = divmod(round(abs(dd) * 3600, 6), 60)
     d, m = divmod(m, 60)
     d = d if is_positive else -d
     return round(d), round(m), round(s, 6)

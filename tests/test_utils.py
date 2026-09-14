@@ -272,6 +272,15 @@ class TestDdToDms:
         assert m == 30
         assert isclose(s, 30, abs_tol=1e-3)
 
+    @pytest.mark.parametrize(
+        ("dd", "expected"),
+        [(0.99999999999, (1, 0, 0)), (-45.99999999999, (-46, 0, 0))],
+    )
+    def test_dd_to_dms_rounding_carries_over(
+        self, dd: float, expected: tuple[int, int, float]
+    ) -> None:
+        assert dd_to_dms(dd) == expected
+
 
 class TestDmsToDd:
     """Tests for dms_to_dd conversion."""

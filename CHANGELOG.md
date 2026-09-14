@@ -32,6 +32,7 @@ The **third number** is for emergencies when we need to start branches for older
 - Fixed `utm_to_latlon()` (and thereby `PaperMap.from_utm()`) silently treating any hemisphere other than `S` (e.g. a lowercase `s`) as the northern hemisphere. It now raises a `ValueError` for a hemisphere other than `N` or `S`, or a zone outside 1-60. The `utm` CLI sub-command now accepts a lowercase hemisphere, and rejects invalid hemispheres and zones with a usage error.
 - Fixed `latlon_to_utm()` and `latlon_to_mgrs()` returning the non-existent UTM zone 61 for a longitude of exactly 180°; it now lies in zone 1, like 180°W.
 - Fixed `latlon_to_utm()` silently converting a latitude beyond the poles (e.g. 100°) to a coordinate in the opposite hemisphere (e.g. -80°); it now raises a `ValueError`.
+- Fixed `utils.dd_to_dms()` returning 60 seconds (e.g. `(0, 59, 60.0)` for `0.99999999999`) instead of carrying over into the minutes and degrees.
 
 ## [2026.2.0](https://github.com/sgraaf/papermap/compare/2026.1.0...2026.2.0) (2026-05-17)
 
