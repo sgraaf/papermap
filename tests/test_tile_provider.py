@@ -1,5 +1,12 @@
 """Unit tests for papermap.tile_provider module."""
 
+import importlib
+import pkgutil
+from types import SimpleNamespace
+
+import pytest
+
+from papermap import tile_providers
 from papermap.tile import Tile
 from papermap.tile_provider import TileProvider
 from papermap.tile_providers import KEY_TO_TILE_PROVIDER
@@ -338,3 +345,64 @@ class TestRealTileProviders:
             assert ts.url_template, f"{key} missing url_template"
             assert ts.zoom_min >= 0, f"{key} has invalid zoom_min"
             assert ts.zoom_max >= ts.zoom_min, f"{key} has invalid zoom range"
+
+
+class TestDiscoverTileProviders:
+    """Tests for the auto-discovery of tile provider modules."""
+
+    @staticmethod
+    def fake_submodules(
+        monkeypatch: pytest.MonkeyPatch, modules: dict[str, SimpleNamespace]
+    ) -> None:
+        monkeypatch.setattr(
+            pkgutil,
+            "iter_modules",
+            lambda _path: [SimpleNamespace(name=name) for name in modules],
+        )
+        monkeypatch.setattr(
+            importlib, "import_module", lambda name: modules[name.rpartition(".")[2]]
+        )
+
+    @staticmethod
+    def make_tile_provider(key: str) -> TileProvider:
+        return TileProvider(
+            key=key,
+            name=key,
+            attribution=key,
+            html_attribution=key,
+            url_template="https://example.com/{z}/{x}/{y}.png",
+            zoom_min=0,
+            zoom_max=19,
+        )
+
+    def test_collects_tile_providers_of_public_modules(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        a, b = self.make_tile_provider("a"), self.make_tile_provider("b")
+        self.fake_submodules(
+            monkeypatch,
+            {
+                "one": SimpleNamespace(TILE_PROVIDERS=[a]),
+                "two": SimpleNamespace(TILE_PROVIDERS=[b]),
+                "_private": SimpleNamespace(),
+            },
+        )
+        assert tile_providers._discover_tile_providers() == [a, b]  # noqa: SLF001
+
+    def test_missing_tile_providers_attribute_raises(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        self.fake_submodules(monkeypatch, {"typo": SimpleNamespace(TILE_PROVIDER=[])})
+        with pytest.raises(AttributeError, match="TILE_PROVIDERS"):
+            tile_providers._discover_tile_providers()  # noqa: SLF001
+
+    def test_duplicate_keys_raise(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self.fake_submodules(
+            monkeypatch,
+            {
+                "one": SimpleNamespace(TILE_PROVIDERS=[self.make_tile_provider("a")]),
+                "two": SimpleNamespace(TILE_PROVIDERS=[self.make_tile_provider("a")]),
+            },
+        )
+        with pytest.raises(ValueError, match="Duplicate tile provider keys: a"):
+            tile_providers._discover_tile_providers()  # noqa: SLF001
