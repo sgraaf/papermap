@@ -89,6 +89,7 @@ Options:
   --grid                          Add a coordinate grid overlay to the paper
                                   map.
   --grid-size METERS              Size of the grid squares (if applicable).
+                                  [x>=1]
   --strict                        Fail if any tiles cannot be downloaded.
   -h, --help                      Show this message and exit.
 ```
@@ -129,6 +130,7 @@ Options:
   --grid                          Add a coordinate grid overlay to the paper
                                   map.
   --grid-size METERS              Size of the grid squares (if applicable).
+                                  [x>=1]
   --strict                        Fail if any tiles cannot be downloaded.
   -h, --help                      Show this message and exit.
 ```
@@ -167,6 +169,7 @@ Options:
   --grid                          Add a coordinate grid overlay to the paper
                                   map.
   --grid-size METERS              Size of the grid squares (if applicable).
+                                  [x>=1]
   --strict                        Fail if any tiles cannot be downloaded.
   -h, --help                      Show this message and exit.
 ```
@@ -205,6 +208,7 @@ Options:
   --grid                          Add a coordinate grid overlay to the paper
                                   map.
   --grid-size METERS              Size of the grid squares (if applicable).
+                                  [x>=1]
   --strict                        Fail if any tiles cannot be downloaded.
   -h, --help                      Show this message and exit.
 ```
@@ -262,6 +266,7 @@ Options:
   --grid                          Add a coordinate grid overlay to the paper
                                   map.
   --grid-size METERS              Size of the grid squares (if applicable).
+                                  [x>=1]
   --strict                        Fail if any tiles cannot be downloaded.
   -h, --help                      Show this message and exit.
 ```
@@ -322,6 +327,7 @@ Options:
   --grid                          Add a coordinate grid overlay to the paper
                                   map.
   --grid-size METERS              Size of the grid squares (if applicable).
+                                  [x>=1]
   --strict                        Fail if any tiles cannot be downloaded.
   -h, --help                      Show this message and exit.
 ```

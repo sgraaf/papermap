@@ -257,6 +257,7 @@ class PaperMap:
         ValueError: If the tile provider is invalid.
         ValueError: If no API key is specified (when applicable).
         ValueError: If the paper size is invalid.
+        ValueError: If the grid size is not positive.
         ScaleOutOfBoundsError: If the scale is "out of bounds" for the chosen
             tile provider.
     """
@@ -310,6 +311,9 @@ class PaperMap:
     def __post_init__(self, tile_provider_key: str, paper_size: str) -> None:
         # Store basic parameters
         self._validate_coordinates()
+
+        # Validate grid parameters
+        self._validate_grid()
 
         # Validate and initialize tile provider
         self._validate_and_set_tile_provider(tile_provider_key)
@@ -677,6 +681,16 @@ class PaperMap:
             raise ValueError(msg)
         if not -180 <= self.lon <= 180:  # noqa: PLR2004
             msg = f"Longitude must be in [-180, 180] range, got {self.lon}"
+            raise ValueError(msg)
+
+    def _validate_grid(self) -> None:
+        """Validate the grid parameters.
+
+        Raises:
+            ValueError: If the grid size is not positive.
+        """
+        if self.grid_size <= 0:
+            msg = f"Grid size must be positive, got {self.grid_size}"
             raise ValueError(msg)
 
     def _validate_and_set_tile_provider(self, tile_provider_key: str) -> None:

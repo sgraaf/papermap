@@ -150,6 +150,11 @@ class TestPaperMapValidation:
         with pytest.raises(ValueError, match="Invalid paper size"):
             PaperMap(lat=40.7128, lon=-74.0060, paper_size="nonexistent_size")
 
+    @pytest.mark.parametrize("grid_size", [0, -1000])
+    def test_non_positive_grid_size_raises_error(self, grid_size: int) -> None:
+        with pytest.raises(ValueError, match="Grid size must be positive"):
+            PaperMap(lat=40.7128, lon=-74.0060, add_grid=True, grid_size=grid_size)
+
     def test_valid_paper_sizes(self) -> None:
         for size in PAPER_SIZES:
             pm = PaperMap(lat=40.7128, lon=-74.0060, paper_size=size)

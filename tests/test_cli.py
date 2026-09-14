@@ -459,6 +459,25 @@ class TestLatLonCommand:
         result = runner.invoke(cli, ["latlon", str(TEST_LAT), str(TEST_LON)])
         assert result.exit_code != 0
 
+    @pytest.mark.parametrize("grid_size", ["0", "-1000"])
+    def test_latlon_non_positive_grid_size(
+        self, runner: CliRunner, tmp_path: Path, grid_size: str
+    ) -> None:
+        output_file = tmp_path / "test.pdf"
+        result = runner.invoke(
+            cli,
+            [
+                "latlon",
+                str(TEST_LAT),
+                str(TEST_LON),
+                str(output_file),
+                "--grid",
+                f"--grid-size={grid_size}",
+            ],
+        )
+        assert result.exit_code == 2
+        assert "--grid-size" in result.output
+
     def test_latlon_invalid_tile_provider(
         self, runner: CliRunner, tmp_path: Path
     ) -> None:

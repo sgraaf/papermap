@@ -27,6 +27,7 @@ The **third number** is for emergencies when we need to start branches for older
 - Fixed maps crossing the ±180° meridian rendering the far side of the meridian blank: its tiles were downloaded but pasted outside the map image. Maps extending beyond the latitude limits of the Web Mercator projection (±85.05°) no longer download tiles from the opposite pole.
 - Fixed `mgrs_to_latlon()` (and thereby `PaperMap.from_mgrs()` and the `mgrs` CLI sub-command) placing MGRS coordinates in a narrow strip just north of 64°N about 2,000km too far north.
 - Fixed `PaperMap.download_tiles(num_retries=n)` retrying failed tiles only `n - 1` times.
+- Fixed a non-positive `grid_size` (or `--grid-size`) hanging the process while consuming ever more memory when rendering the grid. It now raises a `ValueError` (or a usage error in the CLI).
 
 ## [2026.2.0](https://github.com/sgraaf/papermap/compare/2026.1.0...2026.2.0) (2026-05-17)
 

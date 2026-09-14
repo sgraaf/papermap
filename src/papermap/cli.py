@@ -211,7 +211,7 @@ def common_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
     )
     @click.option(
         "--grid-size",
-        type=int,
+        type=click.IntRange(min=1),
         default=DEFAULT_GRID_SIZE,
         metavar="METERS",
         help="Size of the grid squares (if applicable).",
