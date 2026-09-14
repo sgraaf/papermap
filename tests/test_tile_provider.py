@@ -60,6 +60,24 @@ class TestTileProviderInit:
         subdomains = [next(ts.subdomains_cycle) for _ in range(8)]
         assert subdomains == [0, 1, 2, 3, 0, 1, 2, 3]
 
+    def test_equality_ignores_subdomains_cycle(self) -> None:
+        def make_tile_provider() -> TileProvider:
+            return TileProvider(
+                key="test-provider",
+                name="Test Provider",
+                attribution="Test Attribution",
+                html_attribution="Test Attribution",
+                url_template="https://{s}.example.com/{z}/{x}/{y}.png",
+                zoom_min=0,
+                zoom_max=19,
+                subdomains=["a", "b"],
+            )
+
+        tile_provider = make_tile_provider()
+
+        assert tile_provider == make_tile_provider()
+        assert "cycle" not in repr(tile_provider)
+
 
 class TestTileProviderFormatUrlTemplate:
     """Tests for TileProvider.format_url_template method."""
