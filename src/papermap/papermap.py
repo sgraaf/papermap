@@ -133,6 +133,26 @@ COMMON_SCALES: tuple[int, ...] = (
 """Common cartographic scales that ``auto_scale`` snaps up to."""
 
 
+def _paper_dimensions(paper_size: str, *, use_landscape: bool) -> tuple[int, int]:
+    """Look up the dimensions of a paper size, in the given orientation.
+
+    Args:
+        paper_size: Paper size name (e.g. ``"a4"``).
+        use_landscape: Whether the paper is in landscape orientation.
+
+    Returns:
+        The ``(width, height)`` of the paper, in mm.
+
+    Raises:
+        ValueError: If the paper size is invalid.
+    """
+    if paper_size not in PAPER_SIZE_TO_DIMENSIONS_MAP:
+        msg = f"Invalid paper size. Please choose one of {', '.join(PAPER_SIZES)}"
+        raise ValueError(msg)
+    width, height = PAPER_SIZE_TO_DIMENSIONS_MAP[paper_size]
+    return (height, width) if use_landscape else (width, height)
+
+
 def _compute_auto_scale(  # noqa: PLR0913
     lat_min: float,
     lat_max: float,
@@ -178,12 +198,7 @@ def _compute_auto_scale(  # noqa: PLR0913
         ValueError: If padding/margins leave no printable area.
         ValueError: If the bounding box has zero extent on either axis.
     """
-    if paper_size not in PAPER_SIZE_TO_DIMENSIONS_MAP:
-        msg = f"Invalid paper size. Please choose one of {', '.join(PAPER_SIZES)}"
-        raise ValueError(msg)
-    width_mm, height_mm = PAPER_SIZE_TO_DIMENSIONS_MAP[paper_size]
-    if use_landscape:
-        width_mm, height_mm = height_mm, width_mm
+    width_mm, height_mm = _paper_dimensions(paper_size, use_landscape=use_landscape)
 
     image_w_mm = width_mm - margin_left - margin_right - 2 * padding
     image_h_mm = height_mm - margin_top - margin_bottom - 2 * padding
@@ -751,13 +766,9 @@ class PaperMap:
         Raises:
             ValueError: If paper size is invalid.
         """
-        if paper_size in PAPER_SIZE_TO_DIMENSIONS_MAP:
-            self.width, self.height = PAPER_SIZE_TO_DIMENSIONS_MAP[paper_size]
-            if self.use_landscape:
-                self.width, self.height = self.height, self.width
-        else:
-            msg = f"Invalid paper size. Please choose one of {', '.join(PAPER_SIZES)}"
-            raise ValueError(msg)
+        self.width, self.height = _paper_dimensions(
+            paper_size, use_landscape=self.use_landscape
+        )
 
     def _compute_zoom_and_resize_factor(self, tile_provider_key: str) -> None:
         """Compute zoom levels and validate they are within tile provider bounds.
