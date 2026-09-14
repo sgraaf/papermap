@@ -8,7 +8,9 @@ The **first number** of the version is the year.
 The **second number** is incremented with each release, starting at 1 for each year.
 The **third number** is for emergencies when we need to start branches for older releases.
 
-## [Unreleased]
+## [2026.3.0](https://github.com/sgraaf/papermap/compare/2026.2.0...2026.3.0) (2026-09-14)
+
+This third release in the year 2026 focuses on correctness and robustness. It fixes a number of bugs that silently produced wrong maps: grid lines are no longer drawn mirrored about the map centre and are labelled correctly for any `grid_size`, maps crossing the ±180° meridian render both sides, and MGRS coordinates just north of 64°N are no longer placed about 2,000km too far north. Tile downloads are more resilient, retrying network errors and invalid images instead of aborting the whole map, while raising an error rather than producing a blank map when no tile can be downloaded at all (e.g. due to an invalid API key). Invalid input is now validated up front, before any tiles are downloaded, and the CLI reports errors as concise messages instead of tracebacks. The `geojson` and `gpx` CLI sub-commands gain styling options such as `--stroke` and `--fill`. Finally, `httpx` has been replaced by `httpx2`, the minimum version of the optional `gpx` dependency has been bumped (parsing already-loaded GPX objects now also requires it), and the defunct `komoot` and `openfiremap` tile providers have been removed.
 
 ### Added
 
