@@ -6,6 +6,7 @@ from typing import Any, TypedDict, Unpack
 
 import click
 from click.core import ParameterSource
+from click.types import OptionHelpExtra
 from click_default_group import DefaultGroup
 
 from .geodesy import ECEFCoordinate, MGRSCoordinate, UTMCoordinate
@@ -22,6 +23,20 @@ from .papermap import (
 from .tile_providers import DEFAULT_TILE_PROVIDER_KEY, TILE_PROVIDER_KEYS
 
 CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
+
+
+class _HiddenRangeOption(click.Option):
+    """An option that does not show the range of its (numeric) type in the help.
+
+    The ranges (e.g. a positive scale, or non-negative margins) are either
+    self-evident or described in the help text. Values outside the range are
+    still rejected.
+    """
+
+    def get_help_extra(self, ctx: click.Context) -> OptionHelpExtra:
+        extra = super().get_help_extra(ctx)
+        extra.pop("range", None)
+        return extra
 
 
 class CommonParameters(TypedDict):
@@ -51,6 +66,7 @@ def margin_option(side: str) -> Callable:
     """Attaches a margin option for the given side to the command."""
     return click.option(
         f"--margin-{side}",
+        cls=_HiddenRangeOption,
         type=click.IntRange(min=0),
         default=DEFAULT_MARGIN,
         metavar="MILLIMETERS",
@@ -112,6 +128,7 @@ def style_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
     )
     @click.option(
         "--stroke-opacity",
+        cls=_HiddenRangeOption,
         type=click.FloatRange(0.0, 1.0),
         default=None,
         metavar="FLOAT",
@@ -127,6 +144,7 @@ def style_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
     )
     @click.option(
         "--fill-opacity",
+        cls=_HiddenRangeOption,
         type=click.FloatRange(0.0, 1.0),
         default=None,
         metavar="FLOAT",
@@ -134,6 +152,7 @@ def style_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
     )
     @click.option(
         "--opacity",
+        cls=_HiddenRangeOption,
         type=click.FloatRange(0.0, 1.0),
         default=None,
         metavar="FLOAT",
@@ -193,15 +212,19 @@ def common_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
     @margin_option("left")
     @click.option(
         "--scale",
+        cls=_HiddenRangeOption,
         type=click.IntRange(min=1),
         default=DEFAULT_SCALE,
-        help="Scale of the paper map.",
+        metavar="DENOMINATOR",
+        help="Scale of the paper map (e.g. 25000 for 1:25000).",
     )
     @click.option(
         "--dpi",
+        cls=_HiddenRangeOption,
         type=click.IntRange(min=1),
         default=DEFAULT_DPI,
-        help="Dots per inch.",
+        metavar="DOTS-PER-INCH",
+        help="Resolution of the map image.",
     )
     @click.option(
         "--grid",
@@ -212,6 +235,7 @@ def common_parameters(func: Callable[..., Any]) -> Callable[..., Any]:
     )
     @click.option(
         "--grid-size",
+        cls=_HiddenRangeOption,
         type=click.IntRange(min=1),
         default=DEFAULT_GRID_SIZE,
         metavar="METERS",
@@ -378,6 +402,7 @@ def ecef(
 )
 @click.option(
     "--padding",
+    cls=_HiddenRangeOption,
     type=click.FloatRange(min=0),
     default=DEFAULT_AUTO_SCALE_PADDING,
     metavar="MILLIMETERS",
@@ -422,6 +447,7 @@ def geojson(
 )
 @click.option(
     "--padding",
+    cls=_HiddenRangeOption,
     type=click.FloatRange(min=0),
     default=DEFAULT_AUTO_SCALE_PADDING,
     metavar="MILLIMETERS",

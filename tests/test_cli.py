@@ -1,5 +1,6 @@
 """Integration tests for papermap CLI."""
 
+import re
 import runpy
 import subprocess
 import sys
@@ -131,6 +132,15 @@ class TestCliHelp:
         assert result.exit_code == 0
         # Should contain version number
         assert "." in result.output  # Version numbers have dots
+
+    @pytest.mark.parametrize("command", ["latlon", "geojson", "gpx"])
+    def test_help_does_not_show_option_ranges(
+        self, runner: CliRunner, command: str
+    ) -> None:
+        result = runner.invoke(cli, [command, "--help"])
+        assert result.exit_code == 0
+        assert "--margin-top" in result.output
+        assert not re.search(r"\[[^\]]*x[<>]=", result.output)
 
     def test_latlon_help(self, runner: CliRunner) -> None:
         result = runner.invoke(cli, ["latlon", "--help"])
