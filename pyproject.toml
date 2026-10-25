@@ -30,7 +30,7 @@ dependencies = [
     "click_default_group",
     "fpdf2",
     "httpx2",
-    "Pillow",
+    "Pillow>=13.0.0",
 ]
 
 [project.optional-dependencies]
